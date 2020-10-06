@@ -1,0 +1,104 @@
+#include"system.h"
+#include"util.h"
+using namespace std;
+// advise: When you get lost in all these functions. Keep eye on fullsystem::fullsystem() and full_system::Quantum_evolution. Because
+//they are functions do most of works and call other functions here.
+
+
+//choice to turn on intra-detector coupling and scale it
+bool intra_detector_coupling;  // mark if to scale intra-detector coupling strength.
+double intra_detector_coupling_noise;
+// We set this value to explore the coarse-graining of our system  i.e. Compare system with different dof
+
+// choice to turn on inter_detector coupling and scale it.
+bool inter_detector_coupling;
+double inter_detector_coupling_noise;
+
+// choice to continue our simulation: read wavefunction in  save_wavefunction.txt
+bool Continue_Simulation;
+
+// choice to only simulate detector
+bool detector_only;
+
+double noise_strength;
+
+//choice to continue simulation of detector precoupling state: (Used to investigate decoherence of detector)
+bool Detector_Continue_Simulation;
+
+// energy window choice: We usually turn this on for large dof simulation. This will dramatically decrease computational cost for simulation
+bool energy_window ;
+double energy_window_size;  // size of energy window, we will only include whole system state whose energy difference with
+
+double initial_energy;  // energy of system + detector.
+double system_energy;  // energy of photon
+bool Random_bright_state;
+
+// initialization of parameters and do some pre-coupling set up
+full_system::full_system(string path1, string cvpt_path1) {
+
+	path = path1;
+    d.path = path;
+    d.cvpt_path = cvpt_path1;
+    // read hyper parameter and time step from input.txt
+    read_input_with_MPI();
+
+    //  store energy of photon in system_energy
+    system_energy=initial_energy;
+
+	s.read_MPI(input, output, log);
+	d.read_MPI(input, output, log, s.tlnum, s.tldim,path);
+    d.construct_bright_state_MPI(input,output);
+
+    detector_only = true;
+	if(energy_window) {
+	    if(detector_only){ // construct matrix for detector only.
+	        if(Detector_Continue_Simulation){  // load detector matrix.
+                d.load_detector_Hamiltonian_MPI(path,log);
+	        }
+	        else {
+                compute_detector_matrix_size_MPI_new();
+                d.construct_dmatrix_MPI(input,output,log,dmat0,dmat1,vmode0,vmode1);
+                d.save_detector_Hamiltonian_MPI(path,log);
+	        }
+	    }
+	    else {  // construct matrix for detector + photon.
+	        if(Continue_Simulation){
+	            // load matrix for photon + detector system
+	            d.load_detector_Hamiltonian_MPI(path,log);
+	            load_Hamiltonian_MPI();
+	            d.compute_important_state_index();
+                construct_quotient_state_all_MPI(); // we use diagonal Hamiltonian loaded from load_detector_Hamiltonian_MPI and load_Hamiltonian_MPI to construct quotient state
+	            if(my_id==0) {
+                    cout << "Successfully load Hamiltonian." << endl;
+                }
+	        }
+	        else {
+	            compute_detector_matrix_size_MPI_new();
+
+                d.construct_dmatrix_MPI(input, output, log,dmat0,dmat1,vmode0,vmode1);
+
+                // construct full matrix Hamiltonian.
+                construct_fullmatrix_with_energy_window_MPI();
+                // save Hamiltonian for photon + detector.
+                d.save_detector_Hamiltonian_MPI(path,log);
+	            save_Hamiltonian_MPI();
+	        }
+        }
+    }
+	if(my_id ==0){
+        cout<<"Finish constructing Matrix"<<endl;
+        if( ! energy_window){
+            cout<<" This mode is now not supported."<<endl;
+            log<<" This mode is now not supported."<<endl;
+            exit(-1);
+        }
+        dimension_check(); // check if all matrix's dimension is right.
+	}
+}
+
+// Doing Quantum Simulation with SUR algorithm, parallelized version.
+void full_system::Quantum_evolution() {
+    // -----------------------------------------------------------------------------------
+	// Now we construct our wavefunction /phi for our detector and full_system. (For system it is already constructed in s.read())
+    pre_coupling_evolution_MPI(0); // pre-coupling evolution of detector state (lower bright state)
+}
