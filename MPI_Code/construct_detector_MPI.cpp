@@ -526,14 +526,13 @@ void detector::initialize_detector_state_MPI(ofstream & log, int initial_state_c
     double norm;
     double total_norm;
     int local_index = 0;
-    int dmat0_offset = my_id * total_dmat_size[0]/num_proc;
+    int dmat0_offset = my_id * int(total_dmat_size[0]/num_proc);
     for(m=0;m<total_dmat_size[0];m++){
         norm = 0;
         for(i=0;i<dmatsize[0];i++){
             xd[m].push_back(0);
             yd[m].push_back(0);
         }
-        // we use first molecules' state space
         if(m>=dmat0_offset and m< dmat0_offset + dmatsize[0]){
             // state m is in this range
             local_index = m - dmat0_offset;
@@ -543,6 +542,10 @@ void detector::initialize_detector_state_MPI(ofstream & log, int initial_state_c
         MPI_Allreduce(&norm,&total_norm,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
         if(total_norm==0){
             if(my_id==0) {
+                for(i=0;i<num_proc;i++) {
+                    cout << dmatsize_each_process[0][i] <<"  ";
+                }
+                cout <<endl;
                 cout << "Norm for detector state "<< m <<" is 0" << endl;
                 log << "Norm for detector state "<<m<<" is 0" << endl;
                 MPI_Abort(MPI_COMM_WORLD,-10);
