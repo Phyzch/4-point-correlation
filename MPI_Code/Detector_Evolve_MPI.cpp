@@ -269,7 +269,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
     int steps;
-    double detector_tprint = 0.1;
+    double detector_tprint = 0.01;
     int output_step= int(detector_tprint/delt); //Output every output_step.
     double * start_time = new double [s.tlnum];
     double * final_time = new double [s.tlnum];
@@ -286,9 +286,11 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     if(my_id==0){
         if(Detector_Continue_Simulation){
             four_point_correlation_output.open(path + "4 point correlation.txt", ofstream::app);
+            Detector_precoup_output.open(path + "detector_precoupling.txt", ofstream::app);
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
+            Detector_precoup_output.open(path + "detector_precoupling.txt");
         }
     }
     // -------------- Allocate space for <a| |[n_{i}(t),n_{i}(0)]|^{2} |a> -------------
@@ -320,13 +322,18 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     }
     complex<double> * n_offdiag_element;
     n_offdiag_element = new complex <double> [d.nmodes[0]];
+    // ------- For output for our state <a(t)|a> trajectory (check ergodicity)
+    double special_state_x;
+    double special_state_y;
+    double survival_prob;
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
     if(Detector_Continue_Simulation){
-        // d.load_detector_state_MPI(path,start_time,log,initial_state_choice);
+        d.load_detector_state_MPI(path,start_time,log,initial_state_choice);
     }
     else{
         d.initialize_detector_state_MPI(log, 0); // initialize detector lower bright state
     }
+
 
     // -----------------------------------------------------------------------------------------------
     // prepare sendbuffer and recv_buffer and corresponding index.
@@ -337,15 +344,18 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             log <<" Begin Propogation in Molecule Phase space "<<endl;
         }
         t=0;
-        steps= d.proptime[0]/delt + 1;
-        if(Continue_Simulation){
+        steps= d.proptime[0]/delt;
+        if(Detector_Continue_Simulation){
             // update simulation time and t for detector to begin simulation.
             t=start_time[0];
-            steps= (d.proptime[0]-start_time[0])/delt + 1;
+            steps= (d.proptime[0]-start_time[0])/delt;
         }
-        if(my_id==0){
-            four_point_correlation_output << "4- point correlation function for molecule " << endl;
-            four_point_correlation_output << "total time: " << (d.proptime[0]-start_time[0]) << " " << delt * output_step << endl;
+        if(!Detector_Continue_Simulation) {
+            if (my_id == 0) {
+                four_point_correlation_output << "4- point correlation function for molecule " << endl;
+                four_point_correlation_output << "total time: " << (d.proptime[0] - start_time[0]) << " "
+                                              << delt * output_step << endl;
+            }
         }
         // Do simulation in loop
         for(k=0;k<steps;k++){
@@ -375,7 +385,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     four_point_correlation_function_at_initial_state[i] = 0;
                     for(b=0;b<d.total_dmat_size[0];b++){
                         // var = |<a|n_{i}(t)|b>|^{2} * (n_{i}(b) - n_{i}(a))^{2}
-                       var = std::norm(n_offdiag_total[i][b]) * pow(vmode0[b][i] - vmode0[initial_state_index_in_total_dmatrix][i],2);
+                       var = std::norm(n_offdiag_total[i][b]) * pow(d.dv_all[0][b][i] - d.dv_all[0][initial_state_index_in_total_dmatrix][i],2);
                        four_point_correlation_function_at_initial_state[i] =
                                four_point_correlation_function_at_initial_state[i] + var;
                     }
@@ -386,26 +396,33 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                         four_point_correlation_output << four_point_correlation_function_at_initial_state[i] << " ";
                     }
                     four_point_correlation_output<<endl;
-//                    // for debug
-//                    cout<< "inner product <a|n|b>" <<endl;
-//                    for(b=0;b<d.total_dmat_size[0];b++){
-//                        cout << real(n_offdiag_total[1][b]) <<"  "<< imag(n_offdiag_total[1][b])<<endl;
-//                    }
-//                    cout << "Here" <<endl;
                 }
-
+                // ------------- output state <a(t)|a>  ----------------------------------------
+                if (my_id == d.initial_state_pc_id[0]){
+                    special_state_x = d.xd[initial_state_index_in_total_dmatrix][d.initial_state_index[0]];
+                    special_state_y = d.yd[initial_state_index_in_total_dmatrix][d.initial_state_index[0]];
+                }
+                MPI_Bcast(&special_state_x,1,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_COMM_WORLD);
+                MPI_Bcast(&special_state_y,1,MPI_DOUBLE,d.initial_state_pc_id[1],MPI_COMM_WORLD);
+                survival_prob = pow(special_state_x,2) + pow(special_state_y,2);
+                if(my_id == 0){
+                    Detector_precoup_output << "Time:   " << t << endl;
+                    Detector_precoup_output << survival_prob <<endl;
+                }
             }
             t= t+ delt;
             d.SUR_onestep_MPI(cf);
         }
+        final_time[0] = t;
     }
 
-    // d.save_detector_state_MPI(path,final_time,log,initial_state_choice);
+    d.save_detector_state_MPI(path,final_time,log,initial_state_choice);
 
 
     if(my_id==0){
         cout<<"Detector_pre_coupling simulation finished"<<endl;
         four_point_correlation_output.close();
+        Detector_precoup_output.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){

@@ -15,7 +15,7 @@ bool Turn_on_Vanvleck = false ;  // Note when turn on vanvleck, the V_intra and 
 // Warning: Always check Continue_Simulation variable in your code before starting your simulation.  Backup your simulation result output.txt everytime before your simulation.
 int main(int argc,char * argv []) {
     srand(time(0));
-    string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/try1/";
+    string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/4 dof system/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/Potential for flow between molecules/"
                               "5  dof V 300 c 0.3/cutoff 0.05/2nd order/";
     string cvpt_path;

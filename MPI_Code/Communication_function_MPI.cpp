@@ -144,11 +144,11 @@ void detector::gather_xd_yd(){
         }
     }
 
-    for(i=0;i<stlnum;i++){
-        MPI_Allgatherv(&xd[i][0],dmatsize[i],MPI_DOUBLE,
-                       &xd_all[i][0],dmatsize_each_process[i],dmatsize_offset[i],MPI_DOUBLE,MPI_COMM_WORLD);
-        MPI_Allgatherv(&yd[i][0],dmatsize[i],MPI_DOUBLE,
-                       &yd_all[i][0],dmatsize_each_process[i],dmatsize_offset[i],MPI_DOUBLE,MPI_COMM_WORLD);
+    for(i=0;i<total_dmat_size[0];i++){
+        MPI_Allgatherv(&xd[i][0],dmatsize[0],MPI_DOUBLE,&xd_all[i][0],
+                       dmatsize_each_process[0],dmatsize_offset[0],MPI_DOUBLE,MPI_COMM_WORLD);
+        MPI_Allgatherv(&yd[i][0],dmatsize[0],MPI_DOUBLE,&yd_all[i][0],
+                       dmatsize_each_process[0],dmatsize_offset[0],MPI_DOUBLE,MPI_COMM_WORLD);
     }
 
     // free space
@@ -161,29 +161,36 @@ void detector::gather_xd_yd(){
 void detector:: Scatter_xd_yd(){
     int m,i;
     int displacement;
-    int ** displacement_list;
-    displacement_list = new int * [2];
+    int ** dmatsize_offset;
+    dmatsize_offset = new int * [2];
     for(m=0;m<stlnum;m++){
-        displacement_list[m] = new int [num_proc];
+        dmatsize_offset[m] = new int [num_proc];
     }
 
     for(m=0;m<stlnum;m++){
         displacement = 0;
         for(i=0;i<num_proc;i++){
-            displacement_list[m][i]= displacement;
+            dmatsize_offset[m][i]= displacement;
             displacement = displacement + dmatsize_each_process[m][i];
         }
     }
-    for(m=0;m<stlnum;m++) {
-        MPI_Scatterv(&xd_all[m][0],dmatsize_each_process[m],displacement_list[m],MPI_DOUBLE,&xd[m][0],dmatsize[m],MPI_DOUBLE,0,MPI_COMM_WORLD);
-        MPI_Scatterv(&yd_all[m][0],dmatsize_each_process[m],displacement_list[m],MPI_DOUBLE,&yd[m][0],dmatsize[m],MPI_DOUBLE,0,MPI_COMM_WORLD);
+    for(i=0;i<total_dmat_size[0];i++){
+        xd[i].resize(total_dmat_size[0]);
+        yd[i].resize(total_dmat_size[0]);
+    }
+
+    for(m=0;m<total_dmat_size[0];m++){
+        MPI_Scatterv(&xd_all[m][0],dmatsize_each_process[0],dmatsize_offset[0],MPI_DOUBLE,
+                     &xd[m][0],dmatsize[0], MPI_DOUBLE,0,MPI_COMM_WORLD);
+        MPI_Scatterv(&yd_all[m][0],dmatsize_each_process[0],dmatsize_offset[0],MPI_DOUBLE,
+                     &yd[m][0],dmatsize[0], MPI_DOUBLE,0,MPI_COMM_WORLD);
     }
 
     // free the space
     for(m=0;m<stlnum;m++){
-        delete [] displacement_list[m];
+        delete [] dmatsize_offset[m];
     }
-    delete [] displacement_list;
+    delete [] dmatsize_offset;
 
 }
 

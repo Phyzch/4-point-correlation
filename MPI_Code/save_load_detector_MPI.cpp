@@ -193,6 +193,7 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
     delete [] temp_dmat;
     delete [] temp_dirow;
     delete [] temp_dicol;
+
 }
 
 void detector:: save_detector_state_MPI(string path,double * final_time,ofstream & log,int initial_state_choice){
@@ -201,22 +202,19 @@ void detector:: save_detector_state_MPI(string path,double * final_time,ofstream
     gather_xd_yd(); // gather xd yd to xd_all, yd_all.
     if(my_id==0){
         ofstream save;
-        if(initial_state_choice==1) {
-            save.open(path + "save_detector_bright_state.txt");
-        }
-        else{
-            save.open(path+ "save_detector_lower_bright_state.txt");
-        }
+        save.open(path + "save_detector_state.txt");
         if(save.is_open()){
-            for(m=0;m<stlnum;m++){
-                save<<final_time[m]<<endl;
-                save<<"Real part of Detector state :"<<endl;
-                for(i=0;i<total_dmat_size[m];i++){
-                    save << xd_all[m][i] <<" ";
+            save<<final_time[0]<<endl;
+            save<<"Real part of Detector state :"<<endl;
+            for(m=0;m<total_dmat_size[0];m++) {
+                for (i = 0; i < total_dmat_size[0]; i++) {
+                    save << xd_all[m][i] << " ";
                 }
-                save<<endl;
-                save<<"Imaginary part of Detector state: "<<endl;
-                for(i=0;i<total_dmat_size[m];i++){
+                save << endl;
+            }
+            save<<"Imaginary part of Detector state: "<<endl;
+            for(m=0;m<total_dmat_size[0];m++){
+                for(i=0;i<total_dmat_size[0];i++){
                     save<<yd_all[m][i]<<" ";
                 }
                 save<<endl;
@@ -235,28 +233,41 @@ void detector:: load_detector_state_MPI(string path,double * start_time,ofstream
     int m,i;
     ifstream load;
     string ss;
+    xd_all = new double * [total_dmat_size[0]];
+    yd_all = new double * [total_dmat_size[0]];
+    for(i=0;i<total_dmat_size[0];i++){
+        xd_all[i] = new double [total_dmat_size[0]];
+        yd_all[i] = new double [total_dmat_size[0]];
+    }
+
+    // for 4 - point correlation function we will make xd , yd as N*N system.
+    // we use first detector's state space
+    xd = new vector <double> [total_dmat_size[0]];
+    yd = new vector<double> [total_dmat_size[0]];
+    for (i = 0; i < total_dmat_size[0]; i++) {
+        xd[i].reserve(dmatsize[0]);
+        yd[i].reserve(dmatsize[0]);
+    }
+
     if(my_id==0) {
         //--------------Allocate space for detector state number for each process. -------------------
-        if (initial_state_choice == 1) {  // we load data from detector bright state information
-            load.open(path + "save_detector_bright_state.txt");
-        } else {
-            load.open(path + "save_detector_lower_bright_state.txt");
-        }
+        load.open(path + "save_detector_state.txt");
         //-------------------Load data from file ----------------------------
         if (load.is_open()) {
-            for (m = 0; m < stlnum; m++) {
-                load >> start_time[m];
-                std::getline(load, ss);
-                std::getline(load, ss);
-                for (i = 0; i < total_dmat_size[m]; i++) {
+            load >> start_time[0];
+            std::getline(load, ss);
+            std::getline(load, ss);
+            for(m=0;m<total_dmat_size[0];m++) {
+                for (i = 0; i < total_dmat_size[0]; i++) {
                     load >> xd_all[m][i];
                 }
                 std::getline(load, ss);
-                std::getline(load, ss);
-                for (i = 0; i < total_dmat_size[m]; i++) {
+            }
+            std::getline(load, ss);
+            for(m=0;m<total_dmat_size[0];m++) {
+                for (i = 0; i < total_dmat_size[0]; i++) {
                     load >> yd_all[m][i];
                 }
-                std::getline(load, ss);
             }
             load.close();
         }
@@ -266,6 +277,7 @@ void detector:: load_detector_state_MPI(string path,double * start_time,ofstream
             MPI_Abort(MPI_COMM_WORLD, -12);
         }
     }
+    MPI_Bcast(&start_time[0],1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     Scatter_xd_yd();
 }
 
