@@ -36,6 +36,38 @@ void full_system::replace_first_line() {
     }
 }
 
+void detector::replace_4_point_corr_second_line(){
+    // This code is quite dumb... I find if I continue my simulation, I have to correct the endtime I give. so I have to rewrite whole output.txt for the first line.
+    ifstream fin;
+    ofstream temp;
+    double detector_tprint = 0.01;
+    int x;
+    if(my_id==0) {
+        string old_path = path + "4 point correlation.txt";
+        fin.open(old_path);
+        string new_path = path + "4 point correlation_new.txt";
+        temp.open(new_path);
+        string line;
+        getline(fin, line); // read first line
+        temp << line <<endl;
+        getline(fin,line); // read second line
+        temp << "total time: "  << " " << proptime[0] << " " << detector_tprint << endl;
+        while (std::getline(fin, line)) {
+            if (line != "") {
+                temp << line << endl;
+            }
+        }
+        temp.close();
+        fin.close();
+        if (remove(old_path.c_str()) == 0) {
+            rename(new_path.c_str(), old_path.c_str());
+        } else {
+            cout << "Remove file failed" << endl;
+            cin >> x;
+        }
+    }
+}
+
 // check some dimension parameter
 void full_system::dimension_check() {
     double errflag = 0;

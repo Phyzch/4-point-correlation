@@ -5,7 +5,7 @@
 #include"../system.h"
 #include"../util.h"
 using namespace std;
-int distance_cutoff = 5;
+int distance_cutoff_for_4_piont_corre ;
 
 void Broadcast_dmat_vmode(int stlnum, vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1);
 
@@ -236,7 +236,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
             state_distance = state_distance + abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -
                     dv_all[0][i][j]);
         }
-        if(state_distance <= distance_cutoff){
+        if(state_distance <= distance_cutoff_for_4_piont_corre ){
             nearby_state_index.push_back(i);
         }
     }

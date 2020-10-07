@@ -297,6 +297,14 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     // -------------- Allocate space for <a| |[n_{i}(t),n_{i}(0)]|^{2} |a> -------------
     double * four_point_correlation_function_at_initial_state = new double [d.nmodes[0]];
 
+    // -------------Load detector state from save data if we want to continue simulation of detector.------------------
+    if(Detector_Continue_Simulation){
+        d.load_detector_state_MPI(path,start_time,log,initial_state_choice);
+    }
+    else{
+        d.initialize_detector_state_MPI(log, 0); // initialize detector lower bright state
+    }
+
     //---------- Allocate space for <a| n_{i}(t) |b>  size: nmode * total_dmat_size[0] -------------------------------------------
     // each row is one n_{i}.  each column is one site |b>
     int nearby_state_index_size = d.nearby_state_index.size();
@@ -330,13 +338,6 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     double special_state_y;
     double survival_prob;
 
-    // -------------Load detector state from save data if we want to continue simulation of detector.------------------
-    if(Detector_Continue_Simulation){
-        d.load_detector_state_MPI(path,start_time,log,initial_state_choice);
-    }
-    else{
-        d.initialize_detector_state_MPI(log, 0); // initialize detector lower bright state
-    }
 
 
     // -----------------------------------------------------------------------------------------------
@@ -357,7 +358,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         if(!Detector_Continue_Simulation) {
             if (my_id == 0) {
                 four_point_correlation_output << "4- point correlation function for molecule " << endl;
-                four_point_correlation_output << "total time: " << (d.proptime[0] - start_time[0]) << " "
+                four_point_correlation_output << "total time: " << d.proptime[0]  << " "
                                               << delt * output_step << endl;
             }
         }
@@ -427,7 +428,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     }
 
     d.save_detector_state_MPI(path,final_time,log,initial_state_choice);
-
+    d.replace_4_point_corr_second_line();
 
     if(my_id==0){
         cout<<"Detector_pre_coupling simulation finished"<<endl;

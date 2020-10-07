@@ -46,7 +46,7 @@ extern bool Turn_on_Vanvleck;
 extern int ndegre;
 extern int ndegrx2;
 
-extern int distance_cutoff; // use to shrink simulation for 4-point correlation function.
+extern int distance_cutoff_for_4_piont_corre; // use to shrink simulation for 4-point correlation function.
 // define function here
 float ran2(long& idum);
 void estimate_memory_cost(ofstream & resource_output);  // output resource cost to file at give time step.

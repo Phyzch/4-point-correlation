@@ -16,7 +16,8 @@ void full_system:: read_input_with_MPI(){
         input >> intra_detector_coupling >> inter_detector_coupling >> Continue_Simulation >> energy_window
               >> detector_only >> Detector_Continue_Simulation >> Random_bright_state;
         input >> intra_detector_coupling_noise >> inter_detector_coupling_noise >> energy_window_size >> initial_energy
-              >> noise_strength >> Rmax >> d.V_intra >> d.detector_energy_window_size >>detector_lower_bright_state_energy_window_shrink;
+              >> noise_strength >> Rmax >> d.V_intra >> d.detector_energy_window_size
+              >>detector_lower_bright_state_energy_window_shrink >> distance_cutoff_for_4_piont_corre ;
         // read time used for simulation.  delt: time step. tstart: time start to turn on coupling. tmax: maximum time for simulation.   tprint: time step to print result.
         input >> delt >> tstart >> tmax >> tprint;
         // check if input is valid
@@ -74,6 +75,7 @@ void full_system:: read_input_with_MPI(){
     MPI_Bcast(&d.V_intra,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&d.detector_energy_window_size,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&detector_lower_bright_state_energy_window_shrink,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&distance_cutoff_for_4_piont_corre,1,MPI_INT,0,MPI_COMM_WORLD);
 
     // Bcast delt tstart tmax tprint to other process.
     MPI_Bcast(&delt, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);
