@@ -358,7 +358,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             }
         }
         // Do simulation in loop
-        for(k=0;k<steps;k++){
+        for(k=0;k<=steps;k++){
             //-------------------- output result ----------------------------
             if(k % output_step ==0) {
                 // ---------------------------------output 4-point correlation function -------------------------------------------------
