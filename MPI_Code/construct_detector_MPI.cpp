@@ -5,6 +5,7 @@
 #include"../system.h"
 #include"../util.h"
 using namespace std;
+int distance_cutoff = 5;
 
 void Broadcast_dmat_vmode(int stlnum, vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1);
 
@@ -178,7 +179,7 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
 };
 
 void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstream & log,  vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1) {
-    int m, i;
+    int m, i , j;
     construct_dv_dirow_dicol_dmatrix_MPI(log, dmat0, dmat1, vmode0, vmode1);
     compute_important_state_index();
     // -------------------------- Two different way of constructing off-diagonal term for detector  -----------------------------
@@ -221,12 +222,43 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     }
 
     // for 4 - point correlation function we will make xd , yd as N*N system.
-    // we use first detector's state space
-    xd = new vector <double> [total_dmat_size[0]];
-    yd = new vector<double> [total_dmat_size[0]];
-    for (i = 0; i < total_dmat_size[0]; i++) {
+    // we will only include state near our initial state.
+    int state_distance;
+    int initial_state_index_in_total_dmatrix;
+    int nearby_state_index_size;
+    initial_state_index_in_total_dmatrix = initial_state_index[0]
+                                           + total_dmat_size[0]/num_proc * initial_state_pc_id[0] ;
+    // compute nearby_state_index and initial_state_index_in_state_index_list for computing 4-point correlation function
+    for(i=0;i<total_dmat_size[0];i++){
+        // compute state distance
+        state_distance = 0;
+        for(j=0;j< nmodes[0];j++){
+            state_distance = state_distance + abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -
+                    dv_all[0][i][j]);
+        }
+        if(state_distance <= distance_cutoff){
+            nearby_state_index.push_back(i);
+        }
+    }
+    nearby_state_index_size = nearby_state_index.size();
+    for(i=0;i<nearby_state_index_size;i++){
+        if(nearby_state_index[i] == initial_state_index_in_total_dmatrix){
+            initial_state_index_in_state_index_list = i;
+            break;
+        }
+    }
+
+    xd = new vector <double> [nearby_state_index_size];
+    yd = new vector<double> [nearby_state_index_size];
+    for (i = 0; i < nearby_state_index_size; i++) {
         xd[i].reserve(dmatsize[0]);
         yd[i].reserve(dmatsize[0]);
+    }
+    xd_all = new double * [nearby_state_index_size];
+    yd_all = new double * [nearby_state_index_size];
+    for(i=0;i<nearby_state_index_size;i++){
+        xd_all[i] = new double [total_dmat_size[0]];
+        yd_all[i] = new double [total_dmat_size[0]];
     }
 }
 
@@ -244,12 +276,6 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
         }
     }
     MPI_Bcast(&total_dmat_size[0],2,MPI_INT,0,MPI_COMM_WORLD);
-    xd_all = new double * [total_dmat_size[0]];
-    yd_all = new double * [total_dmat_size[0]];
-    for(i=0;i<total_dmat_size[0];i++){
-        xd_all[i] = new double [total_dmat_size[0]];
-        yd_all[i] = new double [total_dmat_size[0]];
-    }
     vector <int> * dirow_all, *dicol_all;
     vector< double> * dmat_all;
     int ** vector_size, ** displacement_list;
@@ -527,25 +553,22 @@ void detector::initialize_detector_state_MPI(ofstream & log, int initial_state_c
     double total_norm;
     int local_index = 0;
     int dmat0_offset = my_id * int(total_dmat_size[0]/num_proc);
-    for(m=0;m<total_dmat_size[0];m++){
+    int nearby_state_list_size = nearby_state_index.size();
+    for(m=0;m<nearby_state_list_size;m++){
         norm = 0;
         for(i=0;i<dmatsize[0];i++){
             xd[m].push_back(0);
             yd[m].push_back(0);
         }
-        if(m>=dmat0_offset and m< dmat0_offset + dmatsize[0]){
+        if(nearby_state_index[m] >= dmat0_offset and nearby_state_index[m] < dmat0_offset + dmatsize[0]){
             // state m is in this range
-            local_index = m - dmat0_offset;
+            local_index = nearby_state_index[m] - dmat0_offset;
             xd[m][local_index] = 1;
             norm = 1;
         }
         MPI_Allreduce(&norm,&total_norm,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
         if(total_norm==0){
             if(my_id==0) {
-                for(i=0;i<num_proc;i++) {
-                    cout << dmatsize_each_process[0][i] <<"  ";
-                }
-                cout <<endl;
                 cout << "Norm for detector state "<< m <<" is 0" << endl;
                 log << "Norm for detector state "<<m<<" is 0" << endl;
                 MPI_Abort(MPI_COMM_WORLD,-10);

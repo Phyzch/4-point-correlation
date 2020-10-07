@@ -96,7 +96,7 @@ void detector::prepare_evolution(){
     // Index for remoteVecIndex, tosendVecIndex are computed here.
     int m,i;
     int vsize;
-
+    int nearby_state_list_size = nearby_state_index.size();
     // Index for vector to send and receive.
     // remoteVecCount: total number to receive. remoteVecPtr: displacement in remoteVecIndex for each process. remoteVecIndex: index in other process to receive.
     // tosendVecCount: total number to send to other process. tosendVecPtr: displacement in tosendVecIndex in each process.  tosendVecIndex: Index of element in itself to send. (it's global ,need to be converted to local index)
@@ -139,7 +139,7 @@ void detector::prepare_evolution(){
             remoteVecIndex[0],0);  // construct buffer to receive.
     to_send_buffer_len[0]= construct_send_buffer_index(remoteVecCount[0],remoteVecPtr[0],remoteVecIndex[0],
                                                     tosendVecCount[0],tosendVecPtr[0], tosendVecIndex[0]);
-    for(m=0;m< total_dmat_size[0];m++){
+    for(m=0;m< nearby_state_list_size;m++){
         xd[m].resize(dmatsize[0] + to_recv_buffer_len[0]);
         yd[m].resize(dmatsize[0] + to_recv_buffer_len[0]);
         recv_xd[m] = new double [to_recv_buffer_len[0]];
@@ -166,13 +166,14 @@ void detector::prepare_evolution(){
 
 }
 
-void detector::update_dx(){
+void detector::update_dx(int nearby_state_list_size){
     int i;
     int m;
     int vsize;
     // collect data for send_buffer.
     vsize = total_dmat_size[0]/num_proc;
-    for(m=0;m<total_dmat_size[0];m++){
+
+    for(m=0;m<nearby_state_list_size;m++){
         for (i = 0; i < to_send_buffer_len[0]; i++) {
             send_xd[m][i] = xd[m][tosendVecIndex[0][i] - my_id * vsize];
         }
@@ -183,13 +184,13 @@ void detector::update_dx(){
         }
     }
 }
-void detector::update_dy(){
+void detector::update_dy(int nearby_state_list_size){
     int i;
     int vsize;
     int m;
     // collect data for send_buffer.
     vsize = total_dmat_size[0]/num_proc;
-    for(m=0;m<total_dmat_size[0];m++){
+    for(m=0;m<nearby_state_list_size;m++){
         for (i = 0; i < to_send_buffer_len[0]; i++) {
             send_yd[m][i] = yd[m][tosendVecIndex[0][i] - my_id * vsize];
         }
@@ -207,30 +208,30 @@ void detector::update_dy(){
 void detector::SUR_onestep_MPI(double cf){
     int m, i;
     int irow,icol;
-    update_dy();
+    int nearby_state_list_size = nearby_state_index.size();
+    update_dy(nearby_state_list_size);
         // go simulation starting from different state
     for(i=0;i<dmatnum[0];i++){
         // make sure when we compute off-diagonal matrix, we record both symmetric and asymmetric part
         irow = local_dirow[0][i];
         icol = local_dicol[0][i]; // compute to point to colindex in
-        for(m=0;m<total_dmat_size[0];m++) {
+        for(m=0;m<nearby_state_list_size;m++) {
             xd[m][irow] = xd[m][irow] + dmat[0][i] * yd[m][icol] * cf;
         }
     }
 
-    update_dx();
+    update_dx(nearby_state_list_size);
     for(i=0;i<dmatnum[0];i++){
         irow= local_dirow[0][i];
         icol= local_dicol[0][i];
-        for(m=0;m<total_dmat_size[0];m++){
+        for(m=0;m<nearby_state_list_size;m++){
             yd[m][irow] = yd[m][irow] - dmat[0][i] * xd[m][icol] * cf;
         }
     }
 
 }
 
-void detector:: compute_n_off_diag_element(int index_b, complex<double> * n_off_diag_element,
-                                           int initial_state_index_in_total_dmatrix){
+void detector:: compute_n_off_diag_element(int index_b, complex<double> * n_off_diag_element){
     // compute <a|n_{i}(t)|b> for i = 1, 2, .., N (number of mode) mode
     // here a is our state of interest: We want to compute <a | [n_{i}(t) , n_{i}]|^{2} a>.
     // this index of a is given as initial_state_index_in_total_dmatrix. (state a is chosen as initial state in detector 0)
@@ -246,8 +247,8 @@ void detector:: compute_n_off_diag_element(int index_b, complex<double> * n_off_
     }
 
     for(k=0;k<dmatsize[0];k++){
-        C_ka_conjugate = complex<double> (xd[initial_state_index_in_total_dmatrix][k],
-                                -yd[initial_state_index_in_total_dmatrix][k]);
+        C_ka_conjugate = complex<double> (xd[initial_state_index_in_state_index_list][k],
+                                -yd[initial_state_index_in_state_index_list][k]);
         C_kb = complex<double> (xd[index_b][k],
                                 yd[index_b][k]);
         n_k_CC = C_kb * C_ka_conjugate;
@@ -298,6 +299,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
     //---------- Allocate space for <a| n_{i}(t) |b>  size: nmode * total_dmat_size[0] -------------------------------------------
     // each row is one n_{i}.  each column is one site |b>
+    int nearby_state_index_size = d.nearby_state_index.size();
     complex<double> ** n_offdiag_total;
     double ** n_offdiag_total_real;
     double ** n_offdiag_total_imag;
@@ -305,9 +307,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     n_offdiag_total_real = new double * [d.nmodes[0]];
     n_offdiag_total_imag = new double * [d.nmodes[0]];
     for(i=0;i<d.nmodes[0];i++){
-        n_offdiag_total[i] = new complex <double> [d.total_dmat_size[0]];
-        n_offdiag_total_real[i] = new double [d.total_dmat_size[0]];
-        n_offdiag_total_imag[i] = new double [d.total_dmat_size[0]];
+        n_offdiag_total[i] = new complex <double> [nearby_state_index_size];
+        n_offdiag_total_real[i] = new double [nearby_state_index_size];
+        n_offdiag_total_imag[i] = new double [nearby_state_index_size];
     }
     complex<double> ** n_offdiag;
     double ** n_offdiag_real;
@@ -316,16 +318,18 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     n_offdiag_real = new double * [d.nmodes[0]];
     n_offdiag_imag = new double * [d.nmodes[0]];
     for(i=0;i<d.nmodes[0];i++){
-        n_offdiag [i] = new complex <double> [d.total_dmat_size[0]];
-        n_offdiag_real[i] = new double [d.total_dmat_size[0]];
-        n_offdiag_imag[i] = new double [d.total_dmat_size[0]];
+        n_offdiag [i] = new complex <double> [nearby_state_index_size];
+        n_offdiag_real[i] = new double [nearby_state_index_size];
+        n_offdiag_imag[i] = new double [nearby_state_index_size];
     }
     complex<double> * n_offdiag_element;
     n_offdiag_element = new complex <double> [d.nmodes[0]];
+
     // ------- For output for our state <a(t)|a> trajectory (check ergodicity)
     double special_state_x;
     double special_state_y;
     double survival_prob;
+
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
     if(Detector_Continue_Simulation){
         d.load_detector_state_MPI(path,start_time,log,initial_state_choice);
@@ -362,10 +366,10 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             //-------------------- output result ----------------------------
             if(k % output_step ==0) {
                 // ---------------------------------output 4-point correlation function -------------------------------------------------
-                for(b=0;b<d.total_dmat_size[0];b++){
+                for(b=0;b<nearby_state_index_size;b++){
                     // compute <b|n_{i}(t)|a>
                     // go through all state b
-                    d.compute_n_off_diag_element(b,n_offdiag_element,initial_state_index_in_total_dmatrix);
+                    d.compute_n_off_diag_element(b,n_offdiag_element);
                     for(i=0;i<d.nmodes[0];i++){
                         n_offdiag[i][b] = n_offdiag_element[i];
                         n_offdiag_real[i][b] = real(n_offdiag[i][b]);
@@ -373,19 +377,25 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     }
                 }
                 for(i=0;i<d.nmodes[0];i++){
-                    MPI_Allreduce(&n_offdiag_real[i][0], & n_offdiag_total_real[i][0], d.total_dmat_size[0], MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-                    MPI_Allreduce(&n_offdiag_imag[i][0], & n_offdiag_total_imag[i][0], d.total_dmat_size[0], MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+                    MPI_Allreduce(&n_offdiag_real[i][0], & n_offdiag_total_real[i][0],nearby_state_index_size, MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+                    MPI_Allreduce(&n_offdiag_imag[i][0], & n_offdiag_total_imag[i][0], nearby_state_index_size, MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
                 }
-                for(b=0;b<d.total_dmat_size[0];b++){
+                for(b=0;b<nearby_state_index_size;b++){
                     for(i=0;i<d.nmodes[0];i++){
                         n_offdiag_total[i][b] = complex<double> (n_offdiag_total_real[i][b], n_offdiag_total_imag[i][b]);
                     }
                 }
                 for(i=0;i<d.nmodes[0];i++){
                     four_point_correlation_function_at_initial_state[i] = 0;
-                    for(b=0;b<d.total_dmat_size[0];b++){
+                    for(b=0;b<nearby_state_index_size;b++){
                         // var = |<a|n_{i}(t)|b>|^{2} * (n_{i}(b) - n_{i}(a))^{2}
-                       var = std::norm(n_offdiag_total[i][b]) * pow(d.dv_all[0][b][i] - d.dv_all[0][initial_state_index_in_total_dmatrix][i],2);
+                        // note there are two set of index: (index in nearby_state_list) <-> (index in dmat_all,dv_all)
+                        // (b, initial_state_index_in_state_index_list) <-> (nearby_state_index[b] , initial_state_index_in_total_dmatrix)
+                        // nearby_state_index record the index for all these independent state we evolve with time.
+
+                       var = std::norm(n_offdiag_total[i][b]) *
+                               pow(d.dv_all[0][ d.nearby_state_index[b] ][i]
+                               - d.dv_all[0][initial_state_index_in_total_dmatrix][i],2);
                        four_point_correlation_function_at_initial_state[i] =
                                four_point_correlation_function_at_initial_state[i] + var;
                     }
@@ -399,8 +409,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
                 // ------------- output state <a(t)|a>  ----------------------------------------
                 if (my_id == d.initial_state_pc_id[0]){
-                    special_state_x = d.xd[initial_state_index_in_total_dmatrix][d.initial_state_index[0]];
-                    special_state_y = d.yd[initial_state_index_in_total_dmatrix][d.initial_state_index[0]];
+                    special_state_x = d.xd[d.initial_state_index_in_state_index_list][d.initial_state_index[0]];
+                    special_state_y = d.yd[d.initial_state_index_in_state_index_list][d.initial_state_index[0]];
                 }
                 MPI_Bcast(&special_state_x,1,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_COMM_WORLD);
                 MPI_Bcast(&special_state_y,1,MPI_DOUBLE,d.initial_state_pc_id[1],MPI_COMM_WORLD);
@@ -433,7 +443,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         delete [] d.tosendVecPtr[i];
         delete [] d.tosendVecIndex[i];
     }
-    for(i=0;i<d.total_dmat_size[0];i++){
+    for(i=0;i<nearby_state_index_size;i++){
         delete [] d.send_xd[i];
         delete [] d.send_yd[i];
         delete [] d.recv_xd[i];

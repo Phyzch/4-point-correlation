@@ -95,6 +95,10 @@ public:
 	int ** bright_state, ** initial_detector_state; // record bright mode for two detectors when we try to see decoherence in our model.
 	double * initial_Detector_energy;
 	double * bright_state_energy;  // energy of detector's bright state.
+
+	vector<int> nearby_state_index;
+	int initial_state_index_in_state_index_list;
+
 	detector();
 	~detector();
 	void allocate_space(int tlnum);
@@ -115,8 +119,8 @@ public:
     int construct_receive_buffer_index(int * remoteVecCount_element, int * remoteVecPtr_element, int * remoteVecIndex_element, int detector_index);
     void prepare_evolution();
     // MPI version of SUR for one detector for each timestep.
-    void update_dx();
-    void update_dy();
+    void update_dx(int nearby_state_list_size);
+    void update_dy(int nearby_state_list_size);
     void SUR_onestep_MPI(double cf);
     void construct_bright_state_MPI(ifstream & input, ofstream & output);
     void initialize_detector_state_MPI(ofstream & log, int initial_state_choice);
@@ -137,8 +141,7 @@ public:
     void compute_important_state_index();
 
     void output_state_density(vector<double> & dmat0,  vector<double> & dmat1);
-    void compute_n_off_diag_element(int index_b, complex <double> * n_off_diag_element,
-                                    int initial_state_index_in_total_dmatrix);
+    void compute_n_off_diag_element(int index_b, complex <double> * n_off_diag_element);
 };
 
 class full_system {

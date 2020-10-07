@@ -132,6 +132,7 @@ void detector::Scatter_dv(vector<int> & total_mat_num){
 
 void detector::gather_xd_yd(){
     int i,j;
+    int nearby_state_list_size = nearby_state_index.size();
     int ** dmatsize_offset = new int * [stlnum];
     for(i=0;i<stlnum;i++){
         dmatsize_offset[i]= new int [num_proc];
@@ -144,7 +145,7 @@ void detector::gather_xd_yd(){
         }
     }
 
-    for(i=0;i<total_dmat_size[0];i++){
+    for(i=0;i<nearby_state_list_size;i++){
         MPI_Allgatherv(&xd[i][0],dmatsize[0],MPI_DOUBLE,&xd_all[i][0],
                        dmatsize_each_process[0],dmatsize_offset[0],MPI_DOUBLE,MPI_COMM_WORLD);
         MPI_Allgatherv(&yd[i][0],dmatsize[0],MPI_DOUBLE,&yd_all[i][0],
@@ -162,6 +163,7 @@ void detector:: Scatter_xd_yd(){
     int m,i;
     int displacement;
     int ** dmatsize_offset;
+    int nearby_state_index_size = nearby_state_index.size();
     dmatsize_offset = new int * [2];
     for(m=0;m<stlnum;m++){
         dmatsize_offset[m] = new int [num_proc];
@@ -174,12 +176,12 @@ void detector:: Scatter_xd_yd(){
             displacement = displacement + dmatsize_each_process[m][i];
         }
     }
-    for(i=0;i<total_dmat_size[0];i++){
-        xd[i].resize(total_dmat_size[0]);
-        yd[i].resize(total_dmat_size[0]);
+    for(i=0;i< nearby_state_index_size;i++){
+        xd[i].resize(dmatsize[0]);
+        yd[i].resize(dmatsize[0]);
     }
 
-    for(m=0;m<total_dmat_size[0];m++){
+    for(m=0;m< nearby_state_index_size ;m++){
         MPI_Scatterv(&xd_all[m][0],dmatsize_each_process[0],dmatsize_offset[0],MPI_DOUBLE,
                      &xd[m][0],dmatsize[0], MPI_DOUBLE,0,MPI_COMM_WORLD);
         MPI_Scatterv(&yd_all[m][0],dmatsize_each_process[0],dmatsize_offset[0],MPI_DOUBLE,
