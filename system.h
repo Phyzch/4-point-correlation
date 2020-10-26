@@ -143,7 +143,7 @@ public:
     void output_state_density(vector<double> & dmat0,  vector<double> & dmat1);
     void compute_n_off_diag_element(int index_b, complex <double> * n_off_diag_element);
 
-    void replace_4_point_corr_second_line();
+    void replace_4_point_corr_second_line(double detector_tprint);
 };
 
 class full_system {

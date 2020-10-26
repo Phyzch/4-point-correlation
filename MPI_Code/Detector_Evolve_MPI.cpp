@@ -418,7 +418,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 survival_prob = pow(special_state_x,2) + pow(special_state_y,2);
                 if(my_id == 0){
                     Detector_precoup_output << "Time:   " << t << endl;
-                    Detector_precoup_output << survival_prob <<endl;
+                    Detector_precoup_output << survival_prob << endl;
                 }
             }
             t= t+ delt;
@@ -428,7 +428,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     }
 
     d.save_detector_state_MPI(path,final_time,log,initial_state_choice);
-    d.replace_4_point_corr_second_line();
+    d.replace_4_point_corr_second_line(detector_tprint);
 
     if(my_id==0){
         cout<<"Detector_pre_coupling simulation finished"<<endl;

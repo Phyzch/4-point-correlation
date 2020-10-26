@@ -36,11 +36,10 @@ void full_system::replace_first_line() {
     }
 }
 
-void detector::replace_4_point_corr_second_line(){
+void detector::replace_4_point_corr_second_line(double detector_tprint){
     // This code is quite dumb... I find if I continue my simulation, I have to correct the endtime I give. so I have to rewrite whole output.txt for the first line.
     ifstream fin;
     ofstream temp;
-    double detector_tprint = 0.01;
     int x;
     if(my_id==0) {
         string old_path = path + "4 point correlation.txt";
