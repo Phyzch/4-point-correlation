@@ -96,7 +96,11 @@ public:
 	double * initial_Detector_energy;
 	double * bright_state_energy;  // energy of detector's bright state.
 
-	vector<int> nearby_state_index;
+	vector<int> nearby_state_index; // states that we simulate dynamics, |b> for computing <a|n(t)|b>
+	vector<int> states_for_4_point_correlation_average; // nearby states index for average over all these states 4 point correlation function.
+    vector<int> states_for_average_in_nearby_state_index_list;
+    // For states in states_for_4_point_correlation_average, we compute its index in nearby_state_index
+
 	int initial_state_index_in_state_index_list;
 
 	detector();
@@ -141,7 +145,7 @@ public:
     void compute_important_state_index();
 
     void output_state_density(vector<double> & dmat0,  vector<double> & dmat1);
-    void compute_n_off_diag_element(int index_b, complex <double> * n_off_diag_element);
+    void compute_n_off_diag_element(int index_b, int index_a, complex <double> * n_off_diag_element);
 
     void replace_4_point_corr_second_line(double detector_tprint);
 };

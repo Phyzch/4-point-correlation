@@ -6,6 +6,8 @@
 #include"../util.h"
 using namespace std;
 int distance_cutoff_for_4_piont_corre ;
+double Energy_Range_4_point_corre_function_average = 0; // average over bunch of states within energy window for computation of 4 point correlation function
+int Distance_Range_4_point_corre_function_average = 0;   // average over bunch of states within distance cutoff for computation of 4 point correlation function
 
 void Broadcast_dmat_vmode(int stlnum, vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1);
 
@@ -224,31 +226,53 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     // for 4 - point correlation function we will make xd , yd as N*N system.
     // we will only include state near our initial state.
     int state_distance;
+    double state_energy_difference;
     int initial_state_index_in_total_dmatrix;
     int nearby_state_index_size;
+    int state_for_4_point_correlation_average_list_size ;
     initial_state_index_in_total_dmatrix = initial_state_index[0]
                                            + total_dmat_size[0]/num_proc * initial_state_pc_id[0] ;
     // compute nearby_state_index and initial_state_index_in_state_index_list for computing 4-point correlation function
     for(i=0;i<total_dmat_size[0];i++){
         // compute state distance
         state_distance = 0;
+        state_energy_difference = 0;
         for(j=0;j< nmodes[0];j++){
             state_distance = state_distance + abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -
                     dv_all[0][i][j]);
         }
+        state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
+
         if(state_distance <= distance_cutoff_for_4_piont_corre ){
+            // we will simulate dynamics of states in this list to compute 4 point correlation function
             nearby_state_index.push_back(i);
         }
+        if(state_distance <= Distance_Range_4_point_corre_function_average
+        and state_energy_difference <= Energy_Range_4_point_corre_function_average){
+            states_for_4_point_correlation_average.push_back(i);
+        }
+
     }
     nearby_state_index_size = nearby_state_index.size();
+    state_for_4_point_correlation_average_list_size = states_for_4_point_correlation_average.size();
     for(i=0;i<nearby_state_index_size;i++){
         if(nearby_state_index[i] == initial_state_index_in_total_dmatrix){
             initial_state_index_in_state_index_list = i;
             break;
         }
     }
+    for(j=0;j<state_for_4_point_correlation_average_list_size;j++){
+        for(i=0;i<nearby_state_index_size;i++){
+            if(nearby_state_index[i] == states_for_4_point_correlation_average[j]){
+                states_for_average_in_nearby_state_index_list.push_back(i);
+                break;
+            }
+        }
+    }
+
     log<< "Nearby state number:   "<< nearby_state_index_size <<endl;
     log<< "Total state number:    "<< total_dmat_size[0] <<endl;
+    log<<" 4 point correlation function is average over number of states:  "<<state_for_4_point_correlation_average_list_size;
     xd = new vector <double> [nearby_state_index_size];
     yd = new vector<double> [nearby_state_index_size];
     for (i = 0; i < nearby_state_index_size; i++) {

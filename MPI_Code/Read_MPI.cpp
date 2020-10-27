@@ -17,7 +17,8 @@ void full_system:: read_input_with_MPI(){
               >> detector_only >> Detector_Continue_Simulation >> Random_bright_state;
         input >> intra_detector_coupling_noise >> inter_detector_coupling_noise >> energy_window_size >> initial_energy
               >> noise_strength >> Rmax >> d.V_intra >> d.detector_energy_window_size
-              >>detector_lower_bright_state_energy_window_shrink >> distance_cutoff_for_4_piont_corre ;
+              >>detector_lower_bright_state_energy_window_shrink >> distance_cutoff_for_4_piont_corre
+              >> Energy_Range_4_point_corre_function_average >> Distance_Range_4_point_corre_function_average ;
         // read time used for simulation.  delt: time step. tstart: time start to turn on coupling. tmax: maximum time for simulation.   tprint: time step to print result.
         input >> delt >> tstart >> tmax >> tprint;
         // check if input is valid
