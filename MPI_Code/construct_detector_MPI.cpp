@@ -272,7 +272,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
 
     log<< "Nearby state number:   "<< nearby_state_index_size <<endl;
     log<< "Total state number:    "<< total_dmat_size[0] <<endl;
-    log<<" 4 point correlation function is average over number of states:  "<<state_for_4_point_correlation_average_list_size;
+    log<<" 4 point correlation function is average over number of states:  "<<state_for_4_point_correlation_average_list_size << endl;
     xd = new vector <double> [nearby_state_index_size];
     yd = new vector<double> [nearby_state_index_size];
     for (i = 0; i < nearby_state_index_size; i++) {

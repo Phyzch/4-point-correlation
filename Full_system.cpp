@@ -108,5 +108,16 @@ full_system::full_system(string path1, string cvpt_path1) {
 void full_system::Quantum_evolution() {
     // -----------------------------------------------------------------------------------
 	// Now we construct our wavefunction /phi for our detector and full_system. (For system it is already constructed in s.read())
+    clock_t start_time, end_time, duration;
+    start_time = clock();
+
     pre_coupling_evolution_MPI(0); // pre-coupling evolution of detector state (lower bright state)
+
+    end_time = clock();
+    duration = end_time - start_time;
+    if(my_id == 0) {
+        log << "The total run time for parallel computing is " << (double(duration) /CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
+        cout << "The total run time for parallel computing is " << (double(duration)/CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
+    }
+
 }

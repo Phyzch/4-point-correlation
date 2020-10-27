@@ -265,6 +265,7 @@ void detector:: compute_n_off_diag_element(int index_b, int index_a, complex<dou
 void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     // we do not write output function now, try to make it as simple as possible.
     int irow_index, icol_index;
+    int start_index;
     int m,i,j,k;
     int a;
     int b;
@@ -283,9 +284,6 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream four_point_correlation_average_output;
     ofstream Detector_precoup_output;
 
-    int initial_state_index_in_total_dmatrix;
-    initial_state_index_in_total_dmatrix = d.initial_state_index[0]
-            + d.total_dmat_size[0]/num_proc * d.initial_state_pc_id[0] ;
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
         if(Detector_Continue_Simulation){
@@ -299,6 +297,19 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             Detector_precoup_output.open(path + "detector_precoupling.txt");
         }
     }
+    // -------------Load detector state from save data if we want to continue simulation of detector.------------------
+    if(Detector_Continue_Simulation){
+        d.load_detector_state_MPI(path,start_time,log,initial_state_choice);
+    }
+    else{
+        d.initialize_detector_state_MPI(log, 0); // initialize detector lower bright state
+    }
+
+
+    int initial_state_index_in_total_dmatrix;
+    initial_state_index_in_total_dmatrix = d.initial_state_index[0]
+            + d.total_dmat_size[0]/num_proc * d.initial_state_pc_id[0] ;
+
     // -------------- Allocate space for <a| |[n_{i}(t),n_{i}(0)]|^{2} |a> -------------
     int state_for_average_size = d.states_for_4_point_correlation_average.size();
     int nearby_state_index_size = d.nearby_state_index.size();
@@ -309,13 +320,6 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         four_point_correlation_function_for_each_states[i] = new double [state_for_average_size];
     }
 
-    // -------------Load detector state from save data if we want to continue simulation of detector.------------------
-    if(Detector_Continue_Simulation){
-        d.load_detector_state_MPI(path,start_time,log,initial_state_choice);
-    }
-    else{
-        d.initialize_detector_state_MPI(log, 0); // initialize detector lower bright state
-    }
 
     //---------- Allocate space for <a| n_{i}(t) |b>  size: nmode * total_dmat_size[0] -------------------------------------------
     // each row is one n_{i}.  each column is one site |b>
@@ -390,21 +394,31 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             log <<" Begin Propogation in Molecule Phase space "<<endl;
         }
         t=0;
-        steps= d.proptime[0]/delt;
+        steps= d.proptime[0]/delt+1;
         if(Detector_Continue_Simulation){
             // update simulation time and t for detector to begin simulation.
             t=start_time[0];
-            steps= (d.proptime[0]-start_time[0])/delt;
+            steps= (d.proptime[0]-start_time[0])/delt+2;
         }
         if(!Detector_Continue_Simulation) {
             if (my_id == 0) {
                 four_point_correlation_output << "4- point correlation function for molecule " << endl;
                 four_point_correlation_output << "total time: " << d.proptime[0]  << " "
                                               << delt * output_step << endl;
+                four_point_correlation_average_output << "4 - point correlation function for molecule average over states" <<endl;
+                four_point_correlation_average_output << "total time: " << d.proptime[0]  << " "
+                                              << delt * output_step << endl;
             }
         }
+
+        if(Detector_Continue_Simulation){
+            start_index=1;
+        }
+        else{
+            start_index = 0;
+        }
         // Do simulation in loop
-        for(k=0;k<=steps+1;k++){
+        for(k=start_index;k<steps;k++){
             //-------------------- output result ----------------------------
             if(k % output_step ==0) {
 
