@@ -77,6 +77,8 @@ void full_system:: read_input_with_MPI(){
     MPI_Bcast(&d.detector_energy_window_size,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&detector_lower_bright_state_energy_window_shrink,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&distance_cutoff_for_4_piont_corre,1,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(&Energy_Range_4_point_corre_function_average,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&Distance_Range_4_point_corre_function_average,1,MPI_INT,0,MPI_COMM_WORLD);
 
     // Bcast delt tstart tmax tprint to other process.
     MPI_Bcast(&delt, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);
