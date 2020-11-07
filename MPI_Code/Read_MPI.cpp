@@ -22,7 +22,7 @@ void full_system:: read_input_with_MPI(){
         // read time used for simulation.  delt: time step. tstart: time start to turn on coupling. tmax: maximum time for simulation.   tprint: time step to print result.
         input >> delt >> tstart >> tmax >> tprint;
         // check if input is valid
-        if (!Continue_Simulation) {
+        if (!Continue_Simulation and !Detector_Continue_Simulation) {
             log.open(path + "log.txt");  // log to record the error information
         }
         else{
@@ -33,7 +33,7 @@ void full_system:: read_input_with_MPI(){
             MPI_Abort(MPI_COMM_WORLD, -1);      // Abort the process and return error code -1.  (log file can't open)
         }
         log <<"Number of Process running:  "<< num_proc <<endl;
-        if (! Continue_Simulation) {  // start from beginning.
+        if (! Continue_Simulation and ! Detector_Continue_Simulation) {  // start from beginning.
             output.open(path+"output.txt");
         }
         else {

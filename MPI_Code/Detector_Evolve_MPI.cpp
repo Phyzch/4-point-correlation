@@ -283,6 +283,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream four_point_correlation_output;
     ofstream four_point_correlation_average_output;
     ofstream Detector_precoup_output;
+    ofstream Detector_precoup_mode_quanta;
 
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
@@ -290,11 +291,13 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             four_point_correlation_output.open(path + "4 point correlation.txt", ofstream::app);
             four_point_correlation_average_output.open(path+ "4 point correlation average over states.txt",ofstream::app);
             Detector_precoup_output.open(path + "detector_precoupling.txt", ofstream::app);
+            Detector_precoup_mode_quanta.open(path + "detector_precoup_mode_quanta.txt", ofstream::app);
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
             four_point_correlation_average_output.open(path+ "4 point correlation average over states.txt");
             Detector_precoup_output.open(path + "detector_precoupling.txt");
+            Detector_precoup_mode_quanta.open(path + "detector_precoup_mode_quanta.txt");
         }
     }
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
@@ -309,6 +312,15 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     int initial_state_index_in_total_dmatrix;
     initial_state_index_in_total_dmatrix = d.initial_state_index[0]
             + d.total_dmat_size[0]/num_proc * d.initial_state_pc_id[0] ;
+
+    // ---------- allocate space for mode quanta
+    double * total_mode_quanta;
+    total_mode_quanta= new double [d.nmodes[0]];
+
+
+    double * mode_quanta;
+    mode_quanta= new double [d.nmodes[0]];
+
 
     // -------------- Allocate space for <a| |[n_{i}(t),n_{i}(0)]|^{2} |a> -------------
     int state_for_average_size = d.states_for_4_point_correlation_average.size();
@@ -408,6 +420,10 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 four_point_correlation_average_output << "4 - point correlation function for molecule average over states" <<endl;
                 four_point_correlation_average_output << "total time: " << d.proptime[0]  << " "
                                               << delt * output_step << endl;
+                for(i=0;i<d.nmodes[0];i++){
+                    Detector_precoup_mode_quanta << d.mfreq[0][i] <<" ";
+                }
+                Detector_precoup_mode_quanta<<endl;
             }
         }
 
@@ -537,6 +553,28 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     Detector_precoup_output << "Time:   " << t << endl;
                     Detector_precoup_output << survival_prob << endl;
                 }
+
+                // ----------- output mode quanta -----------------------------------
+                for (j = 0; j < d.nmodes[0]; j++) {
+                    mode_quanta[j] = 0;
+                }
+                for (i = 0; i < d.dmatsize[0]; i++) {
+                    for (j = 0; j < d.nmodes[0]; j++) {
+                        mode_quanta[j] =
+                                mode_quanta[j] + (pow(d.xd[d.initial_state_index_in_state_index_list][i], 2) +
+                                pow(d.yd[d.initial_state_index_in_state_index_list][i], 2)) * d.dv[0][i][j];
+                    }
+                }
+                MPI_Reduce(&mode_quanta[0], &total_mode_quanta[0], d.nmodes[0], MPI_DOUBLE, MPI_SUM, 0,
+                           MPI_COMM_WORLD);
+                if (my_id == 0) {
+                    Detector_precoup_mode_quanta << "Time:   " << t << endl;
+                    for (j = 0; j < d.nmodes[0]; j++) {
+                        Detector_precoup_mode_quanta << total_mode_quanta[j] << " ";
+                    }
+                    Detector_precoup_mode_quanta << endl;
+                }
+
             }
             t= t+ delt;
             d.SUR_onestep_MPI(cf);
@@ -552,6 +590,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         four_point_correlation_output.close();
         four_point_correlation_average_output.close();
         Detector_precoup_output.close();
+        Detector_precoup_mode_quanta.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){

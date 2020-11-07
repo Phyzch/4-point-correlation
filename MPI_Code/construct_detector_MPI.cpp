@@ -186,7 +186,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     compute_important_state_index();
     // -------------------------- Two different way of constructing off-diagonal term for detector  -----------------------------
     // 1:  traditional way of constructing detector off-diagonal part of matrix
-//    compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
+    // compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
 
 //    // 2:  applying Van Vleck transformation:
     if (Turn_on_Vanvleck) {
@@ -196,7 +196,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     }
     construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0]);
     construct_state_coupling_vanvlk(dmat[1], dmat1, vmode1, dirow[1], dicol[1]);
-//
+
 //    // hybrid Van Vleck method: for edge state, use original Hamiltonian, for inner state , use Van Vleck transformation.
 //    construct_state_coupling_vanvlk_hybrid(dmat[0],dmat0,vmode0,dirow[0],dicol[0]);
 //    construct_state_coupling_vanvlk_hybrid(dmat[1],dmat1,vmode1,dirow[1],dicol[1]);
