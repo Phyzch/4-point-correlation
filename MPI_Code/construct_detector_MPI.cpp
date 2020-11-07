@@ -222,75 +222,13 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
         }
 
     }
+    // compute density of state
+    compute_density_of_state(output,dmat0);
+
     //prepare variable for 4 piont correlation function
     prepare_variable_for_4_point_correlation_function(dmat0,dmat1,log);
 }
 
-void detector:: prepare_variable_for_4_point_correlation_function(vector<double> & dmat0, vector<double> & dmat1,ofstream & log){
-    // for 4 - point correlation function we will make xd , yd as N*N system.
-    // we will only include state near our initial state.
-    int i,j;
-    int state_distance;
-    double state_energy_difference;
-    int initial_state_index_in_total_dmatrix;
-    int nearby_state_index_size;
-    int state_for_4_point_correlation_average_list_size ;
-    initial_state_index_in_total_dmatrix = initial_state_index[0]
-                                           + total_dmat_size[0]/num_proc * initial_state_pc_id[0] ;
-    // compute nearby_state_index and initial_state_index_in_state_index_list for computing 4-point correlation function
-    for(i=0;i<total_dmat_size[0];i++){
-        // compute state distance
-        state_distance = 0;
-        state_energy_difference = 0;
-        for(j=0;j< nmodes[0];j++){
-            state_distance = state_distance + abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -
-                                                  dv_all[0][i][j]);
-        }
-        state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
-
-        if(state_distance <= distance_cutoff_for_4_piont_corre ){
-            // we will simulate dynamics of states in this list to compute 4 point correlation function
-            nearby_state_index.push_back(i);
-        }
-        if(state_distance <= Distance_Range_4_point_corre_function_average
-           and state_energy_difference <= Energy_Range_4_point_corre_function_average){
-            states_for_4_point_correlation_average.push_back(i);
-        }
-
-    }
-    nearby_state_index_size = nearby_state_index.size();
-    state_for_4_point_correlation_average_list_size = states_for_4_point_correlation_average.size();
-    for(i=0;i<nearby_state_index_size;i++){
-        if(nearby_state_index[i] == initial_state_index_in_total_dmatrix){
-            initial_state_index_in_state_index_list = i;
-            break;
-        }
-    }
-    for(j=0;j<state_for_4_point_correlation_average_list_size;j++){
-        for(i=0;i<nearby_state_index_size;i++){
-            if(nearby_state_index[i] == states_for_4_point_correlation_average[j]){
-                states_for_average_in_nearby_state_index_list.push_back(i);
-                break;
-            }
-        }
-    }
-
-    log<< "Nearby state number:   "<< nearby_state_index_size <<endl;
-    log<< "Total state number:    "<< total_dmat_size[0] <<endl;
-    log<<" 4 point correlation function is average over number of states:  "<<state_for_4_point_correlation_average_list_size << endl;
-    xd = new vector <double> [nearby_state_index_size];
-    yd = new vector<double> [nearby_state_index_size];
-    for (i = 0; i < nearby_state_index_size; i++) {
-        xd[i].reserve(dmatsize[0]);
-        yd[i].reserve(dmatsize[0]);
-    }
-    xd_all = new double * [nearby_state_index_size];
-    yd_all = new double * [nearby_state_index_size];
-    for(i=0;i<nearby_state_index_size;i++){
-        xd_all[i] = new double [total_dmat_size[0]];
-        yd_all[i] = new double [total_dmat_size[0]];
-    }
-}
 
 void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1){
     int i,m;
@@ -841,5 +779,91 @@ void detector:: output_state_density(vector<double> & dmat0,  vector<double> & d
             state_density_output << initial_Detector_energy[i] << "  " << bright_state_energy[i] << " ";
         }
         state_density_output.close();
+    }
+}
+
+void detector:: prepare_variable_for_4_point_correlation_function(vector<double> & dmat0, vector<double> & dmat1,ofstream & log){
+    // for 4 - point correlation function we will make xd , yd as N*N system.
+    // we will only include state near our initial state.
+    int i,j;
+    int state_distance;
+    double state_energy_difference;
+    int initial_state_index_in_total_dmatrix;
+    int nearby_state_index_size;
+    int state_for_4_point_correlation_average_list_size ;
+    initial_state_index_in_total_dmatrix = initial_state_index[0]
+                                           + total_dmat_size[0]/num_proc * initial_state_pc_id[0] ;
+    // compute nearby_state_index and initial_state_index_in_state_index_list for computing 4-point correlation function
+    for(i=0;i<total_dmat_size[0];i++){
+        // compute state distance
+        state_distance = 0;
+        state_energy_difference = 0;
+        for(j=0;j< nmodes[0];j++){
+            state_distance = state_distance + abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -
+                                                  dv_all[0][i][j]);
+        }
+        state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
+
+        if(state_distance <= distance_cutoff_for_4_piont_corre ){
+            // we will simulate dynamics of states in this list to compute 4 point correlation function
+            nearby_state_index.push_back(i);
+        }
+        if(state_distance <= Distance_Range_4_point_corre_function_average
+           and state_energy_difference <= Energy_Range_4_point_corre_function_average){
+            states_for_4_point_correlation_average.push_back(i);
+        }
+
+    }
+    nearby_state_index_size = nearby_state_index.size();
+    state_for_4_point_correlation_average_list_size = states_for_4_point_correlation_average.size();
+    for(i=0;i<nearby_state_index_size;i++){
+        if(nearby_state_index[i] == initial_state_index_in_total_dmatrix){
+            initial_state_index_in_state_index_list = i;
+            break;
+        }
+    }
+    for(j=0;j<state_for_4_point_correlation_average_list_size;j++){
+        for(i=0;i<nearby_state_index_size;i++){
+            if(nearby_state_index[i] == states_for_4_point_correlation_average[j]){
+                states_for_average_in_nearby_state_index_list.push_back(i);
+                break;
+            }
+        }
+    }
+
+    log<< "Nearby state number:   "<< nearby_state_index_size <<endl;
+    log<< "Total state number:    "<< total_dmat_size[0] <<endl;
+    log<<" 4 point correlation function is average over number of states:  "<<state_for_4_point_correlation_average_list_size << endl;
+    xd = new vector <double> [nearby_state_index_size];
+    yd = new vector<double> [nearby_state_index_size];
+    for (i = 0; i < nearby_state_index_size; i++) {
+        xd[i].reserve(dmatsize[0]);
+        yd[i].reserve(dmatsize[0]);
+    }
+    xd_all = new double * [nearby_state_index_size];
+    yd_all = new double * [nearby_state_index_size];
+    for(i=0;i<nearby_state_index_size;i++){
+        xd_all[i] = new double [total_dmat_size[0]];
+        yd_all[i] = new double [total_dmat_size[0]];
+    }
+}
+
+void detector:: compute_density_of_state(ofstream & output,vector<double> & dmat0){
+    // using eq.(2) in https://doi.org/10.1063/1.476070 to compute density of states: sum Lij
+    int i,l;
+    double energy_difference;
+    int begin_index = total_dmat_size[0]/num_proc * my_id ;
+    double density_of_states = 0;
+    if(my_id == initial_state_pc_id[0]){
+        for(i=dmatsize[0];i<dmatnum[0];i++){
+            if(dirow[0][i] == begin_index + initial_state_index[0]){
+                energy_difference = abs(dmat[0][initial_state_index[0]] - dmat0[dicol[0][i]]);
+                density_of_states = density_of_states + 1 / sqrt(1+ pow(  energy_difference/dmat[0][i] , 2 ) );
+            }
+        }
+    }
+    MPI_Bcast(&density_of_states,1,MPI_DOUBLE,initial_state_pc_id[0],MPI_COMM_WORLD);
+    if(my_id == 0){
+        output<< "Density of states for detector 0 at initial state:   " << int(density_of_states) << endl;
     }
 }
