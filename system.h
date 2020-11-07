@@ -148,6 +148,9 @@ public:
     void compute_n_off_diag_element(int index_b, int index_a, complex <double> * n_off_diag_element);
 
     void replace_4_point_corr_second_line(double detector_tprint);
+
+    // prepare variable for 4 point correlation function:
+    void prepare_variable_for_4_point_correlation_function(vector<double> & dmat0, vector<double> & dmat1,ofstream & log);
 };
 
 class full_system {

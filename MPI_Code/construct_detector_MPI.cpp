@@ -222,9 +222,14 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
         }
 
     }
+    //prepare variable for 4 piont correlation function
+    prepare_variable_for_4_point_correlation_function(dmat0,dmat1,log);
+}
 
+void detector:: prepare_variable_for_4_point_correlation_function(vector<double> & dmat0, vector<double> & dmat1,ofstream & log){
     // for 4 - point correlation function we will make xd , yd as N*N system.
     // we will only include state near our initial state.
+    int i,j;
     int state_distance;
     double state_energy_difference;
     int initial_state_index_in_total_dmatrix;
@@ -239,7 +244,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
         state_energy_difference = 0;
         for(j=0;j< nmodes[0];j++){
             state_distance = state_distance + abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -
-                    dv_all[0][i][j]);
+                                                  dv_all[0][i][j]);
         }
         state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
 
@@ -248,7 +253,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
             nearby_state_index.push_back(i);
         }
         if(state_distance <= Distance_Range_4_point_corre_function_average
-        and state_energy_difference <= Energy_Range_4_point_corre_function_average){
+           and state_energy_difference <= Energy_Range_4_point_corre_function_average){
             states_for_4_point_correlation_average.push_back(i);
         }
 
