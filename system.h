@@ -303,6 +303,20 @@ public:
     void load_wave_function_MPI();
 
     void Normalize_wave_function();
+
+    // compute 4-point correlation function
+    void compute_4_point_corre_for_single_state(int nearby_state_index_size, complex<double> * n_offdiag_element,
+                                           complex<double> ** n_offdiag,double ** n_offdiag_real, double ** n_offdiag_imag,
+                                           complex<double> **n_offdiag_total, double ** n_offdiag_total_real, double ** n_offdiag_total_imag,
+                                           int initial_state_index_in_total_dmatrix ,
+                                           double * four_point_correlation_function_at_initial_state);
+    void compute_4_point_corre_for_multiple_states(int state_for_average_size,int nearby_state_index_size,
+                                                   complex<double> * n_offdiag_element,
+                                                   complex<double> *** n_offdiag_for_states_ensemble, double *** n_offdiag_for_states_ensemble_real,
+                                                   double *** n_offdiag_for_states_ensemble_imag,
+                                                   complex<double> *** n_offdiag_total_for_states_ensemble,
+                                                   double *** n_offdiag_total_for_states_ensemble_real, double *** n_offdiag_total_for_states_ensemble_imag,
+                                                   double * four_point_correlation_function_average_over_states, double ** four_point_correlation_function_for_each_states);
 };
 
 

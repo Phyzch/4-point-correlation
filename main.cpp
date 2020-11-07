@@ -16,7 +16,7 @@ bool Turn_on_Vanvleck = false ;  // Note when turn on vanvleck, the V_intra and 
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/average over states/SCCL2 full Hamiltonian/ergodic case compute mode quanta/";
+                       "t ";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 XB/";
     string cvpt_path;
     int i;
