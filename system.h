@@ -326,6 +326,11 @@ public:
                                                    complex<double> *** n_offdiag_total_for_states_ensemble,
                                                    double *** n_offdiag_total_for_states_ensemble_real, double *** n_offdiag_total_for_states_ensemble_imag,
                                                    double * four_point_correlation_function_average_over_states, double ** four_point_correlation_function_for_each_states);
+    void compute_Stability_Matrix( double ** Stability_Matrix,
+                                                int nearby_state_index_size,
+                                                complex<double> * n_offdiag_element, double * n_offdiag_element_real, double * n_offdiag_element_imag,
+                                                complex<double> * n_offdiag_element_all_pc, double * n_offdiag_element_real_all_pc, double * n_offdiag_element_imag_all_pc,
+                                                int initial_state_index_in_total_dmatrix );
 };
 
 
