@@ -17,6 +17,6 @@ add_executable(4_point_correlation_calculation main.cpp Detector.cpp Full_system
         ./MPI_Code/Detector_Evolve_MPI.cpp ./MPI_Code/construct_full_system_MPI.cpp ./MPI_Code/construct_quotient_state_MPI.cpp
         ./MPI_Code/Compute_Off_diagonal_full_system_MPI.cpp  ./MPI_Code/Compute_Output_MPI.cpp ./MPI_Code/full_system_evolve_MPI.cpp
         ./MPI_Code/System_Read_MPI.cpp ./MPI_Code/compute_detector_energy_window_MPI.cpp ./MPI_Code/save_load_fullsystem_MPI.cpp
-        vanvlk_construct_detector_offdiag.cpp)
+        vanvlk_construct_detector_offdiag.cpp Lanczos_and_MFT.cpp)
 
 target_link_libraries(4_point_correlation_calculation stdc++fs mpi)

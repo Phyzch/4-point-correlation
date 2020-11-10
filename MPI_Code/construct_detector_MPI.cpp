@@ -186,16 +186,16 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     compute_important_state_index();
     // -------------------------- Two different way of constructing off-diagonal term for detector  -----------------------------
     // 1:  traditional way of constructing detector off-diagonal part of matrix
-    // compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
+     compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
 
 //    // 2:  applying Van Vleck transformation:
-    if (Turn_on_Vanvleck) {
-        if (my_id == 0) {
-            log << "Use Van Vleck transformation" << endl;
-        }
-    }
-    construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0]);
-    construct_state_coupling_vanvlk(dmat[1], dmat1, vmode1, dirow[1], dicol[1]);
+//    if (Turn_on_Vanvleck) {
+//        if (my_id == 0) {
+//            log << "Use Van Vleck transformation" << endl;
+//        }
+//    }
+//    construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0]);
+//    construct_state_coupling_vanvlk(dmat[1], dmat1, vmode1, dirow[1], dicol[1]);
 
 //    // hybrid Van Vleck method: for edge state, use original Hamiltonian, for inner state , use Van Vleck transformation.
 //    construct_state_coupling_vanvlk_hybrid(dmat[0],dmat0,vmode0,dirow[0],dicol[0]);
@@ -854,16 +854,20 @@ void detector:: compute_density_of_state(ofstream & output,vector<double> & dmat
     double energy_difference;
     int begin_index = total_dmat_size[0]/num_proc * my_id ;
     double density_of_states = 0;
+    int number_of_state= 0 ;
     if(my_id == initial_state_pc_id[0]){
         for(i=dmatsize[0];i<dmatnum[0];i++){
             if(dirow[0][i] == begin_index + initial_state_index[0]){
+                number_of_state = number_of_state + 1;
                 energy_difference = abs(dmat[0][initial_state_index[0]] - dmat0[dicol[0][i]]);
-                density_of_states = density_of_states + 1 / sqrt(1+ pow(  energy_difference/dmat[0][i] , 2 ) );
+                density_of_states = density_of_states + 1 / (1+ pow(  energy_difference/dmat[0][i] , 2 ) );
             }
         }
     }
     MPI_Bcast(&density_of_states,1,MPI_DOUBLE,initial_state_pc_id[0],MPI_COMM_WORLD);
+    MPI_Bcast(&number_of_state,1,MPI_INT,initial_state_pc_id[0],MPI_COMM_WORLD);
     if(my_id == 0){
-        output<< "Density of states for detector 0 at initial state:   " << int(density_of_states) << endl;
+        output<< "Density of states for detector 0 at initial state:   " << density_of_states << endl;
+        output<< "number of states connected to it is   " << number_of_state << endl;
     }
 }

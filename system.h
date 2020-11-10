@@ -154,6 +154,9 @@ public:
 
     // compute density of states:
     void compute_density_of_state(ofstream & output,vector<double> & dmat0);
+
+    // Use MFT and Lanczos algorithm to compute density of state and eigenvalue of Hamiltonian:
+
 };
 
 class full_system {
