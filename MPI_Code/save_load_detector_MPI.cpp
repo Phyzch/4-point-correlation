@@ -290,10 +290,10 @@ void detector:: load_detector_state_MPI(string path,double * start_time,ofstream
     MPI_Bcast(&nearby_state_index[0],nearby_state_list_size,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(&states_for_4_point_correlation_average[0],state_for_average_size,MPI_INT,0,MPI_COMM_WORLD);
 
-    // compute initial_state_index_in_state_index_list
+    // compute initial_state_index_in_nearby_state_index_list
     for (i = 0; i < nearby_state_list_size; i++) {
         if (initial_state_index_in_total_dmatrix == nearby_state_index[i]) {
-            initial_state_index_in_state_index_list = i;
+            initial_state_index_in_nearby_state_index_list = i;
             break;
         }
     }

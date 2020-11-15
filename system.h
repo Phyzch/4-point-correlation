@@ -101,7 +101,8 @@ public:
     vector<int> states_for_average_in_nearby_state_index_list;
     // For states in states_for_4_point_correlation_average, we compute its index in nearby_state_index
 
-	int initial_state_index_in_state_index_list;
+	int initial_state_index_in_nearby_state_index_list;
+    int initial_state_index_in_nearby_states_for_average_list;
 
 	detector();
 	~detector();
@@ -325,7 +326,8 @@ public:
                                                    double *** n_offdiag_for_states_ensemble_imag,
                                                    complex<double> *** n_offdiag_total_for_states_ensemble,
                                                    double *** n_offdiag_total_for_states_ensemble_real, double *** n_offdiag_total_for_states_ensemble_imag,
-                                                   double * four_point_correlation_function_average_over_states, double ** four_point_correlation_function_for_each_states);
+                                                   double * four_point_correlation_function_average_over_states, double * four_point_correlation_function_variance_over_states,
+                                                   double ** four_point_correlation_function_for_each_states);
     void compute_Stability_Matrix( double ** Stability_Matrix,
                                                 int nearby_state_index_size,
                                                 complex<double> * n_offdiag_element, double * n_offdiag_element_real, double * n_offdiag_element_imag,

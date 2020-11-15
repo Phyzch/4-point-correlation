@@ -793,7 +793,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     int state_for_4_point_correlation_average_list_size ;
     initial_state_index_in_total_dmatrix = initial_state_index[0]
                                            + total_dmat_size[0]/num_proc * initial_state_pc_id[0] ;
-    // compute nearby_state_index and initial_state_index_in_state_index_list for computing 4-point correlation function
+    // compute nearby_state_index and initial_state_index_in_nearby_state_index_list for computing 4-point correlation function
     for(i=0;i<total_dmat_size[0];i++){
         // compute state distance
         state_distance = 0;
@@ -818,7 +818,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     state_for_4_point_correlation_average_list_size = states_for_4_point_correlation_average.size();
     for(i=0;i<nearby_state_index_size;i++){
         if(nearby_state_index[i] == initial_state_index_in_total_dmatrix){
-            initial_state_index_in_state_index_list = i;
+            initial_state_index_in_nearby_state_index_list = i;
             break;
         }
     }
@@ -828,6 +828,9 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
                 states_for_average_in_nearby_state_index_list.push_back(i);
                 break;
             }
+        }
+        if( states_for_4_point_correlation_average[j] == initial_state_index_in_total_dmatrix){
+            initial_state_index_in_nearby_states_for_average_list = j;
         }
     }
 
