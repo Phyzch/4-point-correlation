@@ -101,12 +101,7 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
                 }
                 std::getline(load, ss);
             }
-            for (m = 0; m < stlnum; m++) {
-                dv_all[m].reserve(total_dmat_size[m]);
-                for (i = 0; i < total_dmat_size[m]; i++) {
-                    dv_all[m][i].reserve(nmodes[m]);
-                }
-            }
+            dv_all = new vector<vector<int>>[2];
             for (m = 0; m < stlnum; m++) {
                 for (i = 0; i < total_dmat_size[m]; i++) {
                     temporary_dv.clear();

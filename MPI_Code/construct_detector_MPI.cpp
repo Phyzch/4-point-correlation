@@ -304,7 +304,7 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
     for(m=0;m<stlnum;m++){
         MPI_Allgather(&dmatsize[m],1, MPI_INT,&dmatsize_each_process[m][0],1,MPI_INT,MPI_COMM_WORLD);
     }
-    
+
     if(my_id == 0) {
         for (m = 0; m < stlnum; m++) {
             delete[] vector_size[m];
