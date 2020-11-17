@@ -16,11 +16,11 @@ bool Turn_on_Vanvleck = false ;  // Note when turn on vanvleck, the V_intra and 
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/average over states/SCCL2 effective Hamiltonian/ergodic_state_2/";
+                       "/average over states/SCCL2 effective Hamiltonian/Bunch_simulation_localized/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
     string cvpt_path;
     int i;
-    int Filenumber=1;
+    int Filenumber=10;
     string path;
 
     // MPI Command
@@ -31,7 +31,8 @@ int main(int argc,char * argv []) {
     for(i=0;i<Filenumber;i++){
         if(Filenumber!=1) {
             path = parentpath + to_string(i + 1) + "/";   // path for sub-folder.
-            cvpt_path =cvpt_parent_path + to_string(i+1)+"/";
+//            cvpt_path =cvpt_parent_path + to_string(i+1)+"/";
+            cvpt_path = cvpt_parent_path;
         }
         else{
             path=parentpath;
@@ -40,12 +41,13 @@ int main(int argc,char * argv []) {
 
         // check directory exists or not and create subfolder.
         // only master process will create folder and file.  only master process wilL do I/O.
-        if(my_id==0) {
-            if(Filenumber!=1) {
-                check_and_create_file(parentpath, path);
-            }
-            else ;
-        }
+        
+//        if(my_id==0) {
+//            if(Filenumber!=1) {
+//                check_and_create_file(parentpath, path);
+//            }
+//            else ;
+//        }
 
         { // the parenthese here let destructor called after we use this instance.
             // pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
