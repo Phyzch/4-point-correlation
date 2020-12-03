@@ -223,7 +223,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
 
     }
     // compute density of state
-    compute_density_of_state(output,dmat0);
+    compute_local_density_of_state(output,dmat0);
 
     //prepare variable for 4 piont correlation function
     prepare_variable_for_4_point_correlation_function(dmat0,dmat1,log);
@@ -853,7 +853,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     }
 }
 
-void detector:: compute_density_of_state(ofstream & output,vector<double> & dmat0){
+void detector:: compute_local_density_of_state(ofstream & output,vector<double> & dmat0){
     // using eq.(2) in https://doi.org/10.1063/1.476070 to compute density of states: sum Lij
     int i,l;
     double energy_difference;

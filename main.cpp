@@ -16,11 +16,12 @@ bool Turn_on_Vanvleck = false ;  // Note when turn on vanvleck, the V_intra and 
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/average over states/SCCL2 effective Hamiltonian/Bunch_simulation_ergodic/";
-    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
+                       "/SCCL2 sample/SCCL2 scaling/try/";
+//    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
+    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/SCCL2 scaling/0.2/";
     string cvpt_path;
     int i;
-    int Filenumber=2;
+    int Filenumber=1;
     string path;
 
     // MPI Command
@@ -28,11 +29,16 @@ int main(int argc,char * argv []) {
     MPI_Comm_size(MPI_COMM_WORLD,&num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
 
+    string c_list[3] = {
+            "0.1",
+            "0.2",
+            "0.3"
+    };
     for(i=0;i<Filenumber;i++){
         if(Filenumber!=1) {
             path = parentpath + to_string(i + 1) + "/";   // path for sub-folder.
-//            cvpt_path =cvpt_parent_path + to_string(i+1)+"/";
-            cvpt_path = cvpt_parent_path;
+            cvpt_path =cvpt_parent_path + c_list[i]+"/";
+//            cvpt_path = cvpt_parent_path;
         }
         else{
             path=parentpath;

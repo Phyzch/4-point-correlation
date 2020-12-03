@@ -433,7 +433,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
     int steps;
-    double detector_tprint = 0.01;
+    double detector_tprint = 0.001;
     int output_step= int(detector_tprint/delt); //Output every output_step.
     double * start_time = new double [s.tlnum];
     double * final_time = new double [s.tlnum];
@@ -448,6 +448,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream Detector_precoup_mode_quanta;
     ofstream Stability_matrix_output;
 
+    ofstream n_offdiag_total_output; // output <j| n(t) |l> in our system
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
         if(Detector_Continue_Simulation){
@@ -458,6 +459,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             Detector_precoup_output.open(path + "detector_precoupling.txt", ofstream::app);
             Detector_precoup_mode_quanta.open(path + "detector_precoup_mode_quanta.txt", ofstream::app);
             Stability_matrix_output.open(path+"Stability_Matrix.txt",ofstream::app);
+
+            n_offdiag_total_output.open(path+"n_offdiag.txt",ofstream::app);
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
@@ -467,6 +470,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             Detector_precoup_output.open(path + "detector_precoupling.txt");
             Detector_precoup_mode_quanta.open(path + "detector_precoup_mode_quanta.txt");
             Stability_matrix_output.open(path+"Stability_Matrix.txt");
+
+            n_offdiag_total_output.open(path+"n_offdiag.txt");
         }
     }
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
@@ -614,7 +619,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
                 four_point_correlation_every_state_output << d.initial_state_index_in_nearby_states_for_average_list<<endl;
                 four_point_correlation_every_state_output <<   state_for_average_size <<endl;
-                // output state mode number information.
+
+                // output state mode number information for all states we compute for 4 point correlation function
                 for (i=0;i<state_for_average_size;i++){
                     for(j=0;j<d.nmodes[0];j++){
                         four_point_correlation_every_state_output << d.dv_all[0][d.states_for_4_point_correlation_average[i]][j] <<" ";
@@ -623,6 +629,17 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
                 four_point_correlation_every_state_output << "total time: " << d.proptime[0]  << " "
                                                        << delt * output_step << endl;
+
+                // output state information for which we compute overlap and n_offdiag for b
+                n_offdiag_total_output << d.initial_state_index_in_nearby_state_index_list << endl;
+                n_offdiag_total_output << nearby_state_index_size << endl;
+                for(i=0;i<nearby_state_index_size;i++){
+                    for(j=0;j< d.nmodes[0]; j++){
+                        n_offdiag_total_output << d.dv_all[0][d.nearby_state_index[i]][j] <<" ";
+                    }
+                    n_offdiag_total_output << endl;
+                }
+
                 Stability_matrix_output << d.nmodes[0] <<endl;
 
                 for(i=0;i<d.nmodes[0];i++){
@@ -653,6 +670,16 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                         four_point_correlation_output << four_point_correlation_function_at_initial_state[i] << " ";
                     }
                     four_point_correlation_output<<endl;
+                }
+                // ------------- output overlap with initial state and n_offdiag_total for all state |b> we choose:
+                if(my_id == 0){
+                    n_offdiag_total_output <<"Time:  "<<t << endl;
+                    for(i=0; i< nearby_state_index_size; i++){
+                        for(j=0;j<d.nmodes[0];j++){
+                            n_offdiag_total_output << std::norm(n_offdiag_total[j][i]) <<"  ";
+                        }
+                        n_offdiag_total_output << endl;
+                    }
                 }
 
                 // ---------- output 4-point correlation function average over states and variance -------------------
@@ -752,6 +779,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         four_point_correlation_every_state_output.close();
         Detector_precoup_output.close();
         Detector_precoup_mode_quanta.close();
+
+        n_offdiag_total_output.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){
