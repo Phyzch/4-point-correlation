@@ -455,7 +455,6 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream Detector_precoup_output;
     ofstream Detector_precoup_mode_quanta;
     ofstream Stability_matrix_output;
-
     ofstream Detector_precoup_all_state_output;
 
     ofstream n_offdiag_total_output; // output <j| n(t) |l> in our system
