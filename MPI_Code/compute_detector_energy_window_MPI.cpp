@@ -51,6 +51,16 @@ int state_distance(const vector<int> & ndetector, int * state1, int moddim){
     return distance;
 }
 
+int state_max_quanta_diff(const vector<int> & ndetector, int * state1, int moddim){
+    int i;
+    int max_quanta_diff = 0;
+    for(i=0;i<moddim;i++){
+        if(max_quanta_diff < abs(state1[i] - ndetector[i])){
+            max_quanta_diff = abs(state1[i] - ndetector[i]);
+        }
+    }
+    return max_quanta_diff;
+}
 
 int vmode_compare(const vector <int> & lhs, const vector <int> & rhs){
     // compare function used for find_position_for_insert_binary.
@@ -308,6 +318,7 @@ void full_system:: compute_detector_matrix_size_MPI_new( ){
 
         int excited_bright_state_distance;
         int lower_bright_state_distance;
+        int quanta_diff_max;
 
         double middle_state_energy = (d.initial_Detector_energy[0] + d.initial_Detector_energy[1])/2;
         double high_initial_state_energy = max(d.initial_Detector_energy[0] , d.initial_Detector_energy[1]);
@@ -334,40 +345,43 @@ void full_system:: compute_detector_matrix_size_MPI_new( ){
 
             //--------------------------------------------------------------------------------------------
             // criteria below make sure detector 0 's energy is reasonable.
-            if (detector0_energy > d.bright_state_energy[0] + d.detector_energy_window_size) {
-                // detector 0's energy can not be larger than its initial energy + photon energy
-                // jump to next detector state.
-                k = 0;
-                while (ndetector0[k] == 0) {
-                    ndetector0[k] = d.nmax[0][k];
-                    k++;
-                    if (k >= d.nmodes[0]) {
-                        break;
-                    }
-                }
-                if (k < d.nmodes[0]) {
-                    ndetector0[k] = d.nmax[0][k];
-                }
-                goto label2;
-            }
+//            if (detector0_energy > d.bright_state_energy[0] + d.detector_energy_window_size) {
+//                // detector 0's energy can not be larger than its initial energy + photon energy
+//                // jump to next detector state.
+//                k = 0;
+//                while (ndetector0[k] == 0) {
+//                    ndetector0[k] = d.nmax[0][k];
+//                    k++;
+//                    if (k >= d.nmodes[0]) {
+//                        break;
+//                    }
+//                }
+//                if (k < d.nmodes[0]) {
+//                    ndetector0[k] = d.nmax[0][k];
+//                }
+//                goto label2;
+//            }
 
             // criteria for energy window around bright_state and lower bright state for detector 0
-            if ((detector0_energy > low_initial_state_energy - d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink and
-                 detector0_energy < high_initial_state_energy + d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink)
-                    )
-                ;
-            else {
-                goto label2;
-            }
+//            if ((detector0_energy > low_initial_state_energy - d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink and
+//                 detector0_energy < high_initial_state_energy + d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink)
+//                    )
+//                ;
+//            else {
+//                goto label2;
+//            }
             //------------------------------------------------------------------------------------------------
             // criteria below make sure detector 1 can not be too far away from bright state and lower bright state.
-            excited_bright_state_distance = max(state_distance(ndetector0, d.bright_state[0], d.nmodes[0]),
-                                                state_distance(ndetector0, d.bright_state[1], d.nmodes[1]));
-            lower_bright_state_distance = max(state_distance(ndetector0, d.initial_detector_state[0], d.nmodes[0]),
-                                              state_distance(ndetector0, d.initial_detector_state[1], d.nmodes[1]));
-            // we do not use distance constraint for state whose energy is between two
-            if (excited_bright_state_distance > Rmax and lower_bright_state_distance > Rmax
-                and ( detector0_energy > high_initial_state_energy or detector0_energy<low_initial_state_energy )
+//            excited_bright_state_distance = max(state_distance(ndetector0, d.bright_state[0], d.nmodes[0]),
+//                                                state_distance(ndetector0, d.bright_state[1], d.nmodes[1]));
+//            lower_bright_state_distance = max(state_distance(ndetector0, d.initial_detector_state[0], d.nmodes[0]),
+//                                              state_distance(ndetector0, d.initial_detector_state[1], d.nmodes[1]));
+
+            // we make state space be a cubic not sphere, so There are more states with difference in quantum number from our original state
+               quanta_diff_max = state_max_quanta_diff(ndetector0,d.initial_detector_state[0],d.nmodes[0]);
+
+            // We constraint state we construct in a cubic cell.
+            if (    quanta_diff_max > Rmax
                     ) {
                 goto label2;
             }
@@ -381,72 +395,6 @@ void full_system:: compute_detector_matrix_size_MPI_new( ){
         }
         label1:;
 
-        ndetector1[0] = -1; // this is when we go into code: ndetector1[i] = ndetector1[i]+1. our first state is |000000>
-        while (1) { // loop through detector 1
-            label3:;
-            detector1_energy = 0;
-            for (i2 = 0; i2 < d.nmodes[1]; i2++) {
-                // define the way we loop through detector1
-                ndetector1[i2] = ndetector1[i2] + 1;
-                if (ndetector1[i2] <= d.nmax[1][i2]) break;
-                if (ndetector1[d.nmodes[1] - 1] > d.nmax[1][d.nmodes[1] - 1]) {
-                    ndetector1[d.nmodes[1] - 1] = 0;
-                    goto label4;
-                }
-                ndetector1[i2] = 0;
-            }
-            // calculate detector 1 energy
-            for (i = 0; i < d.nmodes[1]; i++) {
-                detector1_energy = detector1_energy + ndetector1[i] * d.mfreq[1][i];
-            }
-            // --------------------------------------------------------------
-            //  criteria below make sure detector 1's energy is reasonable:
-            if (detector1_energy > d.bright_state_energy[1] + d.detector_energy_window_size) {
-                // initial energy is system energy.
-                // detector 1 's energy can not be larger than its initial energy + photon energy
-                j = 0;
-                while (ndetector1[j] == 0) { // go to first mode whose n!=0;
-                    ndetector1[j] = d.nmax[1][j];
-                    j++;
-                    if (j >= d.nmodes[1]) {
-                        break;
-                    }
-                }
-                if (j < d.nmodes[1]) {
-                    ndetector1[j] = d.nmax[1][j];
-                }
-                goto label3;
-            }
-
-            // criteria for energy window around bright_state and lower bright state for detector 1
-            if ((detector1_energy > low_initial_state_energy -
-                                    d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink and
-                 detector1_energy < high_initial_state_energy +
-                                    d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink)
-                    )
-            {  // criteria here means we only consider detector state whose energy is within small energy window
-                ;
-            } else {
-                goto label3;
-            }
-            //------------------------------------------------------------------------------------------------
-            // criteria below make sure detector 1 can not be too far away from bright state and lower bright state.
-            excited_bright_state_distance = max(state_distance(ndetector1, d.bright_state[0], d.nmodes[0]),
-                                                state_distance(ndetector1, d.bright_state[1], d.nmodes[1]));
-            lower_bright_state_distance = max(state_distance(ndetector1, d.initial_detector_state[0], d.nmodes[0]),
-                                              state_distance(ndetector1, d.initial_detector_state[1], d.nmodes[1]));
-            if (excited_bright_state_distance > Rmax and lower_bright_state_distance > Rmax
-                and (detector1_energy< low_initial_state_energy or detector1_energy > high_initial_state_energy )
-                    ) {
-                goto label3;
-            }
-            location = find_position_for_insert_binary(vmode1, ndetector1, exist);
-            if (!exist) {
-                vmode1.insert(vmode1.begin() + location, ndetector1);
-                dmat1.insert(dmat1.begin() + location, detector1_energy);
-            }
-        }
-        label4:;
         // add function here to count state number in dmat1 and dmat0 to get state number.
         int * state_space_size = compute_state_space(dmat0,dmat1,d.initial_Detector_energy, d.bright_state_energy);
         log << "detector_lower_bright_state_energy_window_shrink   " << detector_lower_bright_state_energy_window_shrink

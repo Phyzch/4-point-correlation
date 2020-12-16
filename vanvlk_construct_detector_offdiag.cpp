@@ -8,6 +8,7 @@ using namespace std;
 int ndegre;
 int ndegrx2;
 
+
 int bin_number = 1000;
 void Broadcast_vanvlk_data(int & norder, vector<double> & frequency, vector<double> & energy_decrease_list,
                            vector<double> & Coeff, vector<vector<int>> & Normal_form);
@@ -51,6 +52,7 @@ void Read_ham4x_out( string  path, int & norder, vector<double> & frequency, vec
         frequency.push_back(f);
         getline(ham4x_out,ss);
     }
+
     // read 0 order term
     ham4x_out >> numterm_in_order;
     getline(ham4x_out,ss);
@@ -290,7 +292,7 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
           vector <int> & dirow, vector<int> & dicol,
           vector<double> & energy_decrease_list, vector<double> & Coeff,
           vector<vector<int>> & Normal_Form, int * mcount, int i, int j, int bin_index,
-          int matrix_size, double cutoff){
+          int matrix_size, double cutoff, double random_number){
     // <i| operator |j>
     int k,l;
     double Prod;
@@ -319,13 +321,22 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
             Vmat = Vmat + Prod * Coeff[k];
             label1:;
         }
+
+        // we use  random number as anharmonicity, this way, we get Logan Wolynes model: energy difference between nearby state is random
+        // Turn on random anharmonicity
+        if (turn_on_random_anharmonicity){
+            Vmat = random_number;
+        }
+
     }
     else{
         // off-diagonal term
+        // have to consider the case where number of coupling term is much smaller than bin number : sparse coupling.
         begin_index = mcount[bin_index - 1];
         end_index = mcount[bin_index];
 
-        for(k=begin_index;k<end_index;k++){
+        for(k=begin_index;k <=end_index;k++){
+            if (k == mcount[bin_number]) break;
             for(l=0;l<ndegre;l++){
                 index_diff = Normal_Form[k][l] - Normal_Form[k][l+ndegre];
                 if( dv[i][l] - dv[j][l] != index_diff ) goto label2;
@@ -362,7 +373,7 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
 void  construct_state_coupling_subroutine(vector<double> & state_energy_local ,vector<double> & state_energy, vector<vector<int>> & dv,
                                           vector <int> & dirow, vector<int> & dicol,
                                           vector<double> & energy_decrease_list, vector<double> & Coeff,
-                                          vector<vector<int>> & Normal_Form, int * mcount, double cutoff){
+                                          vector<vector<int>> & Normal_Form, int * mcount, double cutoff, ofstream & output){
     // state_energy is energy of state (diagonal term)
     // dv is coordinate in state .
     // dirow and dicol is row index and column index for matrix.  matrix is sparse here
@@ -387,15 +398,25 @@ void  construct_state_coupling_subroutine(vector<double> & state_energy_local ,v
     int begin_index, end_index;  // begin index is beginning index for this process.
     begin_index = matrix_size / num_proc * my_id ;
     end_index = begin_index + state_energy_local.size();
+    double random_number;
+    double timee = time(0);
+    double self_anharmonicity_strength = 1000 ;
+    std::default_random_engine generator(timee);
+    std::normal_distribution<double> distribution(0,self_anharmonicity_strength);   // used to generate random anharmonicity
+
+    if(turn_on_random_anharmonicity){
+        output<<"Self anharmonicity on energy level:   "<<self_anharmonicity_strength << endl;
+    }
 
     // first compute state energy shift: (state_energy_change)
     for(i=begin_index;i<end_index;i++){
         j=i;
         energy_difference = 0;
         bin_index = 1 + (energy_difference - min_energy) / (max_energy - min_energy) * bin_number;
+        random_number = distribution(generator);
         if(bin_index >=1 and bin_index < bin_number+1) {
             vmat(state_energy_change,state_energy_local,state_energy, dv, dirow, dicol, energy_decrease_list, Coeff, Normal_Form, mcount, i, j,
-                 bin_index,matrix_size,cutoff);  // compute coupling strength and update off-diagonal part and diagonal part correction
+                 bin_index,matrix_size,cutoff,random_number);  // compute coupling strength and update off-diagonal part and diagonal part correction
         }
     }
     MPI_Allreduce(&state_energy_change[0],&state_energy_change_in_all_process[0],matrix_size,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
@@ -409,11 +430,12 @@ void  construct_state_coupling_subroutine(vector<double> & state_energy_local ,v
                 energy_difference = original_state_energy[j] - original_state_energy[i];   // <i| operator | j>
                 // to find the right bin for energy change of opeartor, we should use original state energy.
                 bin_index = 1 + (energy_difference - min_energy) / (max_energy - min_energy) * bin_number;
+                random_number = distribution(generator);
                 if (bin_index >= 1 and bin_index < bin_number + 1) {
                     vmat(state_energy_change, state_energy_local, state_energy, dv, dirow, dicol, energy_decrease_list,
                          Coeff, Normal_Form, mcount, i, j,
                          bin_index, matrix_size,
-                         cutoff);  // compute coupling strength and update off-diagonal part and diagonal part correction
+                         cutoff,random_number);  // compute coupling strength and update off-diagonal part and diagonal part correction
                 }
             }
         }
@@ -421,15 +443,17 @@ void  construct_state_coupling_subroutine(vector<double> & state_energy_local ,v
 }
 
 void detector::construct_state_coupling_vanvlk(vector<double> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
-                                               vector <int> & dirow, vector<int> & dicol){
+                                               vector <int> & dirow, vector<int> & dicol,ofstream & output){
     // state_energy_local is dmat[0] \ dmat[1] , which is local detector matrix in each process.
     // state_energy is dmat0 or dmat1, which is detector matrix (diagonal part) shared by all process
+    int i ;
     vector <double> frequency;
     vector <double> Coeff;
     vector <double> energy_decrease_list;
     vector<vector<int>> Normal_Form;
     int norder;
     int * mcount;
+    bool match = true;
     if(my_id == 0) {
         if (Turn_on_Vanvleck) {
             Read_Vanvleck_output(cvpt_path, norder, frequency, energy_decrease_list, Coeff, Normal_Form);
@@ -437,6 +461,16 @@ void detector::construct_state_coupling_vanvlk(vector<double> & state_energy_loc
         else {
             Read_ham4x_out(cvpt_path, norder, frequency, energy_decrease_list, Coeff, Normal_Form);
         }
+        // check if frequency match
+        for(i=0;i<ndegre;i++){
+            if(mfreq[0][i] != frequency[i] ) match = false;
+        }
+
+        if(match == false){
+            cout <<"Frequency doesn't match!" << endl;
+            MPI_Abort(MPI_COMM_WORLD,-13);
+        }
+
         ifstream pot_dat(cvpt_path + "pot.dat");
         assert(!pot_dat.fail());
         pot_dat >> a_intra >> V_intra;
@@ -448,7 +482,7 @@ void detector::construct_state_coupling_vanvlk(vector<double> & state_energy_loc
     // Bin the coupling term
     mcount = Bin_coupling_term(energy_decrease_list,Coeff,Normal_Form);
     // compute diagonal correction to matrix and off-diagonal term there
-    construct_state_coupling_subroutine(state_energy_local, state_energy,dv,dirow,dicol,energy_decrease_list,Coeff,Normal_Form,mcount, cutoff);
+    construct_state_coupling_subroutine(state_energy_local, state_energy,dv,dirow,dicol,energy_decrease_list,Coeff,Normal_Form,mcount, cutoff,output);
 }
 
 void Broadcast_vanvlk_data(int & norder, vector<double> & frequency, vector<double> & energy_decrease_list,
@@ -568,11 +602,16 @@ void  construct_state_coupling_hybrid_subroutine(vector<double> & state_energy_l
     // check which state is edge state which is not.
     edge_state_mark = check_edge_state(dv);
 
+    double random_number;
+    double timee = time(0);
+    std::default_random_engine generator(timee);
+    std::normal_distribution<double> distribution(10.0,5.0);
 
     // first compute state energy shift: (state_energy_change)
     for(i=begin_index;i<end_index;i++){
         j=i;
         energy_difference = 0;
+        random_number = distribution(generator);
         if(edge_state_mark[i]){
             // for edge state, we use full Hamiltonian as anharmonic term
             bin_index = 1 + (energy_difference - min_energy_full_dynamics) / (max_energy_full_dynamics - min_energy_full_dynamics)
@@ -580,7 +619,7 @@ void  construct_state_coupling_hybrid_subroutine(vector<double> & state_energy_l
             if(bin_index >=1 and bin_index < bin_number + 1){
                 vmat(state_energy_change,state_energy_local,state_energy, dv, dirow, dicol,
                      energy_decrease_list_full_dynamics, Coeff_full_dynamics, Normal_Form_full_dynamics, mcount_full_dynamics,
-                     i, j, bin_index,matrix_size,cutoff);
+                     i, j, bin_index,matrix_size,cutoff , random_number);
             }
         }
         else {
@@ -588,7 +627,7 @@ void  construct_state_coupling_hybrid_subroutine(vector<double> & state_energy_l
             if (bin_index >= 1 and bin_index < bin_number + 1) {
                 vmat(state_energy_change, state_energy_local, state_energy, dv, dirow, dicol,
                      energy_decrease_list,Coeff, Normal_Form, mcount,
-                     i, j, bin_index, matrix_size,cutoff);  // compute coupling strength and update off-diagonal part and diagonal part correction
+                     i, j, bin_index, matrix_size,cutoff,random_number);  // compute coupling strength and update off-diagonal part and diagonal part correction
             }
         }
     }
@@ -604,6 +643,7 @@ void  construct_state_coupling_hybrid_subroutine(vector<double> & state_energy_l
             if(j!=i) { // off-diag term
                 // to find the right bin for energy change of opeartor, we should use original state energy.
                 energy_difference = original_state_energy[j] - original_state_energy[i];   // <i| operator | j>
+                random_number = distribution(generator);
                 if (!edge_state_mark[i] and !edge_state_mark[j]) {
                     // coupling between interior state
                     bin_index = 1 + (energy_difference - min_energy) / (max_energy - min_energy) * bin_number;
@@ -611,7 +651,7 @@ void  construct_state_coupling_hybrid_subroutine(vector<double> & state_energy_l
                         vmat(state_energy_change, state_energy_local, state_energy, dv, dirow, dicol,
                              energy_decrease_list,Coeff, Normal_Form, mcount,
                              i, j, bin_index, matrix_size,
-                             cutoff);  // compute coupling strength and update off-diagonal part and diagonal part correction
+                             cutoff,random_number);  // compute coupling strength and update off-diagonal part and diagonal part correction
                     }
                 }
 
@@ -623,7 +663,7 @@ void  construct_state_coupling_hybrid_subroutine(vector<double> & state_energy_l
                         vmat(state_energy_change, state_energy_local, state_energy, dv, dirow, dicol,
                              energy_decrease_list_full_dynamics, Coeff_full_dynamics, Normal_Form_full_dynamics,
                              mcount_full_dynamics,
-                             i, j, bin_index, matrix_size, cutoff);
+                             i, j, bin_index, matrix_size, cutoff,random_number);
                     }
                 }
 

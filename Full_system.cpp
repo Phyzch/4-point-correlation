@@ -68,29 +68,8 @@ full_system::full_system(string path1, string cvpt_path1) {
 	        }
 	    }
 	    else {  // construct matrix for detector + photon.
-	        if(Continue_Simulation){
-	            // load matrix for photon + detector system
-	            d.load_detector_Hamiltonian_MPI(path,log);
-                vmode0 = d.dv_all[0];
-                vmode1 = d.dv_all[1];
-	            load_Hamiltonian_MPI();
-	            d.compute_important_state_index();
-                construct_quotient_state_all_MPI(); // we use diagonal Hamiltonian loaded from load_detector_Hamiltonian_MPI and load_Hamiltonian_MPI to construct quotient state
-	            if(my_id==0) {
-                    cout << "Successfully load Hamiltonian." << endl;
-                }
-	        }
-	        else {
-	            compute_detector_matrix_size_MPI_new();
-
-                d.construct_dmatrix_MPI(input, output, log,dmat0,dmat1,vmode0,vmode1);
-
-                // construct full matrix Hamiltonian.
-                construct_fullmatrix_with_energy_window_MPI();
-                // save Hamiltonian for photon + detector.
-                d.save_detector_Hamiltonian_MPI(path,log);
-	            save_Hamiltonian_MPI();
-	        }
+            cout << "Mode do not support. We only simulate detector in this code." << endl;
+            MPI_Abort(MPI_COMM_WORLD, -15);
         }
     }
 	if(my_id ==0){
