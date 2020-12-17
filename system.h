@@ -143,8 +143,6 @@ public:
     void output_detector_Hamiltonian(vector<double> & state_energy, vector<vector<int>> & dv);
     void construct_state_coupling_vanvlk(vector<double> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
                                          vector <int> & dirow, vector<int> & dicol, ofstream & output);
-    void construct_state_coupling_vanvlk_hybrid(vector<double> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
-                                                vector <int> & dirow, vector<int> & dicol,ofstream & output);
     // use hybrid method for van vleck Hamiltonian
     void update_initial_and_bright_detector_energy();
     void compute_important_state_index();

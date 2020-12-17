@@ -145,6 +145,14 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
             dmat_offset_each_process[m][i]= dmat_offset_each_process[m][i-1] + dmatnum_each_process[m][i-1];
         }
     }
+    // compute dmat_size_offset_each_process
+    for(m=0;m<stlnum;m++){
+        dmatsize_offset_each_process[m][0] = 0;
+        for(i=1;i<num_proc;i++){
+            dmatsize_offset_each_process[m][i] = dmatsize_offset_each_process[m][i-1] + dmatsize_each_process[m][i-1];
+        }
+    }
+
     // scatter dmat, dirow, dicol to each process.
     for(m=0;m<stlnum;m++){
         dmat[m].reserve(dmatnum[m]);

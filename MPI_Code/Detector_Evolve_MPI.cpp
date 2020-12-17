@@ -435,7 +435,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
     int steps;
-    double detector_tprint = 0.0001;
+    double detector_tprint = 0.00001;
     int output_step= int(detector_tprint/delt); //Output every output_step.
 
     int scale_of_output;
@@ -794,7 +794,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     Detector_precoup_output << survival_prob << endl;
                 }
 
-                                // output IPR (inverse participation ratio)
+                // output IPR (inverse participation ratio)
                 MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
                 &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
 
