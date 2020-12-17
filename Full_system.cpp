@@ -68,8 +68,8 @@ full_system::full_system(string path1, string cvpt_path1) {
 	        }
 	    }
 	    else {  // construct matrix for detector + photon.
-            cout << "Mode do not support. We only simulate detector in this code." << endl;
-            MPI_Abort(MPI_COMM_WORLD, -15);
+	        cout << "Mode do not support. We only simulate detector in this code." << endl;
+	        MPI_Abort(MPI_COMM_WORLD, -15);
         }
     }
 	if(my_id ==0){

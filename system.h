@@ -57,12 +57,12 @@ public:
 	int ** dmatsize_each_process;
 	int ** doffnum_each_process;
 	int ** dmatnum_each_process;  // record detector matrix element number in each process.
-	int ** dmatsize_offset_each_process;
+    int ** dmatsize_offset_each_process;
 	int ** dmat_offset_each_process; // record local first detector matrix's index in global matrix.
 	double ** total_dmat;
 	int ** total_dirow, ** total_dicol; // dirow, dicol, dmat in all process.
 
-	double average_coupling_strength;
+    double average_coupling_strength;
 
 	vector<vector<int>> *dv;  //dv: the q.n. for states (m,i) at coordinate j.  [m][i][j]: [detector][state][mode]
 	vector<int> *dirow;
@@ -142,9 +142,10 @@ public:
     // for Van Vleck transformation
     void output_detector_Hamiltonian(vector<double> & state_energy, vector<vector<int>> & dv);
     void construct_state_coupling_vanvlk(vector<double> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
-                                         vector <int> & dirow, vector<int> & dicol,ofstream & output);
+                                         vector <int> & dirow, vector<int> & dicol, ofstream & output);
     void construct_state_coupling_vanvlk_hybrid(vector<double> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
-                                                vector <int> & dirow, vector<int> & dicol);  // use hybrid method for van vleck Hamiltonian
+                                                vector <int> & dirow, vector<int> & dicol,ofstream & output);
+    // use hybrid method for van vleck Hamiltonian
     void update_initial_and_bright_detector_energy();
     void compute_important_state_index();
 

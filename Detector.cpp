@@ -44,11 +44,10 @@ detector::~detector(){
         delete [] total_dmat[i];
         delete [] total_dirow[i];
         delete [] total_dicol[i];
-    }
-
-    for(i=0;i<nearby_state_index_size;i++){
-        delete [] xd_all[i];
-        delete [] yd_all[i];
+            }
+       for(i=0;i<nearby_state_index_size;i++){
+            delete [] xd_all[i];
+            delete [] yd_all[i];
     }
 
     delete [] dmatsize_each_process;

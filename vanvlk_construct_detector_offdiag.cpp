@@ -322,12 +322,11 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
             label1:;
         }
 
-        // we use  random number as anharmonicity, this way, we get Logan Wolynes model: energy difference between nearby state is random
-        // Turn on random anharmonicity
+ // we use  random number as anharmonicity, this way, we get Logan Wolynes model: energy difference between nearby state is random
+ // Turn on random anharmonicity
         if (turn_on_random_anharmonicity){
-            Vmat = random_number;
+           Vmat = random_number;
         }
-
     }
     else{
         // off-diagonal term
@@ -335,7 +334,7 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
         begin_index = mcount[bin_index - 1];
         end_index = mcount[bin_index];
 
-        for(k=begin_index;k <=end_index;k++){
+        for(k=begin_index;k<end_index;k++){
             if (k == mcount[bin_number]) break;
             for(l=0;l<ndegre;l++){
                 index_diff = Normal_Form[k][l] - Normal_Form[k][l+ndegre];
@@ -408,6 +407,16 @@ void  construct_state_coupling_subroutine(vector<double> & state_energy_local ,v
         output<<"Self anharmonicity on energy level:   "<<self_anharmonicity_strength << endl;
     }
 
+   double random_number;
+   double timee = time(0);
+   double self_anharmonicity_strength = 1000 ;
+   std::default_random_engine generator(timee);
+   std::normal_distribution<double> distribution(0,self_anharmonicity_strength);   // used to generate random anharmonicity
+
+   if(turn_on_random_anharmonicity){
+       output<<"Self anharmonicity on energy level:   "<<self_anharmonicity_strength << endl;
+   }
+
     // first compute state energy shift: (state_energy_change)
     for(i=begin_index;i<end_index;i++){
         j=i;
@@ -461,11 +470,10 @@ void detector::construct_state_coupling_vanvlk(vector<double> & state_energy_loc
         else {
             Read_ham4x_out(cvpt_path, norder, frequency, energy_decrease_list, Coeff, Normal_Form);
         }
-        // check if frequency match
+                // check if frequency match
         for(i=0;i<ndegre;i++){
             if(mfreq[0][i] != frequency[i] ) match = false;
         }
-
         if(match == false){
             cout <<"Frequency doesn't match!" << endl;
             MPI_Abort(MPI_COMM_WORLD,-13);
@@ -616,10 +624,11 @@ void  construct_state_coupling_hybrid_subroutine(vector<double> & state_energy_l
             // for edge state, we use full Hamiltonian as anharmonic term
             bin_index = 1 + (energy_difference - min_energy_full_dynamics) / (max_energy_full_dynamics - min_energy_full_dynamics)
                             * bin_number;
+            random_number = distribution(generator);
             if(bin_index >=1 and bin_index < bin_number + 1){
                 vmat(state_energy_change,state_energy_local,state_energy, dv, dirow, dicol,
                      energy_decrease_list_full_dynamics, Coeff_full_dynamics, Normal_Form_full_dynamics, mcount_full_dynamics,
-                     i, j, bin_index,matrix_size,cutoff , random_number);
+                     i, j, bin_index,matrix_size,cutoff, random_number);
             }
         }
         else {
@@ -627,7 +636,7 @@ void  construct_state_coupling_hybrid_subroutine(vector<double> & state_energy_l
             if (bin_index >= 1 and bin_index < bin_number + 1) {
                 vmat(state_energy_change, state_energy_local, state_energy, dv, dirow, dicol,
                      energy_decrease_list,Coeff, Normal_Form, mcount,
-                     i, j, bin_index, matrix_size,cutoff,random_number);  // compute coupling strength and update off-diagonal part and diagonal part correction
+                     i, j, bin_index, matrix_size,cutoff, random_number);  // compute coupling strength and update off-diagonal part and diagonal part correction
             }
         }
     }
@@ -646,6 +655,7 @@ void  construct_state_coupling_hybrid_subroutine(vector<double> & state_energy_l
                 random_number = distribution(generator);
                 if (!edge_state_mark[i] and !edge_state_mark[j]) {
                     // coupling between interior state
+                    random_number = distribution(generator);
                     bin_index = 1 + (energy_difference - min_energy) / (max_energy - min_energy) * bin_number;
                     if (bin_index >= 1 and bin_index < bin_number + 1) {
                         vmat(state_energy_change, state_energy_local, state_energy, dv, dirow, dicol,
