@@ -12,6 +12,7 @@ detector::detector(){
 
 detector::~detector(){
     int i;
+    int nearby_state_index_size = nearby_state_index.size();
     delete [] nmodes;
     delete [] nmax;
     delete [] modtype;
@@ -36,17 +37,20 @@ detector::~detector(){
 
     for(i=0;i<stlnum;i++){
         delete [] dmatsize_each_process[i];
+        delete [] dmatsize_offset_each_process[i];
         delete [] doffnum_each_process[i];
         delete [] dmatnum_each_process[i];
         delete [] dmat_offset_each_process[i];
         delete [] total_dmat[i];
         delete [] total_dirow[i];
         delete [] total_dicol[i];
-        delete [] xd_all[i];
-        delete [] yd_all[i];
-
+            }
+       for(i=0;i<nearby_state_index_size;i++){
+            delete [] xd_all[i];
+            delete [] yd_all[i];
     }
     delete [] dmatsize_each_process;
+    delete [] dmatsize_offset_each_process;
     delete [] doffnum_each_process;
     delete [] dmatnum_each_process;
     delete [] dmat_offset_each_process;

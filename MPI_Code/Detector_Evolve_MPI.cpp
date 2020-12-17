@@ -430,11 +430,19 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     int a;
     int b;
     double var;
+    double IPR;
+    double Magnitude;
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
     int steps;
-    double detector_tprint = 0.001;
+    double detector_tprint = 0.0001;
     int output_step= int(detector_tprint/delt); //Output every output_step.
+
+    int scale_of_output;
+    double output_all_state_time_unit ;
+    int output_step_for_all_state;
+    double minimum_output_all_state_time_unit = pow(10,-2) ;
+
     double * start_time = new double [s.tlnum];
     double * final_time = new double [s.tlnum];
     for(i=0;i<s.tlnum;i++){
@@ -447,8 +455,12 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream Detector_precoup_output;
     ofstream Detector_precoup_mode_quanta;
     ofstream Stability_matrix_output;
+    ofstream Detector_precoup_all_state_output;
 
     ofstream n_offdiag_total_output; // output <j| n(t) |l> in our system
+
+    ofstream IPR_output;
+
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
         if(Detector_Continue_Simulation){
@@ -457,10 +469,12 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             four_point_correlation_variance_output.open(path+"4 point correlation function variance.txt",ofstream::app);
             four_point_correlation_every_state_output.open(path+"4 point correlation function all states.txt",ofstream::app);
             Detector_precoup_output.open(path + "detector_precoupling.txt", ofstream::app);
+            Detector_precoup_all_state_output.open(path + "detector_precoupling_all_state.txt",ofstream::app);
             Detector_precoup_mode_quanta.open(path + "detector_precoup_mode_quanta.txt", ofstream::app);
             Stability_matrix_output.open(path+"Stability_Matrix.txt",ofstream::app);
 
             n_offdiag_total_output.open(path+"n_offdiag.txt",ofstream::app);
+            IPR_output.open(path+"IPR.txt",ofstream::app);
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
@@ -468,10 +482,12 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             four_point_correlation_variance_output.open(path+"4 point correlation function variance.txt");
             four_point_correlation_every_state_output.open(path+"4 point correlation function all states.txt");
             Detector_precoup_output.open(path + "detector_precoupling.txt");
+            Detector_precoup_all_state_output.open(path + "detector_precoupling_all_state.txt");
             Detector_precoup_mode_quanta.open(path + "detector_precoup_mode_quanta.txt");
             Stability_matrix_output.open(path+"Stability_Matrix.txt");
 
             n_offdiag_total_output.open(path+"n_offdiag.txt");
+            IPR_output.open(path+"IPR.txt");
         }
     }
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
@@ -646,6 +662,17 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     Detector_precoup_mode_quanta << d.mfreq[0][i] <<" ";
                 }
                 Detector_precoup_mode_quanta<<endl;
+
+                Detector_precoup_all_state_output << d.proptime[0] << endl;
+                Detector_precoup_all_state_output << initial_state_index_in_total_dmatrix << endl;
+                Detector_precoup_all_state_output << d.total_dmat_size[0] << endl;
+                for(i=0;i<d.total_dmat_size[0];i++){
+                    for(j=0;j<d.nmodes[0];j++){
+                        Detector_precoup_all_state_output << d.dv_all[0][i][j] <<" ";
+                    }
+                        Detector_precoup_all_state_output << endl;
+                }
+
             }
         }
 
@@ -659,7 +686,34 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         for(k=start_index;k<steps;k++){
             //-------------------- output result ----------------------------
             if(k % output_step ==0) {
-
+                if(t!=0){
+                    scale_of_output =  floor(std::log(t/pow(10,-4))/std::log(10));  // 0 for 10^{-4} : 1 for 10^{-1}
+                }
+                else{
+                    scale_of_output = 0;
+                }
+                output_all_state_time_unit = min(pow(10,-4+scale_of_output), minimum_output_all_state_time_unit);
+                output_step_for_all_state = int(output_all_state_time_unit / delt);
+                if(k%output_step_for_all_state==0){
+                    // ----- output state real and imaginary part for all state in simulation ----------------------
+                    MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
+                                &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],
+                                d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+                    MPI_Gatherv(&d.yd[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize[0], MPI_DOUBLE,
+                                &d.yd_all[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize_each_process[0],
+                                d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+                    if(my_id == 0){
+                        Detector_precoup_all_state_output << t << endl;
+                        for(i=0;i<d.total_dmat_size[0];i++){
+                            Detector_precoup_all_state_output << d.xd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
+                        }
+                        Detector_precoup_all_state_output << endl;
+                        for(i=0;i<d.total_dmat_size[0];i++){
+                            Detector_precoup_all_state_output << d.yd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
+                        }
+                        Detector_precoup_all_state_output << endl;
+                    }
+                }
                 // ---------------------------------output 4-point correlation function -------------------------------------------------
                compute_4_point_corre_for_single_state(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
                                                       n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,initial_state_index_in_total_dmatrix,
@@ -733,11 +787,30 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     special_state_y = d.yd[d.initial_state_index_in_nearby_state_index_list][d.initial_state_index[0]];
                 }
                 MPI_Bcast(&special_state_x,1,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_COMM_WORLD);
-                MPI_Bcast(&special_state_y,1,MPI_DOUBLE,d.initial_state_pc_id[1],MPI_COMM_WORLD);
+                MPI_Bcast(&special_state_y,1,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_COMM_WORLD);
                 survival_prob = pow(special_state_x,2) + pow(special_state_y,2);
                 if(my_id == 0){
                     Detector_precoup_output << "Time:   " << t << endl;
                     Detector_precoup_output << survival_prob << endl;
+                }
+
+                                // output IPR (inverse participation ratio)
+                MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
+                &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+                MPI_Gatherv(&d.yd[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize[0], MPI_DOUBLE,
+                                             &d.yd_all[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize_each_process[0],
+                                             d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+                if(my_id == 0){
+                    IPR = 0;
+                    IPR_output << t << endl;
+                    for(i=0;i<d.total_dmat_size[0];i++){
+                        Magnitude = pow(d.xd_all[d.initial_state_index_in_nearby_state_index_list][i] ,2) +
+                                pow(d.yd_all[d.initial_state_index_in_nearby_state_index_list][i],2);
+                        IPR = IPR + pow(Magnitude,2);
+                    }
+                    IPR = 1/ IPR;
+                    IPR_output << IPR << endl;
                 }
 
                 // ----------- output mode quanta -----------------------------------
@@ -778,9 +851,11 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         four_point_correlation_variance_output.close();
         four_point_correlation_every_state_output.close();
         Detector_precoup_output.close();
+        Detector_precoup_all_state_output.close();
         Detector_precoup_mode_quanta.close();
 
         n_offdiag_total_output.close();
+        IPR_output.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){

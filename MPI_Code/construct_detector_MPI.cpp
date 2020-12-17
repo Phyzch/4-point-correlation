@@ -54,11 +54,13 @@ void detector::allocate_space(int tlnum) {
     total_dmat_num.reserve(2);
     total_dmat_off_num.reserve(2);
     dmatsize_each_process = new int * [2];
+    dmatsize_offset_each_process = new int * [2];
     doffnum_each_process= new int * [2];
     dmatnum_each_process= new int * [2];;  // record detector matrix element number in each process.
     dmat_offset_each_process= new int * [2];; // record local first detector matrix's index in global matrix.
     for(i=0;i<tlnum;i++){
         dmatsize_each_process[i]= new int [num_proc];
+        dmatsize_offset_each_process[i] = new int [num_proc];
         doffnum_each_process[i]= new int [num_proc];
         dmatnum_each_process[i] = new int [num_proc];
         dmat_offset_each_process[i] = new int [num_proc];
@@ -194,8 +196,8 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
             log << "Use Van Vleck transformation" << endl;
         }
     }
-    construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0]);
-    construct_state_coupling_vanvlk(dmat[1], dmat1, vmode1, dirow[1], dicol[1]);
+    construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0],output);
+//    construct_state_coupling_vanvlk(dmat[1], dmat1, vmode1, dirow[1], dicol[1]);
 
 //    // hybrid Van Vleck method: for edge state, use original Hamiltonian, for inner state , use Van Vleck transformation.
 //    construct_state_coupling_vanvlk_hybrid(dmat[0],dmat0,vmode0,dirow[0],dicol[0]);
@@ -303,6 +305,12 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
     }
     for(m=0;m<stlnum;m++){
         MPI_Allgather(&dmatsize[m],1, MPI_INT,&dmatsize_each_process[m][0],1,MPI_INT,MPI_COMM_WORLD);
+    }
+    for(m=0;m<stlnum;m++){
+        dmatsize_offset_each_process[m][0] = 0;
+        for(i=1;i<num_proc;i++){
+            dmatsize_offset_each_process[m][i] = dmatsize_offset_each_process[m][i-1] + dmatsize_each_process[m][i-1];
+        }
     }
 
     if(my_id == 0) {
@@ -788,7 +796,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     // for 4 - point correlation function we will make xd , yd as N*N system.
     // we will only include state near our initial state.
     int i,j;
-    int state_distance;
+    int max_state_quanta_diff = 0;
     double state_energy_difference;
     int initial_state_index_in_total_dmatrix;
     int nearby_state_index_size;
@@ -798,19 +806,20 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     // compute nearby_state_index and initial_state_index_in_nearby_state_index_list for computing 4-point correlation function
     for(i=0;i<total_dmat_size[0];i++){
         // compute state distance
-        state_distance = 0;
+        max_state_quanta_diff = 0;
         state_energy_difference = 0;
         for(j=0;j< nmodes[0];j++){
-            state_distance = state_distance + abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -
-                                                  dv_all[0][i][j]);
+            if(max_state_quanta_diff <abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -dv_all[0][i][j]) ){
+                max_state_quanta_diff = abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -dv_all[0][i][j]);
+            }
         }
         state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
 
-        if(state_distance <= distance_cutoff_for_4_piont_corre ){
+        if(max_state_quanta_diff <= distance_cutoff_for_4_piont_corre ){
             // we will simulate dynamics of states in this list to compute 4 point correlation function
             nearby_state_index.push_back(i);
         }
-        if(state_distance <= Distance_Range_4_point_corre_function_average
+        if(max_state_quanta_diff <= Distance_Range_4_point_corre_function_average
            and state_energy_difference <= Energy_Range_4_point_corre_function_average){
             states_for_4_point_correlation_average.push_back(i);
         }
@@ -874,5 +883,38 @@ void detector:: compute_local_density_of_state(ofstream & output,vector<double> 
     if(my_id == 0){
         output<< "Density of states for detector 0 at initial state:   " << density_of_states << endl;
         output<< "number of states connected to it is   " << number_of_state << endl;
+    }
+
+
+    double  max_coupling_strength_in_all_process;
+    double max_coupling_strength = 0;
+    int num_terms=0;
+    int num_terms_in_all_process=0;
+    double  coupling_strength_sum ;
+    double  coupling_strength_sum_all_process ;
+    double  coupling_strength_average_all_process;
+    double ratio_to_select_for_average = double(1)/5; // select value larger than 1/10 of maximum coupling strength
+
+    for(i=dmatsize[0];i<dmatnum[0];i++){
+        if(abs(dmat[0][i]) > max_coupling_strength){
+            max_coupling_strength = abs(dmat[0][i]);
+        }
+    }
+    MPI_Allreduce(&max_coupling_strength,&max_coupling_strength_in_all_process,1,MPI_DOUBLE,MPI_MAX,MPI_COMM_WORLD);
+    coupling_strength_sum = 0;
+    for(i=dmatsize[0];i<dmatnum[0];i++){
+        if(abs(dmat[0][i]) > max_coupling_strength_in_all_process * ratio_to_select_for_average ){
+            coupling_strength_sum = coupling_strength_sum + abs(dmat[0][i]);
+            num_terms ++ ;
+        }
+    }
+    MPI_Allreduce(&coupling_strength_sum,&coupling_strength_sum_all_process,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&num_terms,&num_terms_in_all_process,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+    coupling_strength_average_all_process = coupling_strength_sum_all_process / (num_terms_in_all_process);
+    if(my_id == 0){
+        output <<"Largest coupling strength is "<<max_coupling_strength_in_all_process << endl;
+        output <<"ratio for counting as states is "<< ratio_to_select_for_average << endl;
+        output<< "number of terms for coupling strength average is: " << num_terms_in_all_process << endl;
+        output << "Avereage coupling strength V is:   "<<coupling_strength_average_all_process << endl;
     }
 }

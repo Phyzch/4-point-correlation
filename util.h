@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <experimental/filesystem>
+#include <random>
 #include<iomanip>
 #include <complex>
 #include <assert.h>
@@ -49,6 +50,7 @@ extern int ndegrx2;
 extern int distance_cutoff_for_4_piont_corre; // use to shrink simulation for 4-point correlation function.
 extern double Energy_Range_4_point_corre_function_average;
 extern int Distance_Range_4_point_corre_function_average;
+extern bool turn_on_random_anharmonicity;
 // define function here
 float ran2(long& idum);
 void estimate_memory_cost(ofstream & resource_output);  // output resource cost to file at give time step.
