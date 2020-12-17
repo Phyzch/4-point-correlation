@@ -345,22 +345,22 @@ void full_system:: compute_detector_matrix_size_MPI_new( ){
 
             //--------------------------------------------------------------------------------------------
             // criteria below make sure detector 0 's energy is reasonable.
-//            if (detector0_energy > d.bright_state_energy[0] + d.detector_energy_window_size) {
-//                // detector 0's energy can not be larger than its initial energy + photon energy
-//                // jump to next detector state.
-//                k = 0;
-//                while (ndetector0[k] == 0) {
-//                    ndetector0[k] = d.nmax[0][k];
-//                    k++;
-//                    if (k >= d.nmodes[0]) {
-//                        break;
-//                    }
-//                }
-//                if (k < d.nmodes[0]) {
-//                    ndetector0[k] = d.nmax[0][k];
-//                }
-//                goto label2;
-//            }
+            if (detector0_energy > d.bright_state_energy[0] + d.detector_energy_window_size) {
+                // detector 0's energy can not be larger than its initial energy + photon energy
+                // jump to next detector state.
+                k = 0;
+                while (ndetector0[k] == 0) {
+                    ndetector0[k] = d.nmax[0][k];
+                    k++;
+                    if (k >= d.nmodes[0]) {
+                        break;
+                    }
+                }
+                if (k < d.nmodes[0]) {
+                    ndetector0[k] = d.nmax[0][k];
+                }
+                goto label2;
+            }
 
             // criteria for energy window around bright_state and lower bright state for detector 0
 //            if ((detector0_energy > low_initial_state_energy - d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink and

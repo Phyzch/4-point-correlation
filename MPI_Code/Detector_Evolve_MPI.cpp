@@ -435,7 +435,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
     int steps;
-    double detector_tprint = 0.0001;
+    double detector_tprint = 0.00001;
     int output_step= int(detector_tprint/delt); //Output every output_step.
 
     int scale_of_output;

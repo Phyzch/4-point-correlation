@@ -188,7 +188,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     compute_important_state_index();
     // -------------------------- Two different way of constructing off-diagonal term for detector  -----------------------------
     // 1:  traditional way of constructing detector off-diagonal part of matrix
-//     compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
+     compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
 
 //    // 2:  applying Van Vleck transformation:
     if (Turn_on_Vanvleck) {
@@ -196,7 +196,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
             log << "Use Van Vleck transformation" << endl;
         }
     }
-    construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0],output);
+    //construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0],output);
 //    construct_state_coupling_vanvlk(dmat[1], dmat1, vmode1, dirow[1], dicol[1]);
 
 //    // hybrid Van Vleck method: for edge state, use original Hamiltonian, for inner state , use Van Vleck transformation.
@@ -257,7 +257,7 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
     vector_size = new int *[2];
     displacement_list = new int *[2];
 
-    Broadcast_dmat_vmode(stlnum, dmat0,dmat1,vmode0,vmode1); // broadcast dmat0, dmat1, vmode0, vmode1 to all process to compute off-diagonal matrix.
+    Broadcast_dmat_vmode(1, dmat0,dmat1,vmode0,vmode1); // broadcast dmat0, dmat1, vmode0, vmode1 to all process to compute off-diagonal matrix.
     dv_all[0] = vmode0;
     dv_all[1] = vmode1;
 
@@ -273,7 +273,7 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
             }
         }
         // prepare vector size and vector displacement:
-        for (m = 0; m < stlnum; m++) {
+        for (m = 0; m < 1; m++) {
             vsize = total_dmat_size[m] / num_proc;
             vsize2 = total_dmat_size[m] - (num_proc - 1) * vsize;
             vector_size[m] = new int[num_proc];  // size of vector to scatter to each process.
@@ -292,21 +292,21 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
     Scatter_dv(total_dmat_size);  // scatter dv_all
     // construct detector matrix size for each process.
     if(my_id != num_proc-1){
-        for(m=0;m<stlnum;m++) {
+        for(m=0;m<1;m++) {
             vsize= total_dmat_size[m]/num_proc;
             dmatsize[m] = vsize;
         }
     }
     else{
-        for(m=0;m<stlnum;m++){
+        for(m=0;m<1;m++){
             vsize= total_dmat_size[m] - total_dmat_size[m]/num_proc *(num_proc-1);
             dmatsize[m]=vsize;
         }
     }
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         MPI_Allgather(&dmatsize[m],1, MPI_INT,&dmatsize_each_process[m][0],1,MPI_INT,MPI_COMM_WORLD);
     }
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         dmatsize_offset_each_process[m][0] = 0;
         for(i=1;i<num_proc;i++){
             dmatsize_offset_each_process[m][i] = dmatsize_offset_each_process[m][i-1] + dmatsize_each_process[m][i-1];
@@ -314,7 +314,7 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
     }
 
     if(my_id == 0) {
-        for (m = 0; m < stlnum; m++) {
+        for (m = 0; m < 1; m++) {
             delete[] vector_size[m];
             delete[] displacement_list[m];
         }
@@ -407,7 +407,7 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
     int position;
     double random_number;
     // different process do different amount of work.
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         if(m==0){
             vmode_ptr = &(vmode0);
             dmat_ptr= &(dmat0);

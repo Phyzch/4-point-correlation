@@ -16,9 +16,11 @@ bool turn_on_random_anharmonicity = false ;
 // Warning: Always check Continue_Simulation variable in your code before starting your simulation.  Backup your simulation result output.txt everytime before your simulation.
 int main(int argc,char * argv []) {
     srand(time(0));
+//    string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
+//                       "SCCL2 sample/SCCL2 scaling/high energy 8279 no energy window cutoff/0.2/";
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "SCCL2 sample/SCCL2 scaling/high energy 8279 no energy window cutoff/0.2/";
-//   string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 XB/";
+                       "3 dof system/1/";
+    //   string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 XB/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/SCCL2 scaling/0.2/";
     string cvpt_path;
     int i;
