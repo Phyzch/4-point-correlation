@@ -104,8 +104,12 @@ public:
     vector<int> states_for_average_in_nearby_state_index_list;
     // For states in states_for_4_point_correlation_average, we compute its index in nearby_state_index
 
+    vector<vector<int>>  neighbor_state_index_list; // state_index with 1 quanta difference from states in nearby_state_index. [2*dof] , (1up,2up,3up, etc, 1down, 2down, 3down, etc). If not exist, choose -1.
+    vector<vector<int>>  neighbor_state_in_nearby_state_index_list;
+    vector<bool> neighbor_state_all_in_nearby_state_index_list;
+
 	int initial_state_index_in_nearby_state_index_list;
-    int initial_state_index_in_nearby_states_for_average_list;
+    int initial_state_index_in_states_for_4_point_correlation_list;
 
 	detector();
 	~detector();
@@ -149,6 +153,8 @@ public:
 
     void output_state_density(vector<double> & dmat0,  vector<double> & dmat1);
     void compute_n_off_diag_element(int index_b, int index_a, complex <double> * n_off_diag_element);
+
+    void compute_n_off_diag_element_one_mode_quanta_below(int index_b, int index_a, complex<double> * n_off_diag_element);
 
     void replace_4_point_corr_second_line(double detector_tprint);
 
@@ -335,6 +341,13 @@ public:
                                                 complex<double> * n_offdiag_element, double * n_offdiag_element_real, double * n_offdiag_element_imag,
                                                 complex<double> * n_offdiag_element_all_pc, double * n_offdiag_element_real_all_pc, double * n_offdiag_element_imag_all_pc,
                                                 int initial_state_index_in_total_dmatrix );
+    void compute_another_form_of_OTOC(int nearby_state_index_size, complex<double> * n_offdiag_element,
+                                      complex<double> ** n_offdiag,double ** n_offdiag_real, double ** n_offdiag_imag,
+                                      complex<double> **n_offdiag_total, double ** n_offdiag_total_real, double ** n_offdiag_total_imag,
+                                      complex<double> ** n_offdiag_one_mode_quanta_below, double ** n_offdiag_one_mode_quanta_below_real, double ** n_offdiag_one_mode_quanta_below_imag,
+                                      complex<double> ** n_offdiag_total_one_mode_quanta_below, double ** n_offdiag_total_one_mode_quanta_below_real, double ** n_offdiag_total_one_mode_quanta_below_imag,
+                                      int initial_state_index_in_total_dmatrix ,
+                                      double * another_OTOC);
 };
 
 

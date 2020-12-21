@@ -430,7 +430,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     int a;
     int b;
     double var;
-    double IPR;
+
     double Magnitude;
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
@@ -460,7 +460,11 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream n_offdiag_total_output; // output <j| n(t) |l> in our system
 
     ofstream IPR_output;
+    ofstream IPR_for_all_state_output;
 
+    ofstream overlap_with_initial_state_output;
+
+    ofstream another_form_of_OTOC_output;
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
         if(Detector_Continue_Simulation){
@@ -475,6 +479,10 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
             n_offdiag_total_output.open(path+"n_offdiag.txt",ofstream::app);
             IPR_output.open(path+"IPR.txt",ofstream::app);
+            IPR_for_all_state_output.open(path+"IPR_all_state.txt",ofstream::app);
+            overlap_with_initial_state_output.open(path+"other_state_overlap_with_initial_state.txt",ofstream::app);
+
+            another_form_of_OTOC_output.open(path+ "another_OTOC.txt", ofstream::app);
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
@@ -488,6 +496,10 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
             n_offdiag_total_output.open(path+"n_offdiag.txt");
             IPR_output.open(path+"IPR.txt");
+            IPR_for_all_state_output.open(path+"IPR_all_state.txt");
+            overlap_with_initial_state_output.open(path+"other_state_overlap_with_initial_state.txt");
+
+            another_form_of_OTOC_output.open(path+ "another_OTOC.txt");
         }
     }
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
@@ -516,6 +528,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     int state_for_average_size = d.states_for_4_point_correlation_average.size();
     int nearby_state_index_size = d.nearby_state_index.size();
     double * four_point_correlation_function_at_initial_state = new double [d.nmodes[0]];
+    double * another_OTOC = new double [d.nmodes[0]];
     double * four_point_correlation_function_average_over_states = new double [d.nmodes[0]];
     double * four_point_correlation_function_variance_over_states = new double [d.nmodes[0]];
     double ** four_point_correlation_function_for_each_states = new double * [d.nmodes[0]]; // this is average over bunch of states
@@ -523,6 +536,15 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         four_point_correlation_function_for_each_states[i] = new double [state_for_average_size];
     }
 
+    // ----------------- variable for IPR --------------
+    double IPR;
+
+    double * inverse_IPR_in_one_process = new double [nearby_state_index_size]  ;
+    double * inverse_IPR_all = new double [nearby_state_index_size];
+    double * IPR_all = new double [nearby_state_index_size];
+
+    // ------------ Other states in nearby state index list's overlap with initial state ---------------------
+    double * other_state_overlap_with_initial_state = new double [nearby_state_index_size];
 
     //---------- Allocate space for <a| n_{i}(t) |b>  size: nmode * total_dmat_size[0] -------------------------------------------
     // each row is one n_{i}.  each column is one site |b>
@@ -548,6 +570,33 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         n_offdiag_real[i] = new double [nearby_state_index_size];
         n_offdiag_imag[i] = new double [nearby_state_index_size];
     }
+
+
+    //  Another form of OTOC
+    complex<double> ** n_offdiag_total_one_mode_quanta_below;  // compute <m-| n_{i}(t) | l->  states one mode below in corresponding mode index
+    double ** n_offdiag_total_one_mode_quanta_below_real;
+    double ** n_offdiag_total_one_mode_quanta_below_imag;
+    n_offdiag_total_one_mode_quanta_below = new complex<double> * [d.nmodes[0]];
+    n_offdiag_total_one_mode_quanta_below_real = new double * [d.nmodes[0]];
+    n_offdiag_total_one_mode_quanta_below_imag = new double * [d.nmodes[0]];
+    for(i=0;i<d.nmodes[0];i++){
+        n_offdiag_total_one_mode_quanta_below[i] = new complex<double> [nearby_state_index_size];
+        n_offdiag_total_one_mode_quanta_below_real[i] = new double [nearby_state_index_size];
+        n_offdiag_total_one_mode_quanta_below_imag[i] = new double [nearby_state_index_size];
+    }
+
+    complex<double> ** n_offdiag_one_mode_quanta_below;  // compute <m-| n_{i}(t) | l->  states one mode below in corresponding mode index
+    double ** n_offdiag_one_mode_quanta_below_real;
+    double ** n_offdiag_one_mode_quanta_below_imag;
+    n_offdiag_one_mode_quanta_below = new complex<double> * [d.nmodes[0]];
+    n_offdiag_one_mode_quanta_below_real = new double * [d.nmodes[0]];
+    n_offdiag_one_mode_quanta_below_imag = new double * [d.nmodes[0]];
+    for(i=0;i<d.nmodes[0];i++){
+        n_offdiag_one_mode_quanta_below[i] = new complex<double> [nearby_state_index_size];
+        n_offdiag_one_mode_quanta_below_real[i] = new double [nearby_state_index_size];
+        n_offdiag_one_mode_quanta_below_imag[i] = new double [nearby_state_index_size];
+    }
+
 
 
     complex<double> * n_offdiag_element;
@@ -633,7 +682,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 four_point_correlation_variance_output << "total time: " << d.proptime[0]  << " "
                                                       << delt * output_step << endl;
 
-                four_point_correlation_every_state_output << d.initial_state_index_in_nearby_states_for_average_list<<endl;
+                four_point_correlation_every_state_output << d.initial_state_index_in_states_for_4_point_correlation_list<<endl;
                 four_point_correlation_every_state_output <<   state_for_average_size <<endl;
 
                 // output state mode number information for all states we compute for 4 point correlation function
@@ -673,6 +722,22 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                         Detector_precoup_all_state_output << endl;
                 }
 
+                IPR_for_all_state_output << nearby_state_index_size << endl;
+                for(i=0;i<nearby_state_index_size;i++){
+                    for(j=0;j<d.nmodes[0];j++){
+                        IPR_for_all_state_output << d.dv_all[0][d.nearby_state_index[i]][j] <<"  ";
+                    }
+                    IPR_for_all_state_output << endl;
+                }
+
+                overlap_with_initial_state_output<< nearby_state_index_size << endl;
+                for(i=0;i<nearby_state_index_size;i++){
+                    for(j=0;j<d.nmodes[0];j++){
+                        overlap_with_initial_state_output << d.dv_all[0][d.nearby_state_index[i]][j] <<"  ";
+                    }
+                    overlap_with_initial_state_output << endl;
+                }
+
             }
         }
 
@@ -685,35 +750,62 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         // Do simulation in loop
         for(k=start_index;k<steps;k++){
             //-------------------- output result ----------------------------
-            if(k % output_step ==0) {
-                if(t!=0){
-                    scale_of_output =  floor(std::log(t/pow(10,-4))/std::log(10));  // 0 for 10^{-4} : 1 for 10^{-1}
+            if(t!=0){
+                scale_of_output =  floor(std::log(t/pow(10,-4))/std::log(10));  // 0 for 10^{-4} : 1 for 10^{-1}
+            }
+            else{
+                scale_of_output = 0;
+            }
+            output_all_state_time_unit = min(pow(10,-4+scale_of_output), minimum_output_all_state_time_unit);
+            output_step_for_all_state = int(output_all_state_time_unit / delt);
+            if(k%output_step_for_all_state==0){
+                // ----- output state real and imaginary part for all state in simulation ----------------------
+                MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
+                            &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],
+                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+                MPI_Gatherv(&d.yd[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize[0], MPI_DOUBLE,
+                            &d.yd_all[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize_each_process[0],
+                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+                if(my_id == 0){
+                    Detector_precoup_all_state_output << t << endl;
+                    for(i=0;i<d.total_dmat_size[0];i++){
+                        Detector_precoup_all_state_output << d.xd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
+                    }
+                    Detector_precoup_all_state_output << endl;
+                    for(i=0;i<d.total_dmat_size[0];i++){
+                        Detector_precoup_all_state_output << d.yd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
+                    }
+                    Detector_precoup_all_state_output << endl;
                 }
-                else{
-                    scale_of_output = 0;
-                }
-                output_all_state_time_unit = min(pow(10,-4+scale_of_output), minimum_output_all_state_time_unit);
-                output_step_for_all_state = int(output_all_state_time_unit / delt);
-                if(k%output_step_for_all_state==0){
-                    // ----- output state real and imaginary part for all state in simulation ----------------------
-                    MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
-                                &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],
-                                d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
-                    MPI_Gatherv(&d.yd[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize[0], MPI_DOUBLE,
-                                &d.yd_all[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize_each_process[0],
-                                d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
-                    if(my_id == 0){
-                        Detector_precoup_all_state_output << t << endl;
-                        for(i=0;i<d.total_dmat_size[0];i++){
-                            Detector_precoup_all_state_output << d.xd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
-                        }
-                        Detector_precoup_all_state_output << endl;
-                        for(i=0;i<d.total_dmat_size[0];i++){
-                            Detector_precoup_all_state_output << d.yd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
-                        }
-                        Detector_precoup_all_state_output << endl;
+            }
+            // --------- output IPR for all state --------------------------------------
+            if(k%output_step_for_all_state == 0){
+                for(i=0;i<nearby_state_index_size;i++){
+                    inverse_IPR_in_one_process[i] = 0;
+                    for(j=0;j<d.dmatsize[0];j++){
+                        inverse_IPR_in_one_process[i] = inverse_IPR_in_one_process[i] + pow(pow(d.xd[i][j],2) + pow(d.yd[i][j],2),2);
                     }
                 }
+
+                MPI_Reduce(&inverse_IPR_in_one_process[0],&inverse_IPR_all[0],nearby_state_index_size,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+
+                if(my_id == 0){
+                    for(i=0;i<nearby_state_index_size;i++){
+                        IPR_all[i] = 1/ inverse_IPR_all[i];
+                    }
+
+                    // output result
+                    IPR_for_all_state_output << t << endl;
+                    for(i=0;i<nearby_state_index_size;i++){
+                        IPR_for_all_state_output << IPR_all[i] <<" ";
+                    }
+                    IPR_for_all_state_output << endl;
+                }
+
+            }
+
+
+            if(k % output_step ==0) {
                 // ---------------------------------output 4-point correlation function -------------------------------------------------
                compute_4_point_corre_for_single_state(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
                                                       n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,initial_state_index_in_total_dmatrix,
@@ -734,6 +826,20 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                         }
                         n_offdiag_total_output << endl;
                     }
+                }
+
+                // -------- output another form of OTOC ------------------------------
+                compute_another_form_of_OTOC(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
+                                             n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,
+                                             n_offdiag_one_mode_quanta_below,n_offdiag_one_mode_quanta_below_real,n_offdiag_one_mode_quanta_below_imag,
+                                             n_offdiag_total_one_mode_quanta_below,n_offdiag_total_one_mode_quanta_below_real,n_offdiag_total_one_mode_quanta_below_imag,
+                                             initial_state_index_in_total_dmatrix, another_OTOC);
+                if(my_id == 0){
+                    another_form_of_OTOC_output << "Time:  " << t <<endl;
+                    for(i=0;i<d.nmodes[0];i++){
+                        another_form_of_OTOC_output << another_OTOC[i] << "  ";
+                    }
+                    another_form_of_OTOC_output << endl;
                 }
 
                 // ---------- output 4-point correlation function average over states and variance -------------------
@@ -794,7 +900,32 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     Detector_precoup_output << survival_prob << endl;
                 }
 
-                // output IPR (inverse participation ratio)
+                // --------- output other state's overlap with initial state |a> ----------------------
+                if(my_id == d.initial_state_pc_id[0]){
+                    for(i=0;i<nearby_state_index_size;i++){
+                        other_state_overlap_with_initial_state[i] = pow(d.xd[i][d.initial_state_index[0]] ,2)
+                                                                    + pow(d.yd[i][d.initial_state_index[0]],2) ;
+                    }
+                }
+                if(d.initial_state_pc_id[0] != 0){
+                    // pass data to process with id 0 if data is not initially there
+                    if(my_id == d.initial_state_pc_id[0]){
+                        MPI_Send(&other_state_overlap_with_initial_state[0],nearby_state_index_size,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+                    }
+                    if(my_id == 0){
+                        MPI_Recv(&other_state_overlap_with_initial_state[0],nearby_state_index_size,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_ANY_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+                    }
+                }
+
+                if(my_id == 0){
+                    overlap_with_initial_state_output << t << endl;
+                    for(i=0;i<nearby_state_index_size;i++){
+                        overlap_with_initial_state_output << other_state_overlap_with_initial_state[i] <<" ";
+                    }
+                    overlap_with_initial_state_output << endl;
+                }
+
+                // ----  output IPR (inverse participation ratio) ----------------------------
                 MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
                 &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
 
@@ -856,6 +987,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
         n_offdiag_total_output.close();
         IPR_output.close();
+        IPR_for_all_state_output.close();
+        overlap_with_initial_state_output.close();
+        another_form_of_OTOC_output.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){
@@ -917,6 +1051,22 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     delete [] n_offdiag_for_states_ensemble_real;
     delete [] n_offdiag_for_states_ensemble_imag;
 
+    // n_offdiag one mode quanta below.
+    for(i=0;i<d.nmodes[0];i++){
+        delete [] n_offdiag_total_one_mode_quanta_below[i];
+        delete [] n_offdiag_total_one_mode_quanta_below_real[i];
+        delete [] n_offdiag_total_one_mode_quanta_below_imag[i];
+        delete [] n_offdiag_one_mode_quanta_below[i];
+        delete [] n_offdiag_one_mode_quanta_below_real[i];
+        delete [] n_offdiag_one_mode_quanta_below_imag[i];
+    }
+    delete [] n_offdiag_one_mode_quanta_below;
+    delete [] n_offdiag_one_mode_quanta_below_real;
+    delete [] n_offdiag_one_mode_quanta_below_imag;
+    delete [] n_offdiag_total_one_mode_quanta_below;
+    delete [] n_offdiag_total_one_mode_quanta_below_real;
+    delete [] n_offdiag_one_mode_quanta_below_imag;
+
     delete [] four_point_correlation_function_at_initial_state;
     delete [] four_point_correlation_function_average_over_states;
     delete [] four_point_correlation_function_variance_over_states;
@@ -942,4 +1092,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     delete [] d.local_dirow;
     delete [] d.local_dicol;
 
+    delete [] inverse_IPR_in_one_process;
+    delete [] inverse_IPR_all;
+    delete [] IPR_all;
+
+    delete [] other_state_overlap_with_initial_state;
 };

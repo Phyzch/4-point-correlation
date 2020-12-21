@@ -792,7 +792,7 @@ void detector:: output_state_density(vector<double> & dmat0,  vector<double> & d
 void detector:: prepare_variable_for_4_point_correlation_function(vector<double> & dmat0, vector<double> & dmat1,ofstream & log){
     // for 4 - point correlation function we will make xd , yd as N*N system.
     // we will only include state near our initial state.
-    int i,j;
+    int i,j,k,l;
     int max_state_quanta_diff = 0;
     double state_energy_difference;
     int initial_state_index_in_total_dmatrix;
@@ -838,7 +838,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
             }
         }
         if( states_for_4_point_correlation_average[j] == initial_state_index_in_total_dmatrix){
-            initial_state_index_in_nearby_states_for_average_list = j;
+            initial_state_index_in_states_for_4_point_correlation_list = j;
         }
     }
 
@@ -857,6 +857,85 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
         xd_all[i] = new double [total_dmat_size[0]];
         yd_all[i] = new double [total_dmat_size[0]];
     }
+
+    // construct neighbor_state_index
+
+    vector<int> neighbor_state_index;  // index in all dv_all[0]
+    vector<int> neighbor_state_in_nearby_state_index; // index in nearby_state_index
+    vector<int> state_mode;
+    vector<int> neighbor_state_mode ;
+    int position;
+    bool exist;
+
+    for(j=0;j<nearby_state_index_size;j++){
+        state_mode = dv_all[0][ nearby_state_index[j] ];  // states we simulate trajectories.
+        neighbor_state_index.clear();  // record states near to our states of choice for simulating trajectory.
+        for(k=0;k<nmodes[0];k++){
+            // one mode up
+            neighbor_state_mode = state_mode;
+            neighbor_state_mode[k] = state_mode[k] + 1;
+            position = find_position_for_insert_binary(dv_all[0],neighbor_state_mode,exist);
+            if(exist){
+                neighbor_state_index.push_back(position);
+            }
+            else{
+                neighbor_state_index.push_back(-1);
+            }
+        }
+
+        for(k=0;k<nmodes[0];k++){
+            neighbor_state_mode = state_mode;
+            neighbor_state_mode[k] = state_mode[k] - 1;
+            position = find_position_for_insert_binary(dv_all[0],neighbor_state_mode,exist);
+            if(exist){
+                neighbor_state_index.push_back(position);
+            }
+            else{
+                neighbor_state_index.push_back(-1);
+            }
+        }
+        neighbor_state_index_list.push_back(neighbor_state_index);
+
+        neighbor_state_in_nearby_state_index.clear();
+        // compute neighbor_state_in_nearby_state_index
+        for(k=0;k<2*nmodes[0];k++){
+
+            if(neighbor_state_index[k] != -1) {
+                for (l = 0; l < nearby_state_index_size; l++) {
+                    if (nearby_state_index[l] == neighbor_state_index[k]) {
+                        neighbor_state_in_nearby_state_index.push_back(l);
+                        break;
+                    }
+                }
+                if (l == nearby_state_index_size) {
+                    // not found
+                    neighbor_state_in_nearby_state_index.push_back(-1);
+                }
+            }
+
+            else {
+                neighbor_state_in_nearby_state_index.push_back(-1);
+            }
+
+        }
+        neighbor_state_in_nearby_state_index_list.push_back(neighbor_state_in_nearby_state_index);
+
+        exist = true;
+        for(k=nmodes[0];k<2*nmodes[0];k++){
+            if (neighbor_state_in_nearby_state_index[k] == -1){
+                exist = false;
+            }
+        }
+
+        if(exist == true ){
+            neighbor_state_all_in_nearby_state_index_list.push_back(true);
+        }
+        else{
+            neighbor_state_all_in_nearby_state_index_list.push_back(false) ;
+        }
+
+    }
+
 }
 
 void detector:: compute_local_density_of_state(ofstream & output,vector<double> & dmat0){
