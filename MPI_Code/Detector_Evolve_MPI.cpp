@@ -465,6 +465,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream overlap_with_initial_state_output;
 
     ofstream another_form_of_OTOC_output;
+
+    ofstream Lyapunov_spectrum_for_xp_output;
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
         if(Detector_Continue_Simulation){
@@ -483,6 +485,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             overlap_with_initial_state_output.open(path+"other_state_overlap_with_initial_state.txt",ofstream::app);
 
             another_form_of_OTOC_output.open(path+ "another_OTOC.txt", ofstream::app);
+            Lyapunov_spectrum_for_xp_output.open(path+ "Lyapunov_spectrum_for_xp.txt",ofstream::app);
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
@@ -500,6 +503,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             overlap_with_initial_state_output.open(path+"other_state_overlap_with_initial_state.txt");
 
             another_form_of_OTOC_output.open(path+ "another_OTOC.txt");
+            Lyapunov_spectrum_for_xp_output.open(path+"Lyapunov_spectrum_for_xp.txt");
         }
     }
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
@@ -765,6 +769,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     overlap_with_initial_state_output << endl;
                 }
 
+                Lyapunov_spectrum_for_xp_output << d.nmodes[0] << endl;
             }
         }
 
@@ -871,7 +876,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
                 // ----------- output Lyapunovian spectrum for xp ---------------------------------------
                 d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Matrix_M,xd_for_xp,yd_for_xp);
+                if(my_id == 0){
 
+                }
 
                 // ---------- output 4-point correlation function average over states and variance -------------------
                 compute_4_point_corre_for_multiple_states(state_for_average_size,nearby_state_index_size,n_offdiag_element,
@@ -1021,6 +1028,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         IPR_for_all_state_output.close();
         overlap_with_initial_state_output.close();
         another_form_of_OTOC_output.close();
+        Lyapunov_spectrum_for_xp_output.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){

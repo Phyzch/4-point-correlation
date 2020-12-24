@@ -15,6 +15,14 @@ complex<double> detector:: compute_c_overlap(int state_m, int relative_position_
     // else if it's state near initial state, it can be in range [0,nmodes[0]] if it has one quanta lower or in range[0,range[0]] if have one quanta higher
     int i, j ;
     complex<double> c_overlap = 0;  // c_overlap = <m| c_{k}(t) | l>
+    complex<double> c_overlap_sum = 0;
+
+    double real_c_overlap;
+    double imag_c_overlap;
+
+    double real_c_overlap_sum;
+    double imag_c_overlap_sum;
+
     if(mode_k<nmodes[0]){
         // c_{k} = a_{k} : lowering operator. <m(t) | a_{k} | l(t)> = \sum_{j} <m(t) | j> <j| a_{k} |l(t)> = \sum_{j} <m(t) | j> <j_{k}^{+} | l(t)> * sqrt(nj_{k} + 1)
         for(j=0;j<dmatsize[0];j++){
@@ -33,7 +41,16 @@ complex<double> detector:: compute_c_overlap(int state_m, int relative_position_
             // I have mode_k-nmodes[0] because we want to compute <j_{k}^{-}|l(t)> and mode_k > nmodes[0] corresponding to j_{k}^{+}
         }
     }
-    return c_overlap;
+
+    real_c_overlap = real(c_overlap);
+    imag_c_overlap = imag(c_overlap);
+
+    MPI_Allreduce(&real_c_overlap,&real_c_overlap_sum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&imag_c_overlap, &imag_c_overlap_sum,1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    c_overlap_sum = complex<double>(real_c_overlap_sum, imag_c_overlap_sum);
+    
+    return c_overlap_sum;
 }
 
 void detector:: compute_M_matrix(int state_m, int state_l, complex<double> ** M_matrix,
