@@ -19,8 +19,8 @@ void detector:: compute_n_off_diag_element_one_mode_quanta_below(int index_b, in
     }
 
     for(i=0;i<nmodes[0];i++){
-        a_one_mode_quanta_below = neighbor_state_in_nearby_state_index_list[index_a][i+nmodes[0]]; // one mode up for first dof number element, then one mode below
-        b_one_mode_quanta_below = neighbor_state_in_nearby_state_index_list[index_b][i+nmodes[0]];
+        a_one_mode_quanta_below = neighbor_state_in_nearby_state_index_list[index_a][i]; // one mode up for first dof number element, then one mode below
+        b_one_mode_quanta_below = neighbor_state_in_nearby_state_index_list[index_b][i];
 
         for(k=0;k<dmatsize[0];k++){
             C_ka_conjugate = complex<double> (xd[a_one_mode_quanta_below][k],
@@ -51,7 +51,7 @@ void full_system :: compute_another_form_of_OTOC(int nearby_state_index_size, co
 
 
     for(b=0;b<nearby_state_index_size;b++) {
-        if (d.neighbor_state_all_in_nearby_state_index_list[b]) {
+        if (d.bool_state_one_mode_quanta_below_all_in_nearby_state_index[b]) {
             d.compute_n_off_diag_element(b, d.initial_state_index_in_nearby_state_index_list, n_offdiag_element);
             for (i = 0; i < d.nmodes[0]; i++) {
                 n_offdiag[i][b] = n_offdiag_element[i];

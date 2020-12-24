@@ -873,7 +873,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
         for(k=0;k<nmodes[0];k++){
             // one mode up
             neighbor_state_mode = state_mode;
-            neighbor_state_mode[k] = state_mode[k] + 1;
+            neighbor_state_mode[k] = state_mode[k] - 1;
             position = find_position_for_insert_binary(dv_all[0],neighbor_state_mode,exist);
             if(exist){
                 neighbor_state_index.push_back(position);
@@ -885,7 +885,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
 
         for(k=0;k<nmodes[0];k++){
             neighbor_state_mode = state_mode;
-            neighbor_state_mode[k] = state_mode[k] - 1;
+            neighbor_state_mode[k] = state_mode[k] + 1;
             position = find_position_for_insert_binary(dv_all[0],neighbor_state_mode,exist);
             if(exist){
                 neighbor_state_index.push_back(position);
@@ -920,20 +920,68 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
         }
         neighbor_state_in_nearby_state_index_list.push_back(neighbor_state_in_nearby_state_index);
 
+        // compute bool_state_one_mode_quanta_below_all_in_nearby_state_index
         exist = true;
-        for(k=nmodes[0];k<2*nmodes[0];k++){
+        for(k = 0 ;k< nmodes[0];k++){
             if (neighbor_state_in_nearby_state_index[k] == -1){
                 exist = false;
             }
         }
 
         if(exist == true ){
-            neighbor_state_all_in_nearby_state_index_list.push_back(true);
+            bool_state_one_mode_quanta_below_all_in_nearby_state_index.push_back(true);
         }
         else{
-            neighbor_state_all_in_nearby_state_index_list.push_back(false) ;
+            bool_state_one_mode_quanta_below_all_in_nearby_state_index.push_back(false) ;
         }
 
+        // compute bool_neighbor_state_all_in_nearby_state_index
+        exist = true;
+        for(k=0;k<nmodes[0];k++){
+            if( neighbor_state_in_nearby_state_index[k] == -1 and state_mode[k]!=0 ){
+                exist = false;
+            }
+        }
+        for(k=nmodes[0];k<2*nmodes[0];k++){
+            if (neighbor_state_in_nearby_state_index[k] == -1){
+                exist = false;
+            }
+        }
+        if(exist == false){
+            bool_neighbor_state_all_in_nearby_state_index.push_back(false);
+        }
+        else{
+            bool_neighbor_state_all_in_nearby_state_index.push_back(true);
+        }
+
+    }
+    // construct_nearby_state_index_for_all_states
+    for(j=0;j<total_dmat_size[0];j++){
+        state_mode = dv_all[0][j];
+        neighbor_state_index.clear();
+        for(k=0;k<nmodes[0];k++){
+            neighbor_state_mode = state_mode;
+            neighbor_state_mode[k] = state_mode[k] - 1 ;
+            position = find_position_for_insert_binary(dv_all[0],neighbor_state_mode,exist);
+            if(exist){
+                neighbor_state_index.push_back(position);
+            }
+            else{
+                neighbor_state_index.push_back(-1);
+            }
+        }
+        for(k=0;k<nmodes[0];k++){
+            neighbor_state_mode = state_mode;
+            neighbor_state_mode[k] = state_mode[k] + 1 ;
+            position = find_position_for_insert_binary(dv_all[0],neighbor_state_mode,exist);
+            if(exist){
+                neighbor_state_index.push_back(position);
+            }
+            else{
+                neighbor_state_index.push_back(-1);
+            }
+        }
+        neighbor_state_index_for_all_state_list.push_back(neighbor_state_index);
     }
 
 }

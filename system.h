@@ -106,7 +106,10 @@ public:
 
     vector<vector<int>>  neighbor_state_index_list; // state_index with 1 quanta difference from states in nearby_state_index. [2*dof] , (1up,2up,3up, etc, 1down, 2down, 3down, etc). If not exist, choose -1.
     vector<vector<int>>  neighbor_state_in_nearby_state_index_list;
-    vector<bool> neighbor_state_all_in_nearby_state_index_list;
+    vector<bool> bool_state_one_mode_quanta_below_all_in_nearby_state_index; // bool variable: indicating if all
+
+    vector<bool> bool_neighbor_state_all_in_nearby_state_index;
+    vector<vector<int>> neighbor_state_index_for_all_state_list;  // to compute OTOC for x and p , I need to record all states' nearby states.
 
 	int initial_state_index_in_nearby_state_index_list;
     int initial_state_index_in_states_for_4_point_correlation_list;
@@ -164,8 +167,44 @@ public:
     // compute density of states:
     void compute_local_density_of_state(ofstream & output,vector<double> & dmat0);
 
-    // Use MFT and Lanczos algorithm to compute density of state and eigenvalue of Hamiltonian:
+    // compute OTOC for x, p variable:
+    int ** remoteVecCount_for_xp ;
+    int ** remoteVecPtr_for_xp ;
+    int ** remoteVecIndex_for_xp ;
+    int ** Index_in_remoteVecIndex_for_xp ;
+    vector<int> to_receive_buffer_len_list_for_xp;
 
+    int ** tosendVecCount_for_xp;
+    int ** tosendVecPtr_for_xp ;
+    int ** tosendVecIndex_for_xp ;
+    vector<int> to_send_buffer_len_list_for_xp;
+
+    double *** send_xd_for_xp;
+    double *** send_yd_for_xp;
+
+    double *** receive_xd_for_xp;
+    double *** receive_yd_for_xp;
+
+    complex<double> compute_c_overlap(int state_m, int state_l, int mode_k,
+                                      vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
+
+    void compute_M_matrix(int state_m, int state_l, complex<double> ** M_matrix ,
+                          vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
+
+    void compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_spectrum_for_xp, complex<double> ** M_matrix,
+                                          vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
+
+    void prepare_computing_Lyapunovian_for_xp();
+
+    void delete_variable_for_computing_Lyapunovian_xp();
+
+    vector<int>  construct_receive_buffer_index_for_xp(int ** remoteVecCount_for_xp, int ** remoteVecPtr_for_xp, int ** remoteVecIndex_for_xp,
+                                                       int ** Index_in_remoteVecIndex_for_xp);
+
+    vector<int> construct_send_buffer_index_for_xp(int ** remoteVecCount_for_xp, int ** remoteVecPtr_for_xp, int ** remoteVecIndex_for_xp,
+                                    int ** tosendVecCount_for_xp, int ** tosendVecPtr_for_xp, int ** tosendVecIndex_for_xp);
+
+    void update_xd_yd_for_xp(vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
 };
 
 class full_system {
