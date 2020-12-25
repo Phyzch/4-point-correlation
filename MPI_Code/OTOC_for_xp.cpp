@@ -35,7 +35,7 @@ complex<double> detector:: compute_c_overlap(int state_m, int relative_position_
     else{
         // c_{k} = a_{k}^{+} :raising operator: <m(t) | a_{k}^{+} | l(t)> = \sum_{j} <m(t)|j> <j| a_{k}^{+} |l(t)>
         for(j=0;j<dmatsize[0];j++){
-            c_overlap = c_overlap + sqrt(dv[0][j][mode_k]) *
+            c_overlap = c_overlap + sqrt(dv[0][j][mode_k - nmodes[0] ]) *
                     complex<double> (xd_for_xp[relative_position_to_initial_state][mode_k-nmodes[0]][j] , yd_for_xp[relative_position_to_initial_state][mode_k - nmodes[0]][j])
                             * complex<double> (xd[state_m][j], -yd[state_m][j]);
             // I have mode_k-nmodes[0] because we want to compute <j_{k}^{-}|l(t)> and mode_k > nmodes[0] corresponding to j_{k}^{+}
@@ -89,7 +89,7 @@ void detector:: compute_M_matrix(int state_m, int state_l, complex<double> ** M_
                 else{
                     C2 = 0;
                 }
-                M_matrix[k][i] = sqrt(dv_all[0][nearby_state_index[state_l]][i]+1) * C1 - sqrt(dv_all[0][nearby_state_index[state_m]][i]) * C2;
+                M_matrix[k][i] = sqrt(dv_all[0][nearby_state_index[state_l]][i - nmodes[0] ]+1) * C1 - sqrt(dv_all[0][nearby_state_index[state_m]][i - nmodes[0] ]) * C2;
             }
         }
     }
@@ -254,7 +254,7 @@ vector<int> detector::construct_receive_buffer_index_for_xp(int ** remoteVecCoun
             to_receive_buffer_len = to_receive_buffer_len + remoteVecCount_for_xp[i][j];
         }
         to_receive_buffer_len_list.push_back(to_receive_buffer_len);
-        
+
         // compute Index_in_remoteVecIndex_for_xp
         for(j=0;j<dmatsize[0];j++){
 
@@ -333,9 +333,11 @@ void detector::prepare_computing_Lyapunovian_for_xp() {
     }
 
 
-    to_receive_buffer_len_list_for_xp = construct_receive_buffer_index_for_xp(remoteVecCount_for_xp,remoteVecPtr_for_xp,remoteVecIndex_for_xp,Index_in_remoteVecIndex_for_xp);
+    to_receive_buffer_len_list_for_xp = construct_receive_buffer_index_for_xp(remoteVecCount_for_xp,
+                                                                              remoteVecPtr_for_xp,remoteVecIndex_for_xp,
+                                                                              Index_in_remoteVecIndex_for_xp);
 
-    to_send_buffer_len_list_for_xp = construct_send_buffer_index_for_xp(remoteVecIndex_for_xp,remoteVecPtr_for_xp,remoteVecIndex_for_xp,
+    to_send_buffer_len_list_for_xp = construct_send_buffer_index_for_xp(remoteVecCount_for_xp,remoteVecPtr_for_xp,remoteVecIndex_for_xp,
                                                                  tosendVecCount_for_xp,tosendVecPtr_for_xp,tosendVecIndex_for_xp);
 
     send_xd_for_xp = new double **[2*nmodes[0] + 1];
