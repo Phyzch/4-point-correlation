@@ -642,6 +642,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     }
 
     // ----------- Lyapunov spectrum for x,p operator: [a_{i}(t),a_{j}] or [a_{i}^{+}(t), a_{j}] or [a_{i}(t),a_{j}^{+}] or [a_{i}^{+}(t), a_{j}^{+}(t) ]-----------------
+
 //    complex<double> ** Lyapunov_spectrum_for_xp;
 //    Lyapunov_spectrum_for_xp = new complex<double> * [2 * d.nmodes[0]];
 //    for(i=0;i< 2*d.nmodes[0];i++){
@@ -681,6 +682,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     double special_state_x;
     double special_state_y;
     double survival_prob;
+
+    // ------------- prepare variable computing for Lyapunovian for xp --------------
+//    d.prepare_computing_Lyapunovian_for_xp();
 
     // -----------------------------------------------------------------------------------------------
     // prepare sendbuffer and recv_buffer and corresponding index.
@@ -1154,6 +1158,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     delete [] other_state_overlap_with_initial_state;
 
     // delete variable for computing Lyapunovian for xp.
+
 //    d.delete_variable_for_computing_Lyapunovian_xp();
 //    delete [] xd_for_xp;
 //    delete [] yd_for_xp;
@@ -1163,5 +1168,4 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 //    }
 //    delete [] Lyapunov_spectrum_for_xp;
 //    delete [] Matrix_M;
-
 };

@@ -49,7 +49,6 @@ complex<double> detector:: compute_c_overlap(int state_m, int relative_position_
     MPI_Allreduce(&imag_c_overlap, &imag_c_overlap_sum,1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     c_overlap_sum = complex<double>(real_c_overlap_sum, imag_c_overlap_sum);
-
     return c_overlap_sum;
 }
 
@@ -167,6 +166,7 @@ void detector:: update_xd_yd_for_xp(vector<vector<double>> * xd_for_xp, vector<v
         for(j=0;j<2*nmodes[0];j++){
             MPI_Alltoallv(&send_xd_for_xp[i][j][0],tosendVecCount_for_xp[j],tosendVecPtr_for_xp[j],MPI_DOUBLE,
                           &receive_xd_for_xp[i][j][0],remoteVecCount_for_xp[j],remoteVecPtr_for_xp[j],MPI_DOUBLE,MPI_COMM_WORLD);
+
             MPI_Alltoallv(&send_yd_for_xp[i][j][0], tosendVecCount_for_xp[j],tosendVecPtr_for_xp[j],MPI_DOUBLE,
                           &receive_yd_for_xp[i][j][0], remoteVecCount_for_xp[j],remoteVecPtr_for_xp[j],MPI_DOUBLE,MPI_COMM_WORLD);
         }
@@ -254,7 +254,7 @@ vector<int> detector::construct_receive_buffer_index_for_xp(int ** remoteVecCoun
             to_receive_buffer_len = to_receive_buffer_len + remoteVecCount_for_xp[i][j];
         }
         to_receive_buffer_len_list.push_back(to_receive_buffer_len);
-
+        
         // compute Index_in_remoteVecIndex_for_xp
         for(j=0;j<dmatsize[0];j++){
 
