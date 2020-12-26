@@ -188,21 +188,24 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     compute_important_state_index();
     // -------------------------- Two different way of constructing off-diagonal term for detector  -----------------------------
     // 1:  traditional way of constructing detector off-diagonal part of matrix
-     compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
-
-//    // 2:  applying Van Vleck transformation:
-    if (Turn_on_Vanvleck) {
-        if (my_id == 0) {
-            log << "Use Van Vleck transformation" << endl;
-        }
+    if(not read_Hamltonian_from_file){
+        compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
     }
-    //construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0],output);
-//    construct_state_coupling_vanvlk(dmat[1], dmat1, vmode1, dirow[1], dicol[1]);
+    else{
+//  2:  applying Van Vleck transformation:
+        if (Turn_on_Vanvleck) {
+            if (my_id == 0) {
+                log << "Use Van Vleck transformation" << endl;
+            }
+        }
+        construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0],output);
+    }
+
 
     //--------------------------------------------------------------------------------------------------
     update_initial_and_bright_detector_energy();
 
-    output_state_density(dmat0,dmat1);
+    //output_state_density(dmat0,dmat1);
 
     broadcast_dmatnum_doffnum();
     broadcast_total_dmat();
@@ -794,6 +797,8 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     // we will only include state near our initial state.
     int i,j,k,l;
     int max_state_quanta_diff = 0;
+    int state_distance = 0;
+
     double state_energy_difference;
     int initial_state_index_in_total_dmatrix;
     int nearby_state_index_size;
@@ -802,24 +807,48 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
                                            + total_dmat_size[0]/num_proc * initial_state_pc_id[0] ;
     // compute nearby_state_index and initial_state_index_in_nearby_state_index_list for computing 4-point correlation function
     for(i=0;i<total_dmat_size[0];i++){
-        // compute state distance
-        max_state_quanta_diff = 0;
-        state_energy_difference = 0;
-        for(j=0;j< nmodes[0];j++){
-            if(max_state_quanta_diff <abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -dv_all[0][i][j]) ){
-                max_state_quanta_diff = abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -dv_all[0][i][j]);
-            }
-        }
-        state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
 
-        if(max_state_quanta_diff <= distance_cutoff_for_4_piont_corre ){
-            // we will simulate dynamics of states in this list to compute 4 point correlation function
-            nearby_state_index.push_back(i);
+        if (Sphere_cutoff_in_phase_space){
+            // compute state distance
+            max_state_quanta_diff = 0;
+            state_energy_difference = 0;
+            for(j=0;j< nmodes[0];j++){
+                if(max_state_quanta_diff <abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -dv_all[0][i][j]) ){
+                    max_state_quanta_diff = abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -dv_all[0][i][j]);
+                }
+            }
+            state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
+
+            if(max_state_quanta_diff <= distance_cutoff_for_4_piont_corre ){
+                // we will simulate dynamics of states in this list to compute 4 point correlation function
+                nearby_state_index.push_back(i);
+            }
+            if(max_state_quanta_diff <= Distance_Range_4_point_corre_function_average
+               and state_energy_difference <= Energy_Range_4_point_corre_function_average){
+                states_for_4_point_correlation_average.push_back(i);
+            }
+
         }
-        if(max_state_quanta_diff <= Distance_Range_4_point_corre_function_average
-           and state_energy_difference <= Energy_Range_4_point_corre_function_average){
-            states_for_4_point_correlation_average.push_back(i);
+        else{
+            state_distance = 0;
+            state_energy_difference = 0;
+            for(j=0;j< nmodes[0];j++){
+                state_distance = state_distance + abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -
+                                                      dv_all[0][i][j]);
+            }
+            state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
+
+            if(state_distance <= distance_cutoff_for_4_piont_corre ){
+                // we will simulate dynamics of states in this list to compute 4 point correlation function
+                nearby_state_index.push_back(i);
+            }
+            if(state_distance <= Distance_Range_4_point_corre_function_average
+               and state_energy_difference <= Energy_Range_4_point_corre_function_average){
+                states_for_4_point_correlation_average.push_back(i);
+            }
+
         }
+
 
     }
     nearby_state_index_size = nearby_state_index.size();

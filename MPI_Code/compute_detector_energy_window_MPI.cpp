@@ -137,7 +137,8 @@ int find_position_for_insert_binary(const vector<vector<int>> & vmode, const vec
 }
 
 
-void full_system:: compute_detector_matrix_size_MPI( ){
+void full_system:: compute_detector_matrix_size_MPI_cubed( ){
+    // use this function we construct detector state in a cube.
     if(my_id==0){
         int i, j, k;
         int i1, i2;
@@ -177,7 +178,7 @@ void full_system:: compute_detector_matrix_size_MPI( ){
 
             //--------------------------------------------------------------------------------------------
             // criteria below make sure detector 0 's energy is reasonable.
-            if (detector0_energy > d.bright_state_energy[0] + d.detector_energy_window_size) {
+            if (detector0_energy > d.initial_Detector_energy[0] + d.detector_energy_window_size) {
                 // detector 0's energy can not be larger than its initial energy + photon energy
                 // jump to next detector state.
                 k = 0;
@@ -194,39 +195,23 @@ void full_system:: compute_detector_matrix_size_MPI( ){
                 goto label2;
             }
 
-            // criteria for energy window around bright_state and lower bright state for detector 0
-            if ((detector0_energy > d.initial_Detector_energy[0] - d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink and
-                 detector0_energy < d.initial_Detector_energy[0] + d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink)
-//                or (detector0_energy > d.bright_state_energy[0] - d.detector_energy_window_size and
-//                    detector0_energy < d.bright_state_energy[0] + d.detector_energy_window_size)
-                    )
-//            if(detector0_energy>=d.initial_Detector_energy[0] and detector0_energy<= d.bright_state_energy[0] + energy_window_size )
-            { ;
-            } else {
-                goto label2;
-            }
             //------------------------------------------------------------------------------------------------
             // criteria below make sure detector 1 can not be too far away from bright state and lower bright state.
-            excited_bright_state_distance = state_distance(ndetector0, d.bright_state[0], d.nmodes[0]);
             lower_bright_state_distance = state_distance(ndetector0, d.initial_detector_state[0], d.nmodes[0]);
-            if (excited_bright_state_distance > Rmax and lower_bright_state_distance > Rmax
-                 and ( detector0_energy > high_initial_state_energy or detector0_energy<low_initial_state_energy )
-            ) {
+            // we do not use distance constraint for state whose energy is between two
+            if ( lower_bright_state_distance > Rmax) {
                 goto label2;
             }
-            //-------------------------------------------------------------------------------------------------
+            //--------------------------------------insert this state in detector's state.-----------------------------------------------------------
             location=find_position_for_insert_binary(vmode0, ndetector0, exist);  // we check if this mode exist and the location we have to insert this state at the same time.
             if (!exist) {
-                // this detector state has not been recorded yet. We should record them.
-                // copy detector 0 mode information into temporary_vector and store this vector in vmode0
-                vector<int> temporary_vector(d.nmodes[0]);
-                copy_array(temporary_vector, ndetector0, d.nmodes[0]);
                 // when we push back we should consider arrange them in order. We compute location to insert in find_position_for_insert_binary() function:
-                vmode0.insert(vmode0.begin() + location, temporary_vector);
+                vmode0.insert(vmode0.begin() + location, ndetector0);
                 dmat0.insert(dmat0.begin() + location, detector0_energy);
             }
         }
         label1:;
+
         ndetector1[0] = -1; // this is when we go into code: ndetector1[i] = ndetector1[i]+1. our first state is |000000>
         while (1) { // loop through detector 1
             label3:;
@@ -247,7 +232,7 @@ void full_system:: compute_detector_matrix_size_MPI( ){
             }
             // --------------------------------------------------------------
             //  criteria below make sure detector 1's energy is reasonable:
-            if (detector1_energy > d.bright_state_energy[1] + d.detector_energy_window_size) {
+            if (detector1_energy > d.initial_Detector_energy[1] + d.detector_energy_window_size) {
                 // initial energy is system energy.
                 // detector 1 's energy can not be larger than its initial energy + photon energy
                 j = 0;
@@ -264,38 +249,23 @@ void full_system:: compute_detector_matrix_size_MPI( ){
                 goto label3;
             }
 
-            // criteria for energy window around bright_state and lower bright state for detector 1
-            if ((detector1_energy > d.initial_Detector_energy[1] - d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink and
-                 detector1_energy < d.initial_Detector_energy[1] + d.detector_energy_window_size / detector_lower_bright_state_energy_window_shrink)
-//                or (detector1_energy > d.bright_state_energy[1] - d.detector_energy_window_size and
-//                    detector1_energy < d.bright_state_energy[1] + d.detector_energy_window_size)
-                    )
-//                if(detector1_energy>=d.initial_Detector_energy[1]  and detector1_energy<= d.bright_state_energy[1]+energy_window_size)
-            {  // criteria here means we only consider detector state whose energy is within small energy window
-                ;
-            } else {
-                goto label3;
-            }
             //------------------------------------------------------------------------------------------------
             // criteria below make sure detector 1 can not be too far away from bright state and lower bright state.
-            excited_bright_state_distance = state_distance(ndetector1, d.bright_state[1], d.nmodes[1]);
             lower_bright_state_distance = state_distance(ndetector1, d.initial_detector_state[1], d.nmodes[1]);
-            if (excited_bright_state_distance > Rmax and lower_bright_state_distance > Rmax
-             and (detector1_energy< low_initial_state_energy or detector1_energy > high_initial_state_energy )
-            ) {
+            if ( lower_bright_state_distance > Rmax ) {
                 goto label3;
             }
             location = find_position_for_insert_binary(vmode1, ndetector1, exist);
             if (!exist) {
-                vector<int> temporary_vector(d.nmodes[1]);
-                copy_array(temporary_vector, ndetector1, d.nmodes[1]);
-                vmode1.insert(vmode1.begin() + location, temporary_vector);
+                vmode1.insert(vmode1.begin() + location, ndetector1);
                 dmat1.insert(dmat1.begin() + location, detector1_energy);
             }
         }
         label4:;
         // add function here to count state number in dmat1 and dmat0 to get state number.
         int * state_space_size = compute_state_space(dmat0,dmat1,d.initial_Detector_energy, d.bright_state_energy);
+        log << "detector_lower_bright_state_energy_window_shrink   " << detector_lower_bright_state_energy_window_shrink
+            << endl;
         log<< "lower bright state number for detector 1:  "<< state_space_size[0]<<endl;
         log<<"higher bright state number for detector 1:  "<<state_space_size[1]<<endl;
         log<<"lower bright state number for detector 2:  "<<state_space_size[2] <<endl;
@@ -304,7 +274,7 @@ void full_system:: compute_detector_matrix_size_MPI( ){
     }
 }
 
-void full_system:: compute_detector_matrix_size_MPI_new( ){
+void full_system:: compute_detector_matrix_size_MPI_sphere( ){
     if(my_id==0){
         int i, j, k;
         int i1, i2;

@@ -154,13 +154,24 @@ void detector:: update_xd_yd_for_xp(vector<vector<double>> * xd_for_xp, vector<v
             state_l_index = neighbor_state_in_nearby_state_index_list[initial_state_index_in_nearby_state_index_list][i-1];
         }
 
-        for(j=0;j<2*nmodes[0];j++){
-            // j is index for move in quantum number space for state j.
-           for(k=0;k<to_send_buffer_len_list_for_xp[j];k++){
-               local_state_index = tosendVecIndex_for_xp[j][k] - begin_index;
-               send_xd_for_xp[i][j][k] = xd[state_l_index][local_state_index];
-               send_yd_for_xp[i][j][k] = yd[state_l_index][local_state_index];
-           }
+        if(state_l_index!=-1){
+            for(j=0;j<2*nmodes[0];j++){
+                // j is index for move in quantum number space for state j.
+                for(k=0;k<to_send_buffer_len_list_for_xp[j];k++){
+                    local_state_index = tosendVecIndex_for_xp[j][k] - begin_index;
+                    send_xd_for_xp[i][j][k] = xd[state_l_index][local_state_index];
+                    send_yd_for_xp[i][j][k] = yd[state_l_index][local_state_index];
+                }
+            }
+        }
+        else{
+            for(j=0;j<2*nmodes[0];j++){
+                // j is index for move in quantum number space for state j.
+                for(k=0;k<to_send_buffer_len_list_for_xp[j];k++){
+                    send_xd_for_xp[i][j][k] = 0;
+                    send_yd_for_xp[i][j][k] = 0;
+                }
+            }
         }
 
         for(j=0;j<2*nmodes[0];j++){

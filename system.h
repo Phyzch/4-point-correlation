@@ -287,8 +287,8 @@ public:
 
     // MPI version of code:
     void read_input_with_MPI();
-    void compute_detector_matrix_size_MPI();
-    void compute_detector_matrix_size_MPI_new();
+    void compute_detector_matrix_size_MPI_cubed();
+    void compute_detector_matrix_size_MPI_sphere();
     void pre_coupling_evolution_MPI(int initial_state_choice);
     void construct_fullmatrix_with_energy_window_MPI();
     void compute_sstate_dstate_diagpart_dirow_dicol_MPI( );

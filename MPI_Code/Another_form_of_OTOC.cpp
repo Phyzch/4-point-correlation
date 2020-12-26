@@ -23,9 +23,19 @@ void detector:: compute_n_off_diag_element_one_mode_quanta_below(int index_b, in
         b_one_mode_quanta_below = neighbor_state_in_nearby_state_index_list[index_b][i];
 
         for(k=0;k<dmatsize[0];k++){
-            C_ka_conjugate = complex<double> (xd[a_one_mode_quanta_below][k],
-                                              -yd[a_one_mode_quanta_below][k]);
-            C_kb = complex<double> (xd[b_one_mode_quanta_below][k],yd[b_one_mode_quanta_below][k]);
+            if(a_one_mode_quanta_below!=-1){
+                C_ka_conjugate = complex<double> (xd[a_one_mode_quanta_below][k],
+                                                  -yd[a_one_mode_quanta_below][k]);
+            }
+            else{
+                C_ka_conjugate = 0;
+            }
+            if(b_one_mode_quanta_below!=-1){
+                C_kb = complex<double> (xd[b_one_mode_quanta_below][k],yd[b_one_mode_quanta_below][k]);
+            }
+            else{
+                C_kb = 0;
+            }
             n_k_i = dv[0][ k ][i];
 
             n_off_diag_element[i] = n_off_diag_element[i] + C_ka_conjugate * C_kb * n_k_i;

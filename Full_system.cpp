@@ -62,7 +62,12 @@ full_system::full_system(string path1, string cvpt_path1) {
                 }
 	        }
 	        else {
-                compute_detector_matrix_size_MPI_new();
+	            if(Sphere_cutoff_in_phase_space){
+                    compute_detector_matrix_size_MPI_sphere();
+	            }
+	            else{
+                    compute_detector_matrix_size_MPI_cubed();
+                }
                 d.construct_dmatrix_MPI(input,output,log,dmat0,dmat1,vmode0,vmode1);
                 d.save_detector_Hamiltonian_MPI(path,log);
 	        }
