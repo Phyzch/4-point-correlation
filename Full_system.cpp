@@ -62,7 +62,7 @@ full_system::full_system(string path1, string cvpt_path1) {
                 }
 	        }
 	        else {
-	            if(Sphere_cutoff_in_phase_space){
+	            if(Sphere_cutoff_in_state_space){
                     compute_detector_matrix_size_MPI_sphere();
 	            }
 	            else{

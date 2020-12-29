@@ -51,7 +51,7 @@ extern int distance_cutoff_for_4_piont_corre; // use to shrink simulation for 4-
 extern double Energy_Range_4_point_corre_function_average;
 extern int Distance_Range_4_point_corre_function_average;
 extern bool turn_on_random_anharmonicity;
-extern bool Sphere_cutoff_in_phase_space;
+extern bool Sphere_cutoff_in_state_space;
 extern bool read_Hamltonian_from_file;
 // define function here
 float ran2(long& idum);

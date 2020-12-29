@@ -212,7 +212,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
 
     if(my_id==0){
         for(m=0;m<stlnum;m++){
-            if (! Continue_Simulation) {
+            if (! Detector_Continue_Simulation) {
                 output << "Matrix for detector " << m << " : " << total_dmat_size[m] << "  " << total_dmat_off_num[m] << endl;
                 if (intra_detector_coupling) {
                     output << "Turn on function of rescale intra-detector coupling strength:  We scale coupling strength by:  " << intra_detector_coupling_noise << endl;
@@ -808,8 +808,8 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     // compute nearby_state_index and initial_state_index_in_nearby_state_index_list for computing 4-point correlation function
     for(i=0;i<total_dmat_size[0];i++){
 
-        if (Sphere_cutoff_in_phase_space){
-            // compute state distance
+        if (! Sphere_cutoff_in_state_space){
+            // construct a cube in state space
             max_state_quanta_diff = 0;
             state_energy_difference = 0;
             for(j=0;j< nmodes[0];j++){
@@ -830,6 +830,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
 
         }
         else{
+            // construct a sphere in state space.
             state_distance = 0;
             state_energy_difference = 0;
             for(j=0;j< nmodes[0];j++){
