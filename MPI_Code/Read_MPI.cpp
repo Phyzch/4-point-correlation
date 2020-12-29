@@ -53,7 +53,7 @@ void full_system:: read_input_with_MPI(){
             output.close();
             MPI_Abort(MPI_COMM_WORLD,-4);  // Abort with error code -4: Wrong time variable.
         }
-        if (! Continue_Simulation) {
+        if (! Detector_Continue_Simulation) {
             output << delt << " " << tstart << " " << tmax << " " << tprint << endl;
         }
     }

@@ -94,7 +94,7 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
         // cutoff: cutoff strength for intra-detector coupling strength.  cutoff2: cutoff strength for inter-detector coupling.
         // kelvin: temperature used to initialize detector state.
         input >> matflag >> maxdis >> cutoff >> cutoff2 >> kelvin;
-        if (! Continue_Simulation) {
+        if (! Detector_Continue_Simulation) {
             output << "Detector  " << matflag << " " << maxdis << " " << cutoff << " " << cutoff2 << " " << kelvin << endl;
         }
         for (i = 0; i < tlnum; i++) {
@@ -138,13 +138,13 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
         }
         //-----------------------------------------------------------------------------------------------------
         for(i=0;i<tlnum;i++){
-            if (!Continue_Simulation) {
+            if (!Detector_Continue_Simulation) {
                 output << nmodes[i] << " " << proptime[i] << endl;
             }
             for(j=0;j<nmodes[i];j++){
                 aij[i][j] = a_intra * pow(double(mfreq[i][j]),0.5) / pow(double(mfreq[0][0] /2),0.5);
                 // aij corresponding to scaling factor for f= f_{bright}/2 cm^{-1}.
-                if (! Continue_Simulation) {
+                if (! Detector_Continue_Simulation) {
                     output << mfreq[i][j] << " " << nmax[i][j] << " " << modtype[i][j] << " " << premodcoup[i][j]
                     << " " << modcoup[i][j] << endl;
                 }

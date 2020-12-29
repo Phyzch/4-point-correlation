@@ -106,12 +106,12 @@ void full_system::dimension_check() {
     }
 
     if (s.tlnum == 1) {
-        if (! Continue_Simulation) {
+        if (! Detector_Continue_Simulation) {
             output << "Global Matrix: 2*" << d.dmatsize[0] << " = " << matsize << endl;
         }
     }
     else if (s.tlnum == 2) {
-        if (! Continue_Simulation ) {
+        if (! Detector_Continue_Simulation ) {
             if (! energy_window) {
                 output << "Global Matrix : 4*" << d.dmatsize[0] << " * " << d.dmatsize[1] << " = " << matsize << endl;
             }
@@ -120,7 +120,7 @@ void full_system::dimension_check() {
             }
         }
     }
-    if (!Continue_Simulation) {
+    if (!Detector_Continue_Simulation) {
         output << "off-diagonal matrix number  " << total_offnum << endl;
         output << "Whole matrix element number  " << total_matnum << endl;
         log << "off-diagonal matrix number  " << total_offnum << endl;

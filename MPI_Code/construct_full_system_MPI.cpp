@@ -172,7 +172,7 @@ void full_system::shift_mat(){
 //    cout <<endl;
 
     if(my_id==0) {
-        if(! Continue_Simulation) {
+        if(! Detector_Continue_Simulation) {
             output << "Total energy before SUR algorithm shifting  " << total_energy / cf << endl;
             output << "Intra-detector coupling strength V set as: " << d.V_intra << endl;
             output << "Intra-detector coupling scaling parameter a set as  " << d.a_intra << endl;
