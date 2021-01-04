@@ -25,8 +25,6 @@ void detector::allocate_space(int tlnum) {
     // if mode is bright or dark
     modtype = new int *[tlnum];
 
-    dmatsize = new int[tlnum];   // size of detector matrix
-
     mfreq = new double *[tlnum];  // mfreq: frequency of each mode here.
 
     aij = new double * [tlnum];
@@ -37,17 +35,21 @@ void detector::allocate_space(int tlnum) {
 
     dmat = new vector <double> [tlnum];
 
-    dirow = new vector<int> [tlnum];
+    for (i=0;i<tlnum;i++){
+        vector<int> v1 ;
+        dirow.push_back(v1);
+        dicol.push_back(v1);
+        vector<vector<int>> v2 ;
+        dv.push_back(v2);
+    }
 
-    dicol = new vector<int> [tlnum];
-
-    dv = new vector<vector<int>> [tlnum];
 
     // matrix element number for detector matrix
     dmatnum = new int[tlnum];
     // off diagonal matrix element number for detector matrix
     doffnum = new int[tlnum];
 
+    dmatsize = new int[tlnum];   // size of detector matrix
 
     // tell detector total matrix size..
     total_dmat_size.reserve(2);
@@ -205,7 +207,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     //--------------------------------------------------------------------------------------------------
     update_initial_and_bright_detector_energy();
 
-    //output_state_density(dmat0,dmat1);
+    output_state_density(dmat0,dmat1);
 
     broadcast_dmatnum_doffnum();
     broadcast_total_dmat();
@@ -228,6 +230,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     compute_local_density_of_state(output,dmat0);
 
     //prepare variable for 4 piont correlation function
+
     prepare_variable_for_4_point_correlation_function(dmat0,dmat1,log);
 }
 
@@ -250,7 +253,10 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
     vector< double> * dmat_all;
     int ** vector_size, ** displacement_list;
 
-    dv_all = new vector<vector<int>>[2];
+    for(i=0;i<2;i++){
+        vector<vector<int>> v1 ;
+        dv_all.push_back(v1);
+    }
     dmat_all = new vector<double>[2];  // do not confuse dmat_all with total_dmat. dmat_all only contain diagonal term
     dirow_all = new vector<int>[2];
     dicol_all = new vector<int>[2];
@@ -875,11 +881,12 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     log<< "Nearby state number:   "<< nearby_state_index_size <<endl;
     log<< "Total state number:    "<< total_dmat_size[0] <<endl;
     log<<" 4 point correlation function is average over number of states:  "<<state_for_4_point_correlation_average_list_size << endl;
-    xd = new vector <double> [nearby_state_index_size];
-    yd = new vector<double> [nearby_state_index_size];
+
     for (i = 0; i < nearby_state_index_size; i++) {
-        xd[i].reserve(dmatsize[0]);
-        yd[i].reserve(dmatsize[0]);
+        vector<double> v1 ;
+        v1.reserve(dmatsize[0]);
+        xd.push_back(v1);
+        yd.push_back(v1);
     }
     xd_all = new double * [nearby_state_index_size];
     yd_all = new double * [nearby_state_index_size];

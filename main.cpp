@@ -10,7 +10,7 @@ int my_id;
 int num_proc;
 bool Turn_on_Vanvleck = false ;  // Note when turn on vanvleck, the V_intra and a_intra is decided by vanvlk file there.
 bool turn_on_random_self_anharmonicity = false ;
-bool read_Hamltonian_from_file = true;
+bool read_Hamltonian_from_file = true ;
 bool Sphere_cutoff_in_state_space = true;
 bool save_state = false;
 // About matflag in input.txt: If matflag==2, +We output all x,y (after the pre_coupling), matrix element, detector matrix element etc.
@@ -63,7 +63,7 @@ int main(int argc,char * argv []) {
         { // the parenthese here let destructor called after we use this instance.
             // pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
             full_system photon_entangled_system(path,cvpt_path);  // set parameter and construct Hamiltonian.
-//            photon_entangled_system.Quantum_evolution(); // creat initial state (or read from file). Then complete simulation.
+            photon_entangled_system.Quantum_evolution(); // creat initial state (or read from file). Then complete simulation.
         }
     }
     MPI_Finalize();

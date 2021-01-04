@@ -14,12 +14,6 @@ detector::~detector(){
     int i;
     int nearby_state_index_size = nearby_state_index.size();
 
-    delete [] nmodes;
-    delete [] nmax;
-    delete [] modtype;
-
-    delete [] dv;
-    delete [] dv_all;
     delete [] dmatsize;
     delete [] dmatnum;
     delete [] doffnum;
@@ -28,11 +22,7 @@ detector::~detector(){
     delete [] mfreq;
     delete [] modcoup;
     delete [] premodcoup;
-    delete [] aij;
-    delete [] dirow;
-    delete [] dicol;
-    delete [] xd;
-    delete [] yd;
+
     delete [] proptime;
     delete [] bright_state;
     delete [] initial_detector_state;
@@ -48,8 +38,8 @@ detector::~detector(){
         delete [] total_dmat[i];
         delete [] total_dirow[i];
         delete [] total_dicol[i];
-            }
-       for(i=0;i<nearby_state_index_size;i++){
+    }
+   for(i=0;i<nearby_state_index_size;i++){
             delete [] xd_all[i];
             delete [] yd_all[i];
     }

@@ -60,7 +60,10 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
     total_dmat = new double * [stlnum];
     total_dirow = new int * [stlnum];
     total_dicol = new int * [stlnum];
-    dv_all = new vector<vector<int>>[2];
+    for (i=0;i<2;i++){
+        vector<vector<int>> v1;
+        dv_all.push_back(v1);
+    }
     vector<int> temporary_dv;
     double ** temp_dmat = new double * [stlnum];
     int ** temp_dirow = new int * [stlnum];
@@ -101,7 +104,12 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
                 }
                 std::getline(load, ss);
             }
-            dv_all = new vector<vector<int>>[2];
+
+            for (i=0;i<2;i++){
+                vector<vector<int>> v1;
+                dv_all.push_back(v1);
+            }
+
             for (m = 0; m < stlnum; m++) {
                 for (i = 0; i < total_dmat_size[m]; i++) {
                     temporary_dv.clear();
@@ -319,11 +327,11 @@ void detector:: load_detector_state_MPI(string path,double * start_time,ofstream
     }
     // for 4 - point correlation function we will make xd , yd as N*N system.
     // we use first detector's state space
-    xd = new vector <double> [nearby_state_list_size];
-    yd = new vector<double> [nearby_state_list_size];
     for (i = 0; i < nearby_state_list_size ; i++) {
-        xd[i].resize(dmatsize[0]);
-        yd[i].resize(dmatsize[0]);
+        vector<double> v1;
+        v1.resize(dmatsize[0]);
+        xd.push_back(v1);
+        yd.push_back(v1);
     }
 
     if(my_id == 0){

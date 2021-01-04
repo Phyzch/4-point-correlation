@@ -53,7 +53,7 @@ public:
     int *dmatnum , *doffnum;  // detector matrix elemetn array
 	vector<int> total_dmat_size; // size of whole matrix across various process.
 	vector <int> total_dmat_num, total_dmat_off_num; // total matrix number and off-diagonal number across various process.
-    vector<vector <int>> * dv_all;
+    vector<vector<vector <int>>>  dv_all;
 	int ** dmatsize_each_process;
 	int ** doffnum_each_process;
 	int ** dmatnum_each_process;  // record detector matrix element number in each process.
@@ -64,14 +64,14 @@ public:
 
     double average_coupling_strength;
 
-	vector<vector<int>> *dv;  //dv: the q.n. for states (m,i) at coordinate j.  [m][i][j]: [detector][state][mode]
-	vector<int> *dirow;
-	vector<int> *dicol;
+	vector<vector<vector<int>>> dv;  //dv: the q.n. for states (m,i) at coordinate j.  [m][i][j]: [detector][state][mode]
+	vector<vector<int>> dirow;
+	vector<vector<int>> dicol;
 	int *deln;  // deln= |n_{i} - n_{j}| at coordinate k
 	double *nbar;
 	double **mfreq, ** modcoup, **premodcoup; // frequency of mode
 	double **aij;
-	vector <double> * xd, * yd; // wavefunction of detector state
+	vector<vector<double>>  xd,  yd; // wavefunction of detector state
     double ** xd_all, ** yd_all;
 	vector<double> * dmat; // matrix
 	double *proptime; // we set proptime for two different mode to be the same
