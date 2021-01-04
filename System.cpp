@@ -24,7 +24,6 @@ system::system() {
 
 
 system::~system(){
-    // destructor for system()
     delete [] xtl;
     delete [] ytl;
     delete [] tle;

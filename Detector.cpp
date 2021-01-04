@@ -13,10 +13,14 @@ detector::detector(){
 detector::~detector(){
     int i;
     int nearby_state_index_size = nearby_state_index.size();
+
     delete [] nmodes;
     delete [] nmax;
     delete [] modtype;
 
+    delete [] dv;
+    delete [] dv_all;
+    delete [] dmatsize;
     delete [] dmatnum;
     delete [] doffnum;
     delete [] deln;
@@ -49,6 +53,7 @@ detector::~detector(){
             delete [] xd_all[i];
             delete [] yd_all[i];
     }
+    delete [] dmat;
     delete [] dmatsize_each_process;
     delete [] dmatsize_offset_each_process;
     delete [] doffnum_each_process;

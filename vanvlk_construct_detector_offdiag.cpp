@@ -322,7 +322,7 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
 
  // we use  random number as anharmonicity, this way, we get Logan Wolynes model: energy difference between nearby state is random
  // Turn on random anharmonicity
-        if (turn_on_random_anharmonicity){
+        if (turn_on_random_self_anharmonicity){
            Vmat = random_number;
         }
     }
@@ -397,11 +397,11 @@ void  construct_state_coupling_subroutine(vector<double> & state_energy_local ,v
 
    double random_number;
    double timee = time(0);
-   double self_anharmonicity_strength = 1000 ;
+   double self_anharmonicity_strength = 200 ;
    std::default_random_engine generator(timee);
    std::normal_distribution<double> distribution(0,self_anharmonicity_strength);   // used to generate random anharmonicity
 
-   if(turn_on_random_anharmonicity){
+   if(turn_on_random_self_anharmonicity){
        output<<"Self anharmonicity on energy level:   "<<self_anharmonicity_strength << endl;
    }
 

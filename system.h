@@ -279,7 +279,6 @@ public:
 	string path;
 
 	full_system(string path1,string cvpt_path1);
-	~full_system();
 	void dimension_check();
 	void Quantum_evolution();;
 	void replace_first_line(); // just ignore this code, this code do the very dumb work..

@@ -897,6 +897,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     int position;
     bool exist;
 
+
     for(j=0;j<nearby_state_index_size;j++){
         state_mode = dv_all[0][ nearby_state_index[j] ];  // states we simulate trajectories.
         neighbor_state_index.clear();  // record states near to our states of choice for simulating trajectory.

@@ -9,9 +9,10 @@ void check_and_create_file(string parent_path, string path);
 int my_id;
 int num_proc;
 bool Turn_on_Vanvleck = false ;  // Note when turn on vanvleck, the V_intra and a_intra is decided by vanvlk file there.
-bool turn_on_random_anharmonicity = false ;
+bool turn_on_random_self_anharmonicity = false ;
 bool read_Hamltonian_from_file = true;
 bool Sphere_cutoff_in_state_space = true;
+bool save_state = false;
 // About matflag in input.txt: If matflag==2, +We output all x,y (after the pre_coupling), matrix element, detector matrix element etc.
 // if matflag==1: We don't output anything but still we will save our final simulation results in save.txt
 // We also set bool Continue_Simulation in class full_system , which indicate we will read from save.txt the wavefunction and begin our simulation at that point. True means start from the middle of simulation.
@@ -19,12 +20,13 @@ bool Sphere_cutoff_in_state_space = true;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/SCCL2 sample/SCCL2 scaling/high energy 16000/0.2(scramble)/";
+                       "/SCCL2 sample/SCCL2 scaling/try/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
+//    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 cutoff 0.05 GOE/frequency set 2(a=0.2)/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 scaling/0.2/";
     string cvpt_path;
     int i;
-    int Filenumber=1;
+    int Filenumber=20;
     string path;
 
     // MPI Command
@@ -40,8 +42,8 @@ int main(int argc,char * argv []) {
     for(i=0;i<Filenumber;i++){
         if(Filenumber!=1) {
             path = parentpath + to_string(i + 1) + "/";   // path for sub-folder.
-            cvpt_path =cvpt_parent_path + c_list[i]+"/";
-//            cvpt_path = cvpt_parent_path;
+//            cvpt_path =cvpt_parent_path + c_list[i]+"/";
+            cvpt_path = cvpt_parent_path;
         }
         else{
             path=parentpath;
@@ -61,7 +63,7 @@ int main(int argc,char * argv []) {
         { // the parenthese here let destructor called after we use this instance.
             // pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
             full_system photon_entangled_system(path,cvpt_path);  // set parameter and construct Hamiltonian.
-            photon_entangled_system.Quantum_evolution(); // creat initial state (or read from file). Then complete simulation.
+//            photon_entangled_system.Quantum_evolution(); // creat initial state (or read from file). Then complete simulation.
         }
     }
     MPI_Finalize();

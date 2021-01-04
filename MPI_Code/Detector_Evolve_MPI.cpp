@@ -129,10 +129,10 @@ void detector::prepare_evolution(){
     local_dirow= new vector<int> [1];
     local_dicol = new vector<int> [1]; // column index for computation in local matrix.
     // buffer to send and receive buffer to/from other process.
-    recv_xd= new double * [total_dmat_size[0]];
-    recv_yd= new double * [total_dmat_size[0]];
-    send_xd= new double * [total_dmat_size[0]];
-    send_yd = new double *[total_dmat_size[0]];
+    recv_xd= new double * [nearby_state_list_size];
+    recv_yd= new double * [nearby_state_list_size];
+    send_xd= new double * [nearby_state_list_size];
+    send_yd = new double *[nearby_state_list_size];
 
     vsize= total_dmat_size[0]/num_proc;
     to_recv_buffer_len[0] = construct_receive_buffer_index(remoteVecCount[0],remoteVecPtr[0],
@@ -435,7 +435,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
     int steps;
-    double detector_tprint = 0.0001;
+    double detector_tprint = tprint; // set detector_tprint == tprint specified in input file.
     int output_step= int(detector_tprint/delt); //Output every output_step.
 
     int scale_of_output;
@@ -532,7 +532,6 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     int state_for_average_size = d.states_for_4_point_correlation_average.size();
     int nearby_state_index_size = d.nearby_state_index.size();
     double * four_point_correlation_function_at_initial_state = new double [d.nmodes[0]];
-    double * another_OTOC = new double [d.nmodes[0]];
     double * four_point_correlation_function_average_over_states = new double [d.nmodes[0]];
     double * four_point_correlation_function_variance_over_states = new double [d.nmodes[0]];
     double ** four_point_correlation_function_for_each_states = new double * [d.nmodes[0]]; // this is average over bunch of states
@@ -577,29 +576,30 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
 
     //  Another form of OTOC
-    complex<double> ** n_offdiag_total_one_mode_quanta_below;  // compute <m-| n_{i}(t) | l->  states one mode below in corresponding mode index
-    double ** n_offdiag_total_one_mode_quanta_below_real;
-    double ** n_offdiag_total_one_mode_quanta_below_imag;
-    n_offdiag_total_one_mode_quanta_below = new complex<double> * [d.nmodes[0]];
-    n_offdiag_total_one_mode_quanta_below_real = new double * [d.nmodes[0]];
-    n_offdiag_total_one_mode_quanta_below_imag = new double * [d.nmodes[0]];
-    for(i=0;i<d.nmodes[0];i++){
-        n_offdiag_total_one_mode_quanta_below[i] = new complex<double> [nearby_state_index_size];
-        n_offdiag_total_one_mode_quanta_below_real[i] = new double [nearby_state_index_size];
-        n_offdiag_total_one_mode_quanta_below_imag[i] = new double [nearby_state_index_size];
-    }
-
-    complex<double> ** n_offdiag_one_mode_quanta_below;  // compute <m-| n_{i}(t) | l->  states one mode below in corresponding mode index
-    double ** n_offdiag_one_mode_quanta_below_real;
-    double ** n_offdiag_one_mode_quanta_below_imag;
-    n_offdiag_one_mode_quanta_below = new complex<double> * [d.nmodes[0]];
-    n_offdiag_one_mode_quanta_below_real = new double * [d.nmodes[0]];
-    n_offdiag_one_mode_quanta_below_imag = new double * [d.nmodes[0]];
-    for(i=0;i<d.nmodes[0];i++){
-        n_offdiag_one_mode_quanta_below[i] = new complex<double> [nearby_state_index_size];
-        n_offdiag_one_mode_quanta_below_real[i] = new double [nearby_state_index_size];
-        n_offdiag_one_mode_quanta_below_imag[i] = new double [nearby_state_index_size];
-    }
+//    double * another_OTOC = new double [d.nmodes[0]];
+//    complex<double> ** n_offdiag_total_one_mode_quanta_below;  // compute <m-| n_{i}(t) | l->  states one mode below in corresponding mode index
+//    double ** n_offdiag_total_one_mode_quanta_below_real;
+//    double ** n_offdiag_total_one_mode_quanta_below_imag;
+//    n_offdiag_total_one_mode_quanta_below = new complex<double> * [d.nmodes[0]];
+//    n_offdiag_total_one_mode_quanta_below_real = new double * [d.nmodes[0]];
+//    n_offdiag_total_one_mode_quanta_below_imag = new double * [d.nmodes[0]];
+//    for(i=0;i<d.nmodes[0];i++){
+//        n_offdiag_total_one_mode_quanta_below[i] = new complex<double> [nearby_state_index_size];
+//        n_offdiag_total_one_mode_quanta_below_real[i] = new double [nearby_state_index_size];
+//        n_offdiag_total_one_mode_quanta_below_imag[i] = new double [nearby_state_index_size];
+//    }
+//
+//    complex<double> ** n_offdiag_one_mode_quanta_below;  // compute <m-| n_{i}(t) | l->  states one mode below in corresponding mode index
+//    double ** n_offdiag_one_mode_quanta_below_real;
+//    double ** n_offdiag_one_mode_quanta_below_imag;
+//    n_offdiag_one_mode_quanta_below = new complex<double> * [d.nmodes[0]];
+//    n_offdiag_one_mode_quanta_below_real = new double * [d.nmodes[0]];
+//    n_offdiag_one_mode_quanta_below_imag = new double * [d.nmodes[0]];
+//    for(i=0;i<d.nmodes[0];i++){
+//        n_offdiag_one_mode_quanta_below[i] = new complex<double> [nearby_state_index_size];
+//        n_offdiag_one_mode_quanta_below_real[i] = new double [nearby_state_index_size];
+//        n_offdiag_one_mode_quanta_below_imag[i] = new double [nearby_state_index_size];
+//    }
 
 
     complex<double> * n_offdiag_element;
@@ -643,31 +643,31 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
     // ----------- Lyapunov spectrum for x,p operator: [a_{i}(t),a_{j}] or [a_{i}^{+}(t), a_{j}] or [a_{i}(t),a_{j}^{+}] or [a_{i}^{+}(t), a_{j}^{+}(t) ]-----------------
 
-    complex<double> ** Lyapunov_spectrum_for_xp;
-    Lyapunov_spectrum_for_xp = new complex<double> * [2 * d.nmodes[0]];
-    for(i=0;i< 2*d.nmodes[0];i++){
-        Lyapunov_spectrum_for_xp[i] = new complex<double> [2 * d.nmodes[0]];
-    }
-
-    complex<double> ** Matrix_M; // L is Lyapunov spectrum,<l| L_{ij} |l> = \sum_{m}  [ \sum_{k} (M_{ki}^{ml})^{*} ( M_{kj}^{ml} )  ]
-    // Here M_{kj}^{ml} = <m| M_{kj} | l>: M_{kj} = [c_{k}(t), c_{j}] where c_{k} = a_{k} if (0<=k<=N-1), c_{k} = (a_{k-N})^{+} if N<=k<= 2N-1
-    Matrix_M = new complex<double> * [2 * d.nmodes[0]];
-    for(i=0;i< 2*d.nmodes[0];i++){
-        Matrix_M[i] = new complex<double> [ 2 * d.nmodes[0]];
-    }
-
-    vector<vector<double>> * xd_for_xp = new vector<vector<double>> [1 + 2*d.nmodes[0]]; // assum initial state l. Then we have [ l , l_{k}^{-} (k=1, cdots ,N) , l_{k}^{+}] (k=1, cdots, N)
-    vector<vector<double>> * yd_for_xp = new vector<vector<double>> [1 + 2*d.nmodes[0]];
-    // size [ 1 + 2*d.nmodes[0] , 2* d.nmodes[0], dmatsize[0] ]
-    vector <double> v1 (d.dmatsize[0],0);
-    vector<vector<double>> v2;
-    for(j=0;j <2*d.nmodes[0];j++){ // this is for <j^{-} | l> or  <j^{+}| l>
-        v2.push_back(v1);
-    }
-    for(i=0;i<1+2*d.nmodes[0];i++){ // first index i is for trajectory
-        xd_for_xp[i] = v2;
-        yd_for_xp[i] = v2;
-    }
+//    complex<double> ** Lyapunov_spectrum_for_xp;
+//    Lyapunov_spectrum_for_xp = new complex<double> * [2 * d.nmodes[0]];
+//    for(i=0;i< 2*d.nmodes[0];i++){
+//        Lyapunov_spectrum_for_xp[i] = new complex<double> [2 * d.nmodes[0]];
+//    }
+//
+//    complex<double> ** Matrix_M; // L is Lyapunov spectrum,<l| L_{ij} |l> = \sum_{m}  [ \sum_{k} (M_{ki}^{ml})^{*} ( M_{kj}^{ml} )  ]
+//    // Here M_{kj}^{ml} = <m| M_{kj} | l>: M_{kj} = [c_{k}(t), c_{j}] where c_{k} = a_{k} if (0<=k<=N-1), c_{k} = (a_{k-N})^{+} if N<=k<= 2N-1
+//    Matrix_M = new complex<double> * [2 * d.nmodes[0]];
+//    for(i=0;i< 2*d.nmodes[0];i++){
+//        Matrix_M[i] = new complex<double> [ 2 * d.nmodes[0]];
+//    }
+//
+//    vector<vector<double>> * xd_for_xp = new vector<vector<double>> [1 + 2*d.nmodes[0]]; // assum initial state l. Then we have [ l , l_{k}^{-} (k=1, cdots ,N) , l_{k}^{+}] (k=1, cdots, N)
+//    vector<vector<double>> * yd_for_xp = new vector<vector<double>> [1 + 2*d.nmodes[0]];
+//    // size [ 1 + 2*d.nmodes[0] , 2* d.nmodes[0], dmatsize[0] ]
+//    vector <double> v1 (d.dmatsize[0],0);
+//    vector<vector<double>> v2;
+//    for(j=0;j <2*d.nmodes[0];j++){ // this is for <j^{-} | l> or  <j^{+}| l>
+//        v2.push_back(v1);
+//    }
+//    for(i=0;i<1+2*d.nmodes[0];i++){ // first index i is for trajectory
+//        xd_for_xp[i] = v2;
+//        yd_for_xp[i] = v2;
+//    }
 
     // ---------- Allocate space for stability matrix L:  ---------------------
     // L = sum_{b} (sum_{k}| <a |n_{k}(t)|b> |^{2}* (n_{i}^{b} - n_{i}^{a})* (n_{j}^{b} - n_{j}^{b}) ) here k,i,j is dof, a,b is state
@@ -684,7 +684,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     double survival_prob;
 
     // ------------- prepare variable computing for Lyapunovian for xp --------------
-    d.prepare_computing_Lyapunovian_for_xp();
+//    d.prepare_computing_Lyapunovian_for_xp();
 
     // -----------------------------------------------------------------------------------------------
     // prepare sendbuffer and recv_buffer and corresponding index.
@@ -864,38 +864,38 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
 
                 // -------- output another form of OTOC ------------------------------
-                compute_another_form_of_OTOC(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
-                                             n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,
-                                             n_offdiag_one_mode_quanta_below,n_offdiag_one_mode_quanta_below_real,n_offdiag_one_mode_quanta_below_imag,
-                                             n_offdiag_total_one_mode_quanta_below,n_offdiag_total_one_mode_quanta_below_real,n_offdiag_total_one_mode_quanta_below_imag,
-                                             initial_state_index_in_total_dmatrix, another_OTOC);
-                if(my_id == 0){
-                    another_form_of_OTOC_output << "Time:  " << t <<endl;
-                    for(i=0;i<d.nmodes[0];i++){
-                        another_form_of_OTOC_output << another_OTOC[i] << "  ";
-                    }
-                    another_form_of_OTOC_output << endl;
-                }
+//                compute_another_form_of_OTOC(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
+//                                             n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,
+//                                             n_offdiag_one_mode_quanta_below,n_offdiag_one_mode_quanta_below_real,n_offdiag_one_mode_quanta_below_imag,
+//                                             n_offdiag_total_one_mode_quanta_below,n_offdiag_total_one_mode_quanta_below_real,n_offdiag_total_one_mode_quanta_below_imag,
+//                                             initial_state_index_in_total_dmatrix, another_OTOC);
+//                if(my_id == 0){
+//                    another_form_of_OTOC_output << "Time:  " << t <<endl;
+//                    for(i=0;i<d.nmodes[0];i++){
+//                        another_form_of_OTOC_output << another_OTOC[i] << "  ";
+//                    }
+//                    another_form_of_OTOC_output << endl;
+//                }
 
                 // ----------- output Lyapunovian spectrum for xp ---------------------------------------
-                d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Matrix_M,xd_for_xp,yd_for_xp);
-                if(my_id == 0){
-                    Lyapunov_spectrum_for_xp_output << t <<endl;
-                    for(i=0;i< 2 * d.nmodes[0];i++){
-                        for(j=0;j<2*d.nmodes[0];j++){
-                            Lyapunov_spectrum_for_xp_output << real(Lyapunov_spectrum_for_xp[i][j]) << " ";
-                        }
-                    }
-                    Lyapunov_spectrum_for_xp_output << endl;
-
-                    for(i=0;i<2*d.nmodes[0];i++){
-                        for(j=0;j<2*d.nmodes[0];j++){
-                            Lyapunov_spectrum_for_xp_output << imag(Lyapunov_spectrum_for_xp[i][j]) <<" ";
-                        }
-                    }
-                    Lyapunov_spectrum_for_xp_output << endl;
-
-                }
+//                d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Matrix_M,xd_for_xp,yd_for_xp);
+//                if(my_id == 0){
+//                    Lyapunov_spectrum_for_xp_output << t <<endl;
+//                    for(i=0;i< 2 * d.nmodes[0];i++){
+//                        for(j=0;j<2*d.nmodes[0];j++){
+//                            Lyapunov_spectrum_for_xp_output << real(Lyapunov_spectrum_for_xp[i][j]) << " ";
+//                        }
+//                    }
+//                    Lyapunov_spectrum_for_xp_output << endl;
+//
+//                    for(i=0;i<2*d.nmodes[0];i++){
+//                        for(j=0;j<2*d.nmodes[0];j++){
+//                            Lyapunov_spectrum_for_xp_output << imag(Lyapunov_spectrum_for_xp[i][j]) <<" ";
+//                        }
+//                    }
+//                    Lyapunov_spectrum_for_xp_output << endl;
+//
+//                }
 
                 // ---------- output 4-point correlation function average over states and variance -------------------
                 compute_4_point_corre_for_multiple_states(state_for_average_size,nearby_state_index_size,n_offdiag_element,
@@ -1026,8 +1026,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         }
         final_time[0] = t;
     }
-
-    d.save_detector_state_MPI(path,final_time,log,initial_state_choice);
+    if(save_state){
+        d.save_detector_state_MPI(path,final_time,log,initial_state_choice);
+    }
     d.replace_4_point_corr_second_line(detector_tprint);
 
     if(my_id==0){
@@ -1062,6 +1063,22 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         delete [] d.recv_xd[i];
         delete [] d.recv_yd[i];
     }
+
+    delete [] d.to_recv_buffer_len;
+    delete [] d.remoteVecCount;
+    delete [] d.remoteVecPtr;
+    delete [] d.remoteVecIndex;
+    delete [] d.to_send_buffer_len;
+    delete [] d.tosendVecCount;
+    delete [] d.tosendVecPtr;
+    delete [] d.tosendVecIndex;
+    delete [] d.send_xd;
+    delete [] d.send_yd;
+    delete [] d.recv_xd;
+    delete [] d.recv_yd;
+    delete [] d.local_dirow;
+    delete [] d.local_dicol;
+
     for(i=0;i<d.nmodes[0];i++){
         delete [] n_offdiag_total[i];
         delete [] n_offdiag_total_real[i];
@@ -1108,20 +1125,21 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     delete [] n_offdiag_for_states_ensemble_imag;
 
     // n_offdiag one mode quanta below.
-    for(i=0;i<d.nmodes[0];i++){
-        delete [] n_offdiag_total_one_mode_quanta_below[i];
-        delete [] n_offdiag_total_one_mode_quanta_below_real[i];
-        delete [] n_offdiag_total_one_mode_quanta_below_imag[i];
-        delete [] n_offdiag_one_mode_quanta_below[i];
-        delete [] n_offdiag_one_mode_quanta_below_real[i];
-        delete [] n_offdiag_one_mode_quanta_below_imag[i];
-    }
-    delete [] n_offdiag_one_mode_quanta_below;
-    delete [] n_offdiag_one_mode_quanta_below_real;
-    delete [] n_offdiag_one_mode_quanta_below_imag;
-    delete [] n_offdiag_total_one_mode_quanta_below;
-    delete [] n_offdiag_total_one_mode_quanta_below_real;
-    delete [] n_offdiag_total_one_mode_quanta_below_imag;
+//    delete [] another_OTOC;
+//    for(i=0;i<d.nmodes[0];i++){
+//        delete [] n_offdiag_total_one_mode_quanta_below[i];
+//        delete [] n_offdiag_total_one_mode_quanta_below_real[i];
+//        delete [] n_offdiag_total_one_mode_quanta_below_imag[i];
+//        delete [] n_offdiag_one_mode_quanta_below[i];
+//        delete [] n_offdiag_one_mode_quanta_below_real[i];
+//        delete [] n_offdiag_one_mode_quanta_below_imag[i];
+//    }
+//    delete [] n_offdiag_one_mode_quanta_below;
+//    delete [] n_offdiag_one_mode_quanta_below_real;
+//    delete [] n_offdiag_one_mode_quanta_below_imag;
+//    delete [] n_offdiag_total_one_mode_quanta_below;
+//    delete [] n_offdiag_total_one_mode_quanta_below_real;
+//    delete [] n_offdiag_total_one_mode_quanta_below_imag;
 
     delete [] four_point_correlation_function_at_initial_state;
     delete [] four_point_correlation_function_average_over_states;
@@ -1133,20 +1151,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     }
     delete [] Stability_Matrix;
 
-    delete [] d.to_recv_buffer_len;
-    delete [] d.remoteVecCount;
-    delete [] d.remoteVecPtr;
-    delete [] d.remoteVecIndex;
-    delete [] d.to_send_buffer_len;
-    delete [] d.tosendVecCount;
-    delete [] d.tosendVecPtr;
-    delete [] d.tosendVecIndex;
-    delete [] d.send_xd;
-    delete [] d.send_yd;
-    delete [] d.recv_xd;
-    delete [] d.recv_yd;
-    delete [] d.local_dirow;
-    delete [] d.local_dicol;
+
 
     delete [] inverse_IPR_in_one_process;
     delete [] inverse_IPR_all;
@@ -1154,15 +1159,21 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
     delete [] other_state_overlap_with_initial_state;
 
+
     // delete variable for computing Lyapunovian for xp.
 
-    d.delete_variable_for_computing_Lyapunovian_xp();
-    delete [] xd_for_xp;
-    delete [] yd_for_xp;
-    for(i=0;i<2*d.nmodes[0];i++){
-        delete [] Lyapunov_spectrum_for_xp[i];
-        delete [] Matrix_M[i];
-    }
-    delete [] Lyapunov_spectrum_for_xp;
-    delete [] Matrix_M;
+//    d.delete_variable_for_computing_Lyapunovian_xp();
+//    delete [] xd_for_xp;
+//    delete [] yd_for_xp;
+//    for(i=0;i<2*d.nmodes[0];i++){
+//        delete [] Lyapunov_spectrum_for_xp[i];
+//        delete [] Matrix_M[i];
+//    }
+//    delete [] Lyapunov_spectrum_for_xp;
+//    delete [] Matrix_M;
+
+    delete [] mode_quanta;
+    delete [] total_mode_quanta;
+    delete [] start_time;
+    delete [] final_time;
 };

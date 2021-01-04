@@ -322,8 +322,8 @@ void detector:: load_detector_state_MPI(string path,double * start_time,ofstream
     xd = new vector <double> [nearby_state_list_size];
     yd = new vector<double> [nearby_state_list_size];
     for (i = 0; i < nearby_state_list_size ; i++) {
-        xd[i].reserve(dmatsize[0]);
-        yd[i].reserve(dmatsize[0]);
+        xd[i].resize(dmatsize[0]);
+        yd[i].resize(dmatsize[0]);
     }
 
     if(my_id == 0){

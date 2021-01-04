@@ -378,15 +378,15 @@ void detector::prepare_computing_Lyapunovian_for_xp() {
 void detector::delete_variable_for_computing_Lyapunovian_xp(){
     int i,j;
     for(i=0;i<2*nmodes[0];i++){
-        delete remoteVecCount_for_xp[i];
-        delete remoteVecPtr_for_xp[i];
-        delete remoteVecIndex_for_xp[i];
+        delete [] remoteVecCount_for_xp[i];
+        delete [] remoteVecPtr_for_xp[i];
+        delete [] remoteVecIndex_for_xp[i];
 
-        delete tosendVecCount_for_xp[i];
-        delete tosendVecPtr_for_xp[i];
-        delete tosendVecIndex_for_xp[i];
+        delete [] tosendVecCount_for_xp[i];
+        delete [] tosendVecPtr_for_xp[i];
+        delete [] tosendVecIndex_for_xp[i];
 
-        delete Index_in_remoteVecIndex_for_xp[i];
+        delete [] Index_in_remoteVecIndex_for_xp[i];
     }
     delete [] remoteVecCount_for_xp;
     delete [] remoteVecPtr_for_xp;
@@ -396,11 +396,12 @@ void detector::delete_variable_for_computing_Lyapunovian_xp(){
     delete [] tosendVecPtr_for_xp;
     delete [] tosendVecIndex_for_xp;
 
+    delete [] Index_in_remoteVecIndex_for_xp;
+
     for(i=0 ; i< 2*nmodes[0] + 1 ; i++){
         for(j=0 ; j < 2*nmodes[0] ; j++){
             delete [] send_xd_for_xp[i][j];
             delete [] send_yd_for_xp[i][j];
-
             delete [] receive_xd_for_xp[i][j];
             delete [] receive_yd_for_xp[i][j];
         }
@@ -409,5 +410,10 @@ void detector::delete_variable_for_computing_Lyapunovian_xp(){
         delete [] receive_xd_for_xp[i];
         delete [] receive_yd_for_xp[i];
     }
+
+    delete [] send_xd_for_xp;
+    delete [] send_yd_for_xp;
+    delete [] receive_xd_for_xp;
+    delete [] receive_yd_for_xp;
 
 }

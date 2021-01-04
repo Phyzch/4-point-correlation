@@ -69,7 +69,9 @@ full_system::full_system(string path1, string cvpt_path1) {
                     compute_detector_matrix_size_MPI_cubed();
                 }
                 d.construct_dmatrix_MPI(input,output,log,dmat0,dmat1,vmode0,vmode1);
-                d.save_detector_Hamiltonian_MPI(path,log);
+	            if(save_state){
+                    d.save_detector_Hamiltonian_MPI(path,log);
+	            }
 	        }
 	    }
 	    else {  // construct matrix for detector + photon.

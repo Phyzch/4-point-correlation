@@ -197,11 +197,14 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
 
             //------------------------------------------------------------------------------------------------
             // criteria below make sure detector 1 can not be too far away from bright state and lower bright state.
+
             lower_bright_state_distance = state_distance(ndetector0, d.initial_detector_state[0], d.nmodes[0]);
             // we do not use distance constraint for state whose energy is between two
             if ( lower_bright_state_distance > Rmax) {
                 goto label2;
             }
+
+
             //--------------------------------------insert this state in detector's state.-----------------------------------------------------------
             location=find_position_for_insert_binary(vmode0, ndetector0, exist);  // we check if this mode exist and the location we have to insert this state at the same time.
             if (!exist) {
