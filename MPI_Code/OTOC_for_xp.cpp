@@ -95,8 +95,11 @@ void detector:: compute_M_matrix(int state_m, int state_l, complex<double> ** M_
     }
 }
 
-void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_spectrum_for_xp, complex<double> ** M_matrix,
-                                                 vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp){
+void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_spectrum_for_xp,
+                                                 complex<double>  ** Lyapunov_spectrum_for_xp_from_single_state,
+                                                 complex<double> ** M_matrix,
+                                                 vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp,
+                                                 double t , ofstream & Every_states_contribution_to_OTOC_xp){
     /*
     because after applying raising and lowering operator, our state may not in same process, so we have to create array to store
      states after we apply raising and lowering operator.
@@ -114,6 +117,10 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
 
     update_xd_yd_for_xp(xd_for_xp,yd_for_xp);
 
+    if(my_id == 0){
+        Every_states_contribution_to_OTOC_xp << t <<endl;
+    }
+
     for(m=0;m<nearby_state_index_size;m++){
 
         // go through state m
@@ -121,12 +128,33 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
             compute_M_matrix(m,initial_state_index_in_nearby_state_index_list,M_matrix,xd_for_xp,yd_for_xp);
             for(i=0;i<2*nmodes[0];i++){
                 for(j=0;j<2*nmodes[0];j++){
+                    Lyapunov_spectrum_for_xp_from_single_state[i][j] = 0;
                     for(k=0;k<2*nmodes[0];k++){
                         Lyapunov_spectrum_for_xp[i][j] = Lyapunov_spectrum_for_xp[i][j] +
                                                          std::conj(M_matrix[k][i]) * M_matrix[k][j];  // \sum_{k} (M_{ki})^{*} * M_{kj}
+                        Lyapunov_spectrum_for_xp_from_single_state[i][j] = Lyapunov_spectrum_for_xp_from_single_state[i][j] +
+                                std::conj(M_matrix[k][i]) * M_matrix[k][j];
                     }
                 }
             }
+            // output each states' contribution to OTOC for xp
+            // real part
+            if(my_id == 0){
+                for(i=0;i<2*nmodes[0];i++){
+                    for(j=0; j < 2*nmodes[0]; j++){
+                        Every_states_contribution_to_OTOC_xp << real(Lyapunov_spectrum_for_xp_from_single_state[i][j]) << " ";
+                    }
+                }
+                Every_states_contribution_to_OTOC_xp << endl;
+                // imaginary part
+                for(i=0;i<2*nmodes[0];i++){
+                    for(j=0; j< 2*nmodes[0]; j++) {
+                        Every_states_contribution_to_OTOC_xp << imag(Lyapunov_spectrum_for_xp_from_single_state[i][j]) << " ";
+                    }
+                }
+                Every_states_contribution_to_OTOC_xp << endl;
+            }
+
         }
 
     }

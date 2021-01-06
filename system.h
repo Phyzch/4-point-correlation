@@ -191,8 +191,10 @@ public:
     void compute_M_matrix(int state_m, int state_l, complex<double> ** M_matrix ,
                           vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
 
-    void compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_spectrum_for_xp, complex<double> ** M_matrix,
-                                          vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
+    void compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_spectrum_for_xp, complex<double>  ** Lyapunov_spectrum_for_xp_from_single_state,
+                                          complex<double> ** M_matrix,
+                                          vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp,
+                                          double t ,ofstream & Every_states_contribution_to_OTOC_xp);
 
     void prepare_computing_Lyapunovian_for_xp();
 

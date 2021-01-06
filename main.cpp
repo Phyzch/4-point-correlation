@@ -20,10 +20,10 @@ bool save_state = false;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/SCCL2 sample/SCCL2 scaling/0.2/";
+                       "/SCCL2 sample/SCCL2 scaling/333222/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 cutoff 0.05 GOE/frequency set 2(a=0.2)/";
-    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 scaling/0.2/";
+    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";
     string cvpt_path;
     int i;
     int Filenumber=1;

@@ -448,6 +448,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     for(i=0;i<s.tlnum;i++){
         start_time[i]=0;
     }
+    int state_number_for_compputing_OTOC_for_xp = 0;
     ofstream four_point_correlation_output;
     ofstream four_point_correlation_average_output;
     ofstream four_point_correlation_variance_output;
@@ -467,6 +468,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream another_form_of_OTOC_output;
 
     ofstream Lyapunov_spectrum_for_xp_output;
+
+    ofstream Every_states_contribution_to_OTOC_xp;
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
         if(Detector_Continue_Simulation){
@@ -486,6 +489,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
             another_form_of_OTOC_output.open(path+ "another_OTOC.txt", ofstream::app);
             Lyapunov_spectrum_for_xp_output.open(path+ "Lyapunov_spectrum_for_xp.txt",ofstream::app);
+            Every_states_contribution_to_OTOC_xp.open(path + "OTOC_xp_for_every_state.txt", ofstream::app);
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
@@ -504,6 +508,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
             another_form_of_OTOC_output.open(path+ "another_OTOC.txt");
             Lyapunov_spectrum_for_xp_output.open(path+"Lyapunov_spectrum_for_xp.txt");
+            Every_states_contribution_to_OTOC_xp.open(path+"OTOC_xp_for_every_state.txt");
         }
     }
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
@@ -651,6 +656,12 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     Lyapunov_spectrum_for_xp = new complex<double> * [2 * d.nmodes[0]];
     for(i=0;i< 2*d.nmodes[0];i++){
         Lyapunov_spectrum_for_xp[i] = new complex<double> [2 * d.nmodes[0]];
+    }
+
+    complex<double> ** Lyapunov_spectrum_for_xp_from_single_state ;
+    Lyapunov_spectrum_for_xp_from_single_state = new complex<double> * [2* d.nmodes[0]];
+    for(i=0;i<2*d.nmodes[0];i++){
+        Lyapunov_spectrum_for_xp_from_single_state[i] = new complex<double> [2 * d.nmodes[0]];
     }
 
     complex<double> ** Matrix_M; // L is Lyapunov spectrum,<l| L_{ij} |l> = \sum_{m}  [ \sum_{k} (M_{ki}^{ml})^{*} ( M_{kj}^{ml} )  ]
@@ -806,6 +817,23 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
 
                 Lyapunov_spectrum_for_xp_output << d.nmodes[0] << endl;
+
+                Every_states_contribution_to_OTOC_xp << d.nmodes[0] << endl;
+                for(m=0;m<nearby_state_index_size;m++){
+                    if(d.bool_neighbor_state_all_in_nearby_state_index[m]){
+                        state_number_for_compputing_OTOC_for_xp = state_number_for_compputing_OTOC_for_xp + 1;
+                    }
+                }
+                Every_states_contribution_to_OTOC_xp << state_number_for_compputing_OTOC_for_xp << endl;
+                for(m=0;m<nearby_state_index_size;m++){
+                    if(d.bool_neighbor_state_all_in_nearby_state_index[m]){
+                        for(i=0;i<d.nmodes[0];i++){
+                            Every_states_contribution_to_OTOC_xp << d.dv_all[0][d.nearby_state_index[m]][i] <<" ";
+                        }
+                        Every_states_contribution_to_OTOC_xp << endl;
+                    }
+                }
+
             }
         }
 
@@ -912,7 +940,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
 
 //                 ----------- output Lyapunovian spectrum for xp ---------------------------------------
-                d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Matrix_M,xd_for_xp,yd_for_xp);
+                d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Lyapunov_spectrum_for_xp_from_single_state,Matrix_M,xd_for_xp,yd_for_xp,t,Every_states_contribution_to_OTOC_xp);
                 if(my_id == 0){
                     Lyapunov_spectrum_for_xp_output << t <<endl;
                     for(i=0;i< 2 * d.nmodes[0];i++){
@@ -1081,6 +1109,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         overlap_with_initial_state_output.close();
         another_form_of_OTOC_output.close();
         Lyapunov_spectrum_for_xp_output.close();
+        Every_states_contribution_to_OTOC_xp.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){
@@ -1193,7 +1222,6 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
     delete [] other_state_overlap_with_initial_state;
 
-
     // delete variable for computing Lyapunovian for xp.
 
     d.delete_variable_for_computing_Lyapunovian_xp();
@@ -1201,9 +1229,11 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     delete [] yd_for_xp;
     for(i=0;i<2*d.nmodes[0];i++){
         delete [] Lyapunov_spectrum_for_xp[i];
+        delete [] Lyapunov_spectrum_for_xp_from_single_state[i];
         delete [] Matrix_M[i];
     }
     delete [] Lyapunov_spectrum_for_xp;
+    delete [] Lyapunov_spectrum_for_xp_from_single_state;
     delete [] Matrix_M;
 
     delete [] mode_quanta;
