@@ -20,13 +20,13 @@ bool save_state = false;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/SCCL2 sample/SCCL2 scaling/try/";
+                       "/SCCL2 sample/SCCL2 scaling/0.2/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 cutoff 0.05 GOE/frequency set 2(a=0.2)/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 scaling/0.2/";
     string cvpt_path;
     int i;
-    int Filenumber=20;
+    int Filenumber=1;
     string path;
 
     // MPI Command
@@ -39,11 +39,16 @@ int main(int argc,char * argv []) {
             "0.2",
             "0.3"
     };
+    string V_list[3] = {
+            "V=100",
+            "V=200",
+            "V=300"
+    };
     for(i=0;i<Filenumber;i++){
         if(Filenumber!=1) {
             path = parentpath + to_string(i + 1) + "/";   // path for sub-folder.
-//            cvpt_path =cvpt_parent_path + c_list[i]+"/";
-            cvpt_path = cvpt_parent_path;
+            cvpt_path =cvpt_parent_path + V_list[i]+"/";
+//            cvpt_path = cvpt_parent_path;
         }
         else{
             path=parentpath;

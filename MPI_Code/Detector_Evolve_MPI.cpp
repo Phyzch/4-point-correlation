@@ -519,7 +519,11 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     initial_state_index_in_total_dmatrix = d.initial_state_index[0]
             + d.total_dmat_size[0]/num_proc * d.initial_state_pc_id[0] ;
 
-    // ---------- allocate space for mode quanta
+
+
+
+
+    // ---------- allocate space for mode quanta -----------------
     double * total_mode_quanta;
     total_mode_quanta= new double [d.nmodes[0]];
 
@@ -690,6 +694,35 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     // prepare sendbuffer and recv_buffer and corresponding index.
     d.prepare_evolution();
 
+    // -----  compute state's energy and shift it before doing simulation -------------
+    vector<complex<double>>  H_phi;
+    H_phi.resize(d.dmatsize[0]);
+    for(i=0;i<d.dmatsize[0];i++){
+        H_phi[i] = 0;
+    }
+    double de;
+    double de_all;
+    for(i=0;i<d.dmatnum[0];i++){
+        irow_index = d.local_dirow[0][i];
+        icol_index = d.local_dicol[0][i]; // compute to point to colindex in
+        H_phi[irow_index] = H_phi[irow_index] + d.dmat[0][i] * complex(d.xd[d.initial_state_index_in_nearby_state_index_list][icol_index],
+                                                                       d.yd[d.initial_state_index_in_nearby_state_index_list][icol_index]);
+    }
+    de=0;
+    for(i=0;i<d.dmatsize[0];i++){
+        de= de+ real(H_phi[i] * complex(d.xd[d.initial_state_index_in_nearby_state_index_list][i],
+                                        -d.yd[d.initial_state_index_in_nearby_state_index_list][i]));
+    }
+    MPI_Allreduce(&de,&de_all,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+    // shift Hamiltonian by detector energy de_all:
+    if(my_id == 0){
+        cout <<"Shift Hamiltonian by energy of system  "<< de_all << endl;
+        log << "Shift Hamiltonian by energy of system  " << de_all <<endl;
+    }
+    for(i=0;i<d.dmatsize[0];i++){
+        d.dmat[0][i] = d.dmat[0][i] - de_all;
+    }
+
 
     final_time[0] = 0;
     if(d.proptime[0]>0){
@@ -786,12 +819,12 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         for(k=start_index;k<steps;k++){
             //-------------------- output result ----------------------------
             if(t!=0){
-                scale_of_output =  floor(std::log(t/pow(10,-4))/std::log(10));  // 0 for 10^{-4} : 1 for 10^{-1}
+                scale_of_output =  floor(std::log(t/delt)/std::log(10));  // 0 for 10^{-4} : 1 for 10^{-1}
             }
             else{
                 scale_of_output = 0;
             }
-            output_all_state_time_unit = min(pow(10,-4+scale_of_output), minimum_output_all_state_time_unit);
+            output_all_state_time_unit = min(delt * pow(10,scale_of_output), minimum_output_all_state_time_unit);
             output_step_for_all_state = int(output_all_state_time_unit / delt);
 
             // ----- output state real and imaginary part for all state in simulation ----------------------
