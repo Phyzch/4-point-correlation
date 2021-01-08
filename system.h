@@ -210,7 +210,7 @@ public:
 
     void compute_Lanczos(double * v, double* vold, double * w, double * alpha, double * beta, int nlev, int maxit);
 
-    void diagonalize(double * eigenvalue_list, int & numlam, int lb, int ub,  ofstream & eigenvalue_log_file);
+    void diagonalize(double * eigenvalue_list, int & numlam,  ofstream & eigenvalue_log_file);
 };
 
 class full_system {

@@ -54,6 +54,8 @@ extern bool turn_on_random_self_anharmonicity;
 extern bool Sphere_cutoff_in_state_space;
 extern bool read_Hamltonian_from_file;
 extern bool save_state;
+extern bool Evolve_dynamics;  // bool variable to decide if we run Detector_Evolve
+extern bool compute_eigenvalue_spectrum; // bool variable to decide if use Lanczos algorithm to compute spectrum of syste
 
 // define function here
 float ran2(long& idum);

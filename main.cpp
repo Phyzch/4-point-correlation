@@ -13,6 +13,9 @@ bool turn_on_random_self_anharmonicity = false ;
 bool read_Hamltonian_from_file = true ;
 bool Sphere_cutoff_in_state_space = true;
 bool save_state = false;
+bool Evolve_dynamics = false;  // bool variable to decide if we run Detector_Evolve
+bool compute_eigenvalue_spectrum = true; // bool variable to decide if use Lanczos algorithm to compute spectrum of system
+
 // About matflag in input.txt: If matflag==2, +We output all x,y (after the pre_coupling), matrix element, detector matrix element etc.
 // if matflag==1: We don't output anything but still we will save our final simulation results in save.txt
 // We also set bool Continue_Simulation in class full_system , which indicate we will read from save.txt the wavefunction and begin our simulation at that point. True means start from the middle of simulation.
@@ -20,7 +23,7 @@ bool save_state = false;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/SCCL2 sample/SCCL2 scaling/333222/";
+                       "/SCCL2 sample/333222/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 cutoff 0.05 GOE/frequency set 2(a=0.2)/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";

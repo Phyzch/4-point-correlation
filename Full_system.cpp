@@ -94,16 +94,50 @@ full_system::full_system(string path1, string cvpt_path1) {
 void full_system::Quantum_evolution() {
     // -----------------------------------------------------------------------------------
 	// Now we construct our wavefunction /phi for our detector and full_system. (For system it is already constructed in s.read())
-    clock_t start_time, end_time, duration;
-    start_time = clock();
+    int i;
+	clock_t start_time, end_time, duration;
 
-    pre_coupling_evolution_MPI(0); // pre-coupling evolution of detector state (lower bright state)
+    if(Evolve_dynamics){
+        start_time = clock();
 
-    end_time = clock();
-    duration = end_time - start_time;
-    if(my_id == 0) {
-        log << "The total run time for parallel computing is " << (double(duration) /CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
-        cout << "The total run time for parallel computing is " << (double(duration)/CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
+        pre_coupling_evolution_MPI(0); // pre-coupling evolution of detector state (lower bright state)
+
+        end_time = clock();
+        duration = end_time - start_time;
+        if(my_id == 0) {
+            log << "The total run time for parallel computing is " << (double(duration) /CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
+            cout << "The total run time for parallel computing is " << (double(duration)/CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
+        }
+    }
+
+    if(compute_eigenvalue_spectrum){
+        start_time = clock();
+        ofstream eigenvalue_log_file;
+        ofstream eigenvalue_output_file;
+        if(my_id == 0){
+            eigenvalue_log_file.open(path + "spectrum_log.txt");
+            eigenvalue_output_file.open(path + "spectrum.txt");
+        }
+        double * eigenvalue_list = new double [d.total_dmat_size[0]];
+        int numlam = 0;
+        // diagonalize matrix using Lanczos algorithm. Eigenvalue store in eigenvalue list. nonzero number of eigenvalue is numlam
+        if(my_id == 0){
+            d.diagonalize(eigenvalue_list,numlam, eigenvalue_log_file);
+        }
+
+        if(my_id == 0){
+            eigenvalue_output_file << numlam << endl;
+            for(i=0;i<numlam;i++){
+                eigenvalue_output_file << eigenvalue_list[i] <<" ";
+            }
+           eigenvalue_output_file << endl;
+        }
+        if(my_id == 0){
+            eigenvalue_log_file.close();
+            eigenvalue_output_file.close();
+        }
+
+        delete [] eigenvalue_list;
     }
 
 }

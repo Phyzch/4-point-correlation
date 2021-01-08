@@ -112,14 +112,14 @@ void tqli( double * d, double *e , int n, ofstream & eigenvalue_log_output) {
                 m = l ;
                 for (m = l; m <= n - 1; m++) {
                     dd = fabs(d[m]) + fabs(d[m + 1]);
-                    if ((double) (fabs(e[m]) + dd) == dd) break;
+                    if ((double) (fabs(e[m]) + dd) == dd) break; // e[m] : offdiagonal part is relatively small to diagonal part
                 }
 
                 if (m != l) {
-                    if (iter > 30) {
+                    if (iter > 50) {
                         // too many iteration
-                        eigenvalue_log_output << d[l] << "  > 30 iteration" << endl;
-                        cout << d[l] << "  > 30 iteration" << endl;
+                        eigenvalue_log_output << d[l] << "  > 50 iteration" << endl;
+                        cout << d[l] << "  > 50 iteration" << endl;
                         goto label2;
                     }
                     iter = iter + 1;
@@ -243,9 +243,9 @@ void sortlambda(int begin_index, int end_index, double * lambda, int * repfind){
     quicksort_lambda(lambda,repfind,begin_index,end_index);
 }
 
-void detector :: diagonalize(double * eigenvalue_list, int & numlam, int lb, int ub,  ofstream & eigenvalue_log_file){
+void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream & eigenvalue_log_file){
     /*
-    eigenvalue_list : size: dmatsize, store eigenvalue computed using Lanczos algorithm
+    eigenvalue_list : size: total_dmat_size, store eigenvalue computed using Lanczos algorithm
      maxit: dimension of vector in Lanczos algorithm
      numlam: number of eigenvalue obtained
      lb: lower bound of eigenvalue want to compute
@@ -258,9 +258,8 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam, int lb, int
     int numold;
     int iold;
     int verified = 0; // number of verified eigenvalue
-    int verified_old = 0;
     int nlev = total_dmat_size[0] ; // size of matrix we want to compute eigenvalue
-    int lanc_matrix_size_ratio = 10;  // lanczos algorithm matrix size over input matrix size
+    int lanc_matrix_size_ratio = 4;  // lanczos algorithm matrix size over input matrix size
     int lancdim = nlev * lanc_matrix_size_ratio; // maximum number of eigenvalue computed in Lanczos algorithm
     int maxit = lancdim - 1;  // maximum iteration in Lanczos algorithm (also size of Lanczos matrix size - 1 )
     int actit ;
@@ -280,13 +279,17 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam, int lb, int
     double * d = new double[lancdim + 1];  // d is diagonal part of matrix after Lanczos algorithm and after we filter out part that loss orthogonality
     double * e = new double[lancdim + 1]; // e is subdiagonal part of matrix after we filter the matrix produced by Lanczos algorithm
 
+
+    eigenvalue_log_file << "Size of Hamiltonian to be diagonalized  " << nlev << endl;
+    cout << "Size of Hamiltonian to be diagonalized  " << nlev << endl;
+
     for(i=0;i<lancdim;i++){
         lambda[i] = 0;
     }
 
     // random number generator
     std::default_random_engine generator;
-    std::uniform_int_distribution<int> distribution(0,1);
+    std::uniform_int_distribution<int> distribution(0,1);  // random number in range [0,1]
 
     while(stopflag == 0){
          iter = iter + 1;
@@ -297,12 +300,7 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam, int lb, int
          //
         vsum = 0;
         for(i=0;i<nlev;i++){
-            if(iter == 1){
-                v[i] = 1;
-            }
-            else{
-                v[i] = distribution(generator) - 0.5;
-            }
+            v[i] = distribution(generator) - 0.5;
             vsum = vsum + pow(v[i],2);
         }
         vsum = sqrt(vsum);
@@ -321,9 +319,9 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam, int lb, int
         // we make d[0], e[0] left as blank not to use. Record data in d[1], e[1]. This way we do not confuse when transfer fortran code to C++ code
         d[0] = 0;
         e[0] = 0;
-        while(i<maxit and alpha[i] < pow(10,6)){
-            d[i+1] = alpha[i];
-            e[i+1] = beta[i];
+        while(i<maxit and alpha[i] < pow(10,5)){
+            d[i+1] = alpha[i];  // d , alpha is diagonal part tridiagonal matrix
+            e[i+1] = beta[i];   // e , beta is off diagonal part of tridiagonal matrix
             i = i + 1;
         }
         // .. we filter possible Lanczos matrix according to size of alpha[i]
@@ -427,7 +425,6 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam, int lb, int
         //
         // compute number of potential and verified eigenvalue and continue simulation if necessary
         //
-        verified_old = verified;
         verified = 0;
         for(i=1;i<=numlam;i++){
             if(repfind[i] == 2) verified = verified + 1;
@@ -436,7 +433,7 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam, int lb, int
         eigenvalue_log_file << numlam << " potential eigenvalue found so far " << endl;
         eigenvalue_log_file << verified << " out of " << nlev <<" eigenvalue verified so far " << endl;
         eigenvalue_log_file << endl;
-        cout << numlam << "potential eigenvalue found so far" << endl;
+        cout << numlam << " potential eigenvalue found so far" << endl;
         cout << verified << " out of " << nlev <<" eigenvalue verified so far " << endl;
         cout << endl;
 
@@ -490,7 +487,7 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam, int lb, int
 
             eigenvalue_log_file << "Error criteria has to be raised to " << minimum
                                 << "to eliminate excess eigenvalue found " << endl;
-            cout << << "Error criteria has to be raised to " << minimum
+            cout  << "Error criteria has to be raised to " << minimum
                     << "to eliminate excess eigenvalue found " << endl;
         }
     }
@@ -540,9 +537,12 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam, int lb, int
             }
             eigenvalue_log_file << "Error criteria has to be raised to " <<
             minimum << "to eliminate necessary number of unverified eigenvalue found " << endl;
+            eigenvalue_log_file <<"Now verified eigeenvalue is:  " << verified << endl;
 
             cout << "Error criteria has to be raised to " <<
                  minimum << "to eliminate necessary number of unverified eigenvalue found " << endl;
+            cout << "Now verified eigeenvalue is:  " << verified << endl;
+
         }
     }
 
@@ -554,6 +554,7 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam, int lb, int
     }
 
     delete [] lambda;
+    delete [] repfind;
     delete [] v;
     delete [] vold;
     delete [] w;
