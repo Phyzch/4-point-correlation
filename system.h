@@ -207,6 +207,10 @@ public:
                                     int ** tosendVecCount_for_xp, int ** tosendVecPtr_for_xp, int ** tosendVecIndex_for_xp);
 
     void update_xd_yd_for_xp(vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
+
+    void compute_Lanczos(double * v, double* vold, double * w, double * alpha, double * beta, int nlev, int maxit);
+
+    void diagonalize(double * eigenvalue_list, int & numlam, int lb, int ub,  ofstream & eigenvalue_log_file);
 };
 
 class full_system {
