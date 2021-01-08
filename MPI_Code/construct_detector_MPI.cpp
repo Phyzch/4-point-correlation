@@ -191,7 +191,9 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     // -------------------------- Two different way of constructing off-diagonal term for detector  -----------------------------
     // 1:  traditional way of constructing detector off-diagonal part of matrix
     if(not read_Hamltonian_from_file){
-        compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
+        if(not no_coupling){
+            compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
+        }
     }
     else{
 //  2:  applying Van Vleck transformation:
@@ -200,7 +202,9 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
                 log << "Use Van Vleck transformation" << endl;
             }
         }
-        construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0],output);
+        if(!no_coupling){
+            construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0],output);
+        }
     }
 
 

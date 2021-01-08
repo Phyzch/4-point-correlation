@@ -279,6 +279,7 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
     double * d = new double[lancdim + 1];  // d is diagonal part of matrix after Lanczos algorithm and after we filter out part that loss orthogonality
     double * e = new double[lancdim + 1]; // e is subdiagonal part of matrix after we filter the matrix produced by Lanczos algorithm
 
+    double error_spacing_between_eigenvalue = pow(10,-6); // we recognize eigenvalue's relative difference within this spacing as the same
 
     eigenvalue_log_file << "Size of Hamiltonian to be diagonalized  " << nlev << endl;
     cout << "Size of Hamiltonian to be diagonalized  " << nlev << endl;
@@ -289,7 +290,7 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
 
     // random number generator
     std::default_random_engine generator;
-    std::uniform_int_distribution<int> distribution(0,1);  // random number in range [0,1]
+    std::uniform_real_distribution<double> distribution(0,1);  // random number in range [0,1]
 
     while(stopflag == 0){
          iter = iter + 1;
@@ -355,7 +356,7 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
             }
 
             k = 1 ; // k is index for already found eigenvalue in lambda
-            while(k <= numlam and abs(lambda[k] - d[i])/ abs(d[i]) > pow(10,-8)  ){
+            while(k <= numlam and abs(lambda[k] - d[i])/ abs(d[i]) > error_spacing_between_eigenvalue  ){
                 k = k + 1;
             }
 
@@ -391,14 +392,14 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
         e[actit] = 0;
 
         tqli(d,e,actit,eigenvalue_log_file);
-        eigenvalue_log_file << "Completed first tqli this iteration:  " << iter << endl;
+        eigenvalue_log_file << "Completed second tqli this iteration:  " << iter << endl;
         cout << "Complete second tqli this iteration: " << iter << endl;
 
         // sort env
         sortev(1,actit-1,d);
         for(i=1;i<=actit-1;i++){
             for(j=numold + 1; j<=numlam; j ++ ){
-                if(repfind[j] < 2 and abs(d[i] - lambda[j]) / abs(d[i]) < pow(10,-8) ){
+                if(repfind[j] < 2 and abs(d[i] - lambda[j]) / abs(d[i]) < error_spacing_between_eigenvalue ){
                     repfind[j] = 0 ;
                 }
             }

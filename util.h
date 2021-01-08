@@ -56,6 +56,7 @@ extern bool read_Hamltonian_from_file;
 extern bool save_state;
 extern bool Evolve_dynamics;  // bool variable to decide if we run Detector_Evolve
 extern bool compute_eigenvalue_spectrum; // bool variable to decide if use Lanczos algorithm to compute spectrum of syste
+extern bool no_coupling;  // if this is Ture, we do not have off-diagonal coupling
 
 // define function here
 float ran2(long& idum);

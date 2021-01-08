@@ -122,15 +122,27 @@ void full_system::Quantum_evolution() {
         int numlam = 0;
         // diagonalize matrix using Lanczos algorithm. Eigenvalue store in eigenvalue list. nonzero number of eigenvalue is numlam
         if(my_id == 0){
-            d.diagonalize(eigenvalue_list,numlam, eigenvalue_log_file);
+            if(not no_coupling){
+                d.diagonalize(eigenvalue_list,numlam, eigenvalue_log_file);
+            }
         }
 
         if(my_id == 0){
-            eigenvalue_output_file << numlam << endl;
-            for(i=0;i<numlam;i++){
-                eigenvalue_output_file << eigenvalue_list[i] <<" ";
+            if(not no_coupling){
+                eigenvalue_output_file << numlam << endl;
+                for(i=0;i<numlam;i++){
+                    eigenvalue_output_file << eigenvalue_list[i] <<" ";
+                }
+                eigenvalue_output_file << endl;
             }
-           eigenvalue_output_file << endl;
+            else{
+                // no off-diagonal coupling. Thus we have states whose energy is exactly same. just output diagonal term
+                eigenvalue_output_file << d.total_dmat_size[0] << endl;
+                for(i=0;i<d.total_dmat_size[0];i++){
+                    eigenvalue_output_file << dmat0[i] <<" ";
+                }
+                eigenvalue_output_file << endl;
+            }
         }
         if(my_id == 0){
             eigenvalue_log_file.close();
