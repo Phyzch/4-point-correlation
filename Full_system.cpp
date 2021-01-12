@@ -94,7 +94,7 @@ full_system::full_system(string path1, string cvpt_path1) {
 void full_system::Quantum_evolution() {
     // -----------------------------------------------------------------------------------
 	// Now we construct our wavefunction /phi for our detector and full_system. (For system it is already constructed in s.read())
-    int i;
+    int i,j;
 	clock_t start_time, end_time, duration;
 
     if(Evolve_dynamics){
@@ -114,9 +114,11 @@ void full_system::Quantum_evolution() {
         start_time = clock();
         ofstream eigenvalue_log_file;
         ofstream eigenvalue_output_file;
+        ofstream diagonal_state_mode_flie;
         if(my_id == 0){
             eigenvalue_log_file.open(path + "spectrum_log.txt");
             eigenvalue_output_file.open(path + "spectrum.txt");
+            diagonal_state_mode_flie.open(path + "diagonal_state.txt");
         }
         double * eigenvalue_list = new double [d.total_dmat_size[0]];
         int numlam = 0;
@@ -142,11 +144,20 @@ void full_system::Quantum_evolution() {
                     eigenvalue_output_file << dmat0[i] <<" ";
                 }
                 eigenvalue_output_file << endl;
+
+                diagonal_state_mode_flie << d.total_dmat_size[0] << endl;
+                for(i=0;i<d.total_dmat_size[0];i++){
+                    for(j=0;j<d.nmodes[0];j++){
+                        diagonal_state_mode_flie << vmode0[i][j] <<" ";
+                    }
+                    diagonal_state_mode_flie << endl;
+                }
             }
         }
         if(my_id == 0){
             eigenvalue_log_file.close();
             eigenvalue_output_file.close();
+            diagonal_state_mode_flie.close();
         }
 
         delete [] eigenvalue_list;

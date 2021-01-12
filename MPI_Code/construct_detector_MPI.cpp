@@ -86,7 +86,7 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
     int my_id;
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
 
-    a_intra= 0.3;
+    a_intra= 0.2;
     stlnum=tlnum;
     stldim=tldim;
     allocate_space(tlnum);
@@ -108,18 +108,27 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
         }
         // -----------------------------------------------------------------------------------------------------
         // add noise to frequency.
+        std::default_random_engine generator(time(NULL));
+        std::uniform_real_distribution<double> distribution(0,1);  // random number in range [0,1]
         if (!Continue_Simulation) {
             for(i=0;i<tlnum;i++) {
                 for(j=0;j<nmodes[0];j++) {
                     if (j == 0) {
-//                    mfreq[i][j] =mfreq[i][j] + min(noise_strength * mfreq[i][j], energy_window_size/2) * rand() / RAND_MAX;
+                        mfreq[i][j] = mfreq[i][j] * (1 + noise_strength * (distribution(generator)-0.5) * 2 );
+                        cout << mfreq[i][j] << " ";
                     }
                     else {
-                        mfreq[i][j] = mfreq[i][j] * (1 + noise_strength * rand() / RAND_MAX);
+                        mfreq[i][j] = mfreq[i][j] * (1 + noise_strength * (distribution(generator)-0.5) * 2 );
+                        cout << mfreq[i][j] << " ";
                     }
                     // set precision of mfreq to 0.01. Convenient to restart simulation.
                     mfreq[i][j] = floor(mfreq[i][j] *100) /100;
                 }
+
+                if (noise_strength not_eq 0){
+                    cout << "Nonzero noise strength" << endl;
+                }
+
             }
         }
         else{

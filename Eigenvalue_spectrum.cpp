@@ -159,7 +159,6 @@ void tqli( double * d, double *e , int n, ofstream & eigenvalue_log_output) {
             } while (m != l);
             label2:;
         }
-
     }
 }
 
@@ -289,7 +288,7 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
     }
 
     // random number generator
-    std::default_random_engine generator;
+    std::default_random_engine generator(time(NULL));
     std::uniform_real_distribution<double> distribution(0,1);  // random number in range [0,1]
 
     while(stopflag == 0){
@@ -316,10 +315,12 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
         compute_Lanczos(v,vold,w,alpha,beta,nlev,maxit);
         cout << "Finish Lanczos run for this iteration: " << iter << endl;
         eigenvalue_log_file << "Finish Lanczos run for this iteration: " << iter << endl;
+
         i =0 ;
         // we make d[0], e[0] left as blank not to use. Record data in d[1], e[1]. This way we do not confuse when transfer fortran code to C++ code
         d[0] = 0;
         e[0] = 0;
+
         while(i<maxit and alpha[i] < pow(10,5)){
             d[i+1] = alpha[i];  // d , alpha is diagonal part tridiagonal matrix
             e[i+1] = beta[i];   // e , beta is off diagonal part of tridiagonal matrix
