@@ -370,8 +370,6 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
     double * lambda = new double [lancdim + 1];  // store potential eigenvalue. Results store in [1, lancdim] ( 0 is left as blank)
     int * repfind = new int [lancdim + 1] ; //
     double * v = new double [nlev]; // store vector v used in Lanczos algorithm
-    double * vold = new double[nlev];
-    double * w = new double[nlev];
     double * alpha = new double [lancdim]; // diagonal part.
     double * beta = new double [lancdim]; // subddiagonal part. code for computing Lanczos
     double * d = new double[lancdim + 1];  // d is diagonal part of matrix after Lanczos algorithm and after we filter out part that loss orthogonality
@@ -694,8 +692,6 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
     delete [] lambda;
     delete [] repfind;
     delete [] v;
-    delete [] vold;
-    delete [] w;
     delete [] alpha;
     delete [] beta;
     delete [] d;
