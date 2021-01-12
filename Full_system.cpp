@@ -122,12 +122,12 @@ void full_system::Quantum_evolution() {
         }
         double * eigenvalue_list = new double [d.total_dmat_size[0]];
         int numlam = 0;
+
         // diagonalize matrix using Lanczos algorithm. Eigenvalue store in eigenvalue list. nonzero number of eigenvalue is numlam
-        if(my_id == 0){
-            if(not no_coupling){
-                d.diagonalize(eigenvalue_list,numlam, eigenvalue_log_file);
-            }
+        if(not no_coupling){
+            d.diagonalize(eigenvalue_list,numlam, eigenvalue_log_file);
         }
+
 
         if(my_id == 0){
             if(not no_coupling){

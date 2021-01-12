@@ -48,6 +48,7 @@ public:
 	// for mode:  modtype: =0 dark or =1 bright state.  nmax: maximum state number for each mode. nmodes: total mode numbers.
 	friend class full_system;
 	friend class system;
+	double cf;
 	int *nmodes, **nmax, **modtype;
 	int *dmatsize;
     int *dmatnum , *doffnum;  // detector matrix elemetn array
@@ -208,7 +209,14 @@ public:
 
     void update_xd_yd_for_xp(vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
 
-    void compute_Lanczos(double * v, double* vold, double * w, double * alpha, double * beta, int nlev, int maxit);
+    void prepare_computation_for_Lanczos();
+    void allocate_space_for_vector_in_Lanczos(double * &local_v, double * &local_vold,
+                                              double * &local_w, double * &send_v, double * &recv_v);
+    void update_v_in_Lanczos(double * local_v, double * send_v, double * recv_v);
+
+    void compute_Lanczos(double * alpha, double * beta,
+                         double * local_v, double * local_vold, double * local_w, double * send_v, double * recv_v,
+                         int nlev, int maxit);
 
     void diagonalize(double * eigenvalue_list, int & numlam,  ofstream & eigenvalue_log_file);
 };
