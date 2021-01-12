@@ -145,7 +145,7 @@ void detector::compute_Lanczos( double * alpha, double * beta,
         for(j=0;j<dmatnum[0];j++){
             irow = local_dirow[0][j];
             icol = local_dicol[0][j];
-            local_w[irow] = local_w[irow] + dmat[0][j] * local_v[icol] * cf;
+            local_w[irow] = local_w[irow] + dmat[0][j] * local_v[icol];
         }
 
         // alpha = w^{T} * v
@@ -424,8 +424,8 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
                 v[i] = v[i] / vsum;
             }
         }
-        MPI_Scatterv(&v,dmatsize_each_process[0],dmatsize_offset_each_process[0],MPI_DOUBLE,
-                     &local_v,dmatsize[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+        MPI_Scatterv(&v[0],dmatsize_each_process[0],dmatsize_offset_each_process[0],MPI_DOUBLE,
+                     &local_v[0],dmatsize[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
         //
         //  Call Lanczos algorithm then diagonalize tri-diagonal using tqli: implicit QL algorithm
         //
