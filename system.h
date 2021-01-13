@@ -400,6 +400,7 @@ public:
                                       complex<double> ** n_offdiag_total_one_mode_quanta_below, double ** n_offdiag_total_one_mode_quanta_below_real, double ** n_offdiag_total_one_mode_quanta_below_imag,
                                       int initial_state_index_in_total_dmatrix ,
                                       double * another_OTOC);
+    void compute_eigenstate_overlap_with_initial_state();
 };
 
 

@@ -163,4 +163,174 @@ void full_system::Quantum_evolution() {
         delete [] eigenvalue_list;
     }
 
+    // compute eigenstate of system using MFD
+    if(compute_overlap_with_eigenstate){
+        compute_eigenstate_overlap_with_initial_state();
+    }
+
+}
+
+void full_system::compute_eigenstate_overlap_with_initial_state(){
+    int i,j;
+    int initial_state_index_in_total_dmatrix;
+    int matrix_element_number;
+    int numlam1 ;
+    int numlam2 ;
+    int min_num_lam;
+    int index1 , index2;
+    int last_index;
+    double initial_state_energy = d.initial_Detector_energy[0];
+    double hnn;
+    double eigenvalue_diff1;
+    double eigenvalue_diff2;
+    double eigenvalue_diff3;
+    double mean_eigenvalue;
+    double * overlap = new double [d.total_dmat_size[0]];
+    double * eigenvalue_list1 = new double [d.total_dmat_size[0]];
+    double * eigenvalue_list2 = new double [d.total_dmat_size[0]];
+    int * matrix_element_number_in_each_proces = new int [num_proc];
+    double shift_mat_scale = 0.001;
+
+    vector<double> eigenvalue1_after_sift;
+    vector<double> eigenvalue2_after_sift;
+
+    ofstream eigenvalue_log_file;
+    ofstream eigenvalue_overlap;
+    if(my_id == 0){
+        eigenvalue_log_file.open(path + "MFD_log_file.txt");
+        eigenvalue_overlap.open(path+"eigenvalue_overlap.txt");
+    }
+
+    initial_state_index_in_total_dmatrix = d.initial_state_index[0] + d.total_dmat_size[0] / num_proc * d.initial_state_pc_id[0];
+    // record matrix element couple to bright state and its position
+    vector<int> matrix_element_position;
+    vector<double> matrix_element_value;
+    matrix_element_number = 0;
+    for(i=d.dmatsize[0];i<d.dmatnum[0];i++){
+        if(d.dirow[0][i] == initial_state_index_in_total_dmatrix or d.dicol[0][i] == initial_state_index_in_total_dmatrix){
+            matrix_element_number ++ ;
+            matrix_element_position.push_back(i);
+            matrix_element_value.push_back(d.dmat[0][i]); // coupling strength value
+        }
+    }
+
+    MPI_Gather(&matrix_element_number,1,MPI_INT,&matrix_element_number_in_each_proces[0],1,MPI_INT,0,MPI_COMM_WORLD);
+    if(my_id == 0){
+        for(i=0;i<num_proc;i++){
+            eigenvalue_log_file << matrix_element_number_in_each_proces[i] <<" ";
+        }
+        eigenvalue_log_file << endl;
+    }
+
+    // increase coupling strength by 0.001
+    for(i=0;i<matrix_element_number;i++){
+        d.dmat[0][matrix_element_position[i]] = (1+shift_mat_scale) * matrix_element_value[i];
+    }
+    if(my_id == 0){
+        cout << "First diagonalization: " << endl;
+    }
+    d.diagonalize(eigenvalue_list1,numlam1, eigenvalue_log_file);
+
+    // decrease coupling strength by 0.001
+    for(i=0;i<matrix_element_number;i++){
+        d.dmat[0][matrix_element_position[i]] = (1-shift_mat_scale) * matrix_element_value[i];
+    }
+    if(my_id == 0){
+        cout << "Second diagonalization: " << endl;
+    }
+    d.diagonalize(eigenvalue_list2,numlam2,eigenvalue_log_file);
+
+    // revert dmat to original value
+    for(i=0;i<matrix_element_number;i++){
+        d.dmat[0][matrix_element_position[i]] = matrix_element_value[i];
+    }
+
+    if(my_id == 0){
+
+        // we may have mismatch. sift these eigenvalue found to match them.
+        index1 = 0;
+        index2 = 0;
+        while(index1 < numlam1 -1  and index2 < numlam2 -1){
+            eigenvalue_diff1 = abs(eigenvalue_list1[index1] - eigenvalue_list2[index2]);
+            eigenvalue_diff2 = abs(eigenvalue_list1[index1 + 1] - eigenvalue_list2[index2]);
+            eigenvalue_diff3 = abs(eigenvalue_list1[index1] - eigenvalue_list2[index2 + 1]);
+            if(eigenvalue_diff1 > eigenvalue_diff2){
+                // mismatch. index1 should +1. which means list1 has one more eigenvalue found not found in list2
+                index1 ++ ;
+                continue;
+            }
+            else if (eigenvalue_diff1 > eigenvalue_diff3){
+                // mismatch. index2 should +1. which means list2 has one more eigenvalue found not found in list1
+                index2 ++;
+                continue;
+            }
+            else{
+                // match
+                eigenvalue1_after_sift.push_back(eigenvalue_list1[index1]);
+                eigenvalue2_after_sift.push_back(eigenvalue_list2[index2]);
+                index1++;
+                index2++;
+            }
+
+        }
+
+        // deal with last element
+        eigenvalue_diff1 = 1000;
+        if(index1 == numlam1-1){
+            for(j=index2;j<numlam2;j++){
+                if( abs(eigenvalue_list1[index1] - eigenvalue_list2[j]) < eigenvalue_diff1 ){
+                    eigenvalue_diff1 = abs(eigenvalue_list1[index1] - eigenvalue_list2[j]);
+                    last_index = j;
+                }
+            }
+            eigenvalue1_after_sift.push_back(eigenvalue_list1[numlam1 -1 ]);
+            eigenvalue2_after_sift.push_back(eigenvalue_list2[last_index]);
+        }
+        else if (index2 == numlam2 -1){
+            for(j = index1 ; j<numlam1; j++){
+                if( abs(eigenvalue_list1[j] - eigenvalue_list2[index2]) < eigenvalue_diff1 ){
+                    eigenvalue_diff1 = abs(eigenvalue_list1[j] - eigenvalue_list2[index2]);
+                    last_index = j;
+                }
+            }
+            eigenvalue1_after_sift.push_back(eigenvalue_list1[last_index]);
+            eigenvalue2_after_sift.push_back(eigenvalue_list2[numlam2-1]);
+        }
+
+        min_num_lam = eigenvalue1_after_sift.size();
+        for(i=0;i<min_num_lam;i++){
+            hnn = (eigenvalue1_after_sift[i]- eigenvalue2_after_sift[i])/(2*shift_mat_scale);
+            mean_eigenvalue = ( eigenvalue1_after_sift[i] + eigenvalue2_after_sift[i])/2 ;
+            overlap[i] = hnn / (2 * (mean_eigenvalue - initial_state_energy) );
+        }
+
+    }
+
+    if(my_id == 0){
+        eigenvalue_overlap << initial_state_energy << endl;
+
+        eigenvalue_overlap << min_num_lam << endl;
+        for(i=0;i<numlam2;i++){
+            eigenvalue_overlap << (eigenvalue1_after_sift[i] - eigenvalue2_after_sift[i])/(2*shift_mat_scale) <<" ";
+        }
+        eigenvalue_overlap << endl;
+
+        eigenvalue_overlap << min_num_lam << endl;
+        for(i=0;i<min_num_lam;i++){
+            mean_eigenvalue = ( eigenvalue1_after_sift[i] + eigenvalue2_after_sift[i])/2 ;
+            eigenvalue_overlap << mean_eigenvalue <<" ";
+        }
+        eigenvalue_overlap << endl;
+        for(i=0;i<min_num_lam;i++){
+            eigenvalue_overlap << overlap[i] << " ";
+        }
+        eigenvalue_overlap << endl;
+    }
+
+    delete [] eigenvalue_list1;
+    delete [] eigenvalue_list2;
+    delete [] overlap;
+    delete [] matrix_element_number_in_each_proces;
+    eigenvalue_log_file.close();
+    eigenvalue_overlap.close();
 }

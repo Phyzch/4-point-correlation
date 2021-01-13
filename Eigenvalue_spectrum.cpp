@@ -364,7 +364,7 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
 
     double minimum ;
     double diff ;
-    int maximum = 5;  // maximum is maximum iteration we do to compute eigenvalue
+    int maximum = 4;  // maximum is maximum iteration we do to compute eigenvalue
 
     double vsum;
     double * lambda = new double [lancdim + 1];  // store potential eigenvalue. Results store in [1, lancdim] ( 0 is left as blank)
@@ -387,7 +387,7 @@ void detector :: diagonalize(double * eigenvalue_list, int & numlam,  ofstream &
 
     allocate_space_for_vector_in_Lanczos(local_v, local_vold,local_w,send_v,recv_v);
 
-    double error_spacing_between_eigenvalue = pow(10,-6); // we recognize eigenvalue's relative difference within this spacing as the same
+    double error_spacing_between_eigenvalue = pow(10,-7); // we recognize eigenvalue's relative difference within this spacing as the same
 
     if(my_id == 0){
         eigenvalue_log_file << "Size of Hamiltonian to be diagonalized  " << nlev << endl;
