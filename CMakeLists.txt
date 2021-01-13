@@ -17,6 +17,6 @@ add_executable(4_point_correlation_calculation main.cpp Detector.cpp Full_system
         ./MPI_Code/construct_detector_MPI.cpp ./MPI_Code/Communication_function_MPI.cpp
         ./MPI_Code/Detector_Evolve_MPI.cpp
         ./MPI_Code/System_Read_MPI.cpp ./MPI_Code/compute_detector_energy_window_MPI.cpp
-        vanvlk_construct_detector_offdiag.cpp MPI_Code/OTOC_for_xp.cpp MPI_Code/Another_form_of_OTOC.cpp Eigenvalue_spectrum.cpp MFD.cpp)
+        vanvlk_construct_detector_offdiag.cpp MPI_Code/OTOC_for_xp.cpp MPI_Code/Another_form_of_OTOC.cpp Eigenvalue_spectrum.cpp)
 
 target_link_libraries(4_point_correlation_calculation stdc++fs mpi)
