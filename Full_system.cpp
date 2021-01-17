@@ -97,18 +97,6 @@ void full_system::Quantum_evolution() {
     int i,j;
 	clock_t start_time, end_time, duration;
 
-    if(Evolve_dynamics){
-        start_time = clock();
-
-        pre_coupling_evolution_MPI(0); // pre-coupling evolution of detector state (lower bright state)
-
-        end_time = clock();
-        duration = end_time - start_time;
-        if(my_id == 0) {
-            log << "The total run time for parallel computing is " << (double(duration) /CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
-            cout << "The total run time for parallel computing is " << (double(duration)/CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
-        }
-    }
 
     if(compute_eigenvalue_spectrum){
         start_time = clock();
@@ -166,6 +154,19 @@ void full_system::Quantum_evolution() {
     // compute eigenstate of system using MFD
     if(compute_overlap_with_eigenstate){
         compute_eigenstate_overlap_with_initial_state();
+    }
+
+    if(Evolve_dynamics){
+        start_time = clock();
+
+        pre_coupling_evolution_MPI(0); // pre-coupling evolution of detector state (lower bright state)
+
+        end_time = clock();
+        duration = end_time - start_time;
+        if(my_id == 0) {
+            log << "The total run time for parallel computing is " << (double(duration) /CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
+            cout << "The total run time for parallel computing is " << (double(duration)/CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
+        }
     }
 
 }

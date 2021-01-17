@@ -396,8 +396,8 @@ void  construct_state_coupling_subroutine(vector<double> & state_energy_local ,v
     end_index = begin_index + state_energy_local.size();
 
    double random_number;
-   double timee = time(0);
-   double self_anharmonicity_strength = 200 ;
+   double timee = time(nullptr);
+   double self_anharmonicity_strength = 5000 ;
    std::default_random_engine generator(timee);
    std::normal_distribution<double> distribution(0,self_anharmonicity_strength);   // used to generate random anharmonicity
 
@@ -565,109 +565,6 @@ vector<bool> check_edge_state(const vector<vector<int>> & dv ){
     return  edge_state_mark;
 }
 
-void  construct_state_coupling_hybrid_subroutine(vector<double> & state_energy_local ,vector<double> & state_energy, vector<vector<int>> & dv,
-                                          vector <int> & dirow, vector<int> & dicol,
-                                          vector<double> & energy_decrease_list, vector<double> & Coeff,
-                                          vector<vector<int>> & Normal_Form, int * mcount,
-                                          vector<double> & energy_decrease_list_full_dynamics, vector<double> & Coeff_full_dynamics,
-                                          vector<vector<int>> & Normal_Form_full_dynamics, int * mcount_full_dynamics,
-                                          double cutoff){
-    int matrix_size = state_energy.size();
-    int i,j;
-    double energy_difference;
-    int bin_index;
-    int coupling_operator_number = energy_decrease_list.size();
-    int coupling_operator_number_full_dynamics = energy_decrease_list_full_dynamics.size();
-    double min_energy = energy_decrease_list[0] - 0.001;
-    double max_energy = energy_decrease_list[coupling_operator_number-1] + 0.001 ;
-    double min_energy_full_dynamics = energy_decrease_list_full_dynamics[0] - 0.001;
-    double max_energy_full_dynamics = energy_decrease_list_full_dynamics[coupling_operator_number_full_dynamics-1]+0.001;
-
-    vector<double> original_state_energy = state_energy;  // original state energy is energy level before perturbed by Van Vleck  transformation (dmat0 or dmat1)
-    vector<double> state_energy_change;
-    vector<double> state_energy_change_in_all_process;
-    state_energy_change.resize(matrix_size);
-    state_energy_change_in_all_process.resize(matrix_size);
-
-    vector<bool> edge_state_mark;
-
-    int begin_index, end_index;  // begin index is beginning index for this process.
-    begin_index = matrix_size / num_proc * my_id ;
-    end_index = begin_index + state_energy_local.size();
-
-    // check which state is edge state which is not.
-    edge_state_mark = check_edge_state(dv);
-
-    double random_number;
-    double timee = time(0);
-    std::default_random_engine generator(timee);
-    std::normal_distribution<double> distribution(10.0,5.0);
-
-    // first compute state energy shift: (state_energy_change)
-    for(i=begin_index;i<end_index;i++){
-        j=i;
-        energy_difference = 0;
-        if(edge_state_mark[i]){
-            // for edge state, we use full Hamiltonian as anharmonic term
-            bin_index = 1 + (energy_difference - min_energy_full_dynamics) / (max_energy_full_dynamics - min_energy_full_dynamics)
-                            * bin_number;
-            random_number = distribution(generator);
-            if(bin_index >=1 and bin_index < bin_number + 1){
-                vmat(state_energy_change,state_energy_local,state_energy, dv, dirow, dicol,
-                     energy_decrease_list_full_dynamics, Coeff_full_dynamics, Normal_Form_full_dynamics, mcount_full_dynamics,
-                     i, j, bin_index,matrix_size,cutoff, random_number);
-            }
-        }
-        else {
-            bin_index = 1 + (energy_difference - min_energy) / (max_energy - min_energy) * bin_number;
-            if (bin_index >= 1 and bin_index < bin_number + 1) {
-                vmat(state_energy_change, state_energy_local, state_energy, dv, dirow, dicol,
-                     energy_decrease_list,Coeff, Normal_Form, mcount,
-                     i, j, bin_index, matrix_size,cutoff, random_number);  // compute coupling strength and update off-diagonal part and diagonal part correction
-            }
-        }
-    }
-
-    MPI_Allreduce(&state_energy_change[0],&state_energy_change_in_all_process[0],matrix_size,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-    for(i=0;i<matrix_size;i++){
-        state_energy[i] = state_energy[i] + state_energy_change_in_all_process[i];
-    }
-
-    // now we compute coupling between different state.
-    for(i=begin_index;i<end_index;i++){
-        for(j=0;j<matrix_size;j++){
-            if(j!=i) { // off-diag term
-                // to find the right bin for energy change of opeartor, we should use original state energy.
-                energy_difference = original_state_energy[j] - original_state_energy[i];   // <i| operator | j>
-                if (!edge_state_mark[i] and !edge_state_mark[j]) {
-                    // coupling between interior state
-                    random_number = distribution(generator);
-                    bin_index = 1 + (energy_difference - min_energy) / (max_energy - min_energy) * bin_number;
-                    if (bin_index >= 1 and bin_index < bin_number + 1) {
-                        vmat(state_energy_change, state_energy_local, state_energy, dv, dirow, dicol,
-                             energy_decrease_list,Coeff, Normal_Form, mcount,
-                             i, j, bin_index, matrix_size,
-                             cutoff,random_number);  // compute coupling strength and update off-diagonal part and diagonal part correction
-                    }
-                }
-
-                else {
-                    // one of the state is edge state.
-                    bin_index = 1 + (energy_difference - min_energy_full_dynamics) /
-                                    (max_energy_full_dynamics - min_energy_full_dynamics) * bin_number;
-                    if (bin_index >= 1 and bin_index < bin_number + 1) {
-                        vmat(state_energy_change, state_energy_local, state_energy, dv, dirow, dicol,
-                             energy_decrease_list_full_dynamics, Coeff_full_dynamics, Normal_Form_full_dynamics,
-                             mcount_full_dynamics,
-                             i, j, bin_index, matrix_size, cutoff,random_number);
-                    }
-                }
-
-            }
-        }
-    }
-
-}
 
 void detector:: output_detector_Hamiltonian(vector<double> & state_energy, vector<vector<int>> & dv){
     ofstream Hamiltonian(path+"Hamiltonian.txt");
