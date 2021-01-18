@@ -425,72 +425,152 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
     bool exist;
     int position;
     double random_number;
-    // different process do different amount of work.
-    for(m=0;m<stlnum;m++){
-        if(m==0){
-            vmode_ptr = &(vmode0);
-            dmat_ptr= &(dmat0);
-        }
-        else {
-            vmode_ptr= &(vmode1);
-            dmat_ptr= &(dmat1);
-        }
-        begin_index= total_dmat_size[m]/num_proc * my_id;
-        // compute off diagonal matrix element, using dmat0, dmat1.
-        for(i=begin_index;i<begin_index + dmatsize[m];i++){  // for my_id==0 , O(dmatsize * dmatsize/ proc_num)
-            for(j=0;j<total_dmat_size[m];j++){ // j is different from serial program. Now we record both symmetric Hamiltonian element
-                if (i==j) continue;
-                ntot=0;
-                for(k=0;k<nmodes[m];k++){
-                    deln[k]= abs( (*vmode_ptr)[i][k] - (*vmode_ptr)[j][k] ); // same as deln[k] = abs(dv[m][i][k] - dv[m][j][k]);
-                    nbar[k]= sqrt(sqrt(double(max(1, (*vmode_ptr)[i][k])) * double(max(1, (*vmode_ptr)[j][k]  ))));
-                    ntot= ntot+ deln[k];
-                }
-                // this is because we don't have 1st order ladder operator in Harmonic oscillator's expression
-                if (ntot == 2) {
-                    for (k = 0; k < nmodes[m]; k++) {
-                        if (deln[k] == 2) deln[k] = 4;
-                        if (deln[k] == 1) deln[k] = 2;
-                    }
-                } else if (ntot == 1) {
-                    for (k = 0; k < nmodes[m]; k++) {
-                        if (deln[k] == 1) deln[k] = 3;
-                    }
-                } else if (ntot == 0) {
-                    log << "Error! The off-diagonal element must differ in q.n." << endl;
-                    MPI_Abort(MPI_COMM_WORLD,-8);
-                }
-                // check ntot with maxdis in quantum number space:
-                if (ntot < maxdis) {
+    bool cubic;
+    bool nearest_neighbor_nonzero_exist;
+    bool * nearest_neighbor_nonzero = new bool [nmodes[0]];
+    int left_index;
+    int right_index;
+    double larger_mode_quanta;
 
-                    if (ntot % 2 == 0) {
-                        value = V_intra;  // V=0.03 as requirement.
-                    } else {
-                        value = -V_intra;
-                    }
-                    if (intra_detector_coupling) {
-                        do (random_number = 2*((double(rand())/RAND_MAX)-0.5)  ); while (random_number==0) ;
-                        value = value * (1+intra_detector_coupling_noise * random_number);
-                    }
-                    for (k = 0; k < nmodes[m]; k++) {
-                        value = value * pow(aij[m][k]* nbar[k], deln[k]);
-                    }
-                    if ( (*dmat_ptr)[i] != (*dmat_ptr)[j] ) {
-                        lij = abs(value / ((*dmat_ptr)[i] - (*dmat_ptr)[j]));
-                        if (lij > cutoff) {
-                            dmat[m].push_back(value);
-                            dirow[m].push_back(i);
-                            dicol[m].push_back(j);
-                        }
-                    } else {
-                        dmat[m].push_back(value);
-                        dirow[m].push_back(i);
-                        dicol[m].push_back(j);
-                    }
+    begin_index = total_dmat_size[0] / num_proc * my_id;
+    for(i=begin_index;i<begin_index + dmatsize[0];i++){
+        for(j=0;j<total_dmat_size[0];j++){
+            if(i==j) continue;
+            ntot=0;
+            cubic = true;
+            for(k=0;k<nmodes[0];k++){
+                deln[k]= abs( vmode0[i][k] - vmode0[j][k] ); // same as deln[k] = abs(dv[m][i][k] - dv[m][j][k]);
+                if(deln[k] >1){
+                    cubic = false;
+                }
+                ntot= ntot+ deln[k];
+            }
+            if(ntot != 3){
+                cubic = false;
+            }
+
+            for(k=0;k<nmodes[0];k++){
+                if(k==0){
+                    left_index = nmodes[0] - 1 ;
+                }
+                else{
+                    left_index = k - 1 ;
+                }
+                if(k==nmodes[0] - 1){
+                    right_index = 0;
+                }
+                else{
+                    right_index = k + 1;
+                }
+
+                if(deln[k] == 1 and deln[left_index] == 1 and deln[right_index] == 1){
+                    nearest_neighbor_nonzero[k] = true;
+                }
+                else{
+                    nearest_neighbor_nonzero[k] = false;
+                }
+
+            }
+
+            nearest_neighbor_nonzero_exist = false;
+            for(k=0;k< nmodes[0]; k++ ){
+                if(nearest_neighbor_nonzero[k] == true){
+                    nearest_neighbor_nonzero_exist = true;
                 }
             }
+
+            if(nearest_neighbor_nonzero_exist == false){
+                cubic = false;
+            }
+
+            if(cubic == false){
+                continue;
+            }
+
+            // construct coupling:  V = V_intra / 3! * (a_{alpha} + a_{alpha}^{+}) (a_{beta} + a_{beta}^{+}) * (a_{\gamma} + a_{\gamma}^{+})
+            value = V_intra ;
+            for(k=0;k<nmodes[0];k++){
+                if(deln[k] != 0){
+                    larger_mode_quanta = max(vmode0[i][k], vmode0[j][k]);
+                    value = value * sqrt(larger_mode_quanta);
+                }
+            }
+
+            dmat[0].push_back(value);
+            dirow[0].push_back(i);
+            dicol[0].push_back(j);
+
         }
     }
+
+    delete [] nearest_neighbor_nonzero;
+
+    // different process do different amount of work.
+//    for(m=0;m<stlnum;m++){
+//        if(m==0){
+//            vmode_ptr = &(vmode0);
+//            dmat_ptr= &(dmat0);
+//        }
+//        else {
+//            vmode_ptr= &(vmode1);
+//            dmat_ptr= &(dmat1);
+//        }
+//        begin_index= total_dmat_size[m]/num_proc * my_id;
+//        // compute off diagonal matrix element, using dmat0, dmat1.
+//        for(i=begin_index;i<begin_index + dmatsize[m];i++){  // for my_id==0 , O(dmatsize * dmatsize/ proc_num)
+//            for(j=0;j<total_dmat_size[m];j++){ // j is different from serial program. Now we record both symmetric Hamiltonian element
+//                if (i==j) continue;
+//                ntot=0;
+//                for(k=0;k<nmodes[m];k++){
+//                    deln[k]= abs( (*vmode_ptr)[i][k] - (*vmode_ptr)[j][k] ); // same as deln[k] = abs(dv[m][i][k] - dv[m][j][k]);
+//                    nbar[k]= sqrt(sqrt(double(max(1, (*vmode_ptr)[i][k])) * double(max(1, (*vmode_ptr)[j][k]  ))));
+//                    ntot= ntot+ deln[k];
+//                }
+//                // this is because we don't have 1st order ladder operator in Harmonic oscillator's expression
+//                if (ntot == 2) {
+//                    for (k = 0; k < nmodes[m]; k++) {
+//                        if (deln[k] == 2) deln[k] = 4;
+//                        if (deln[k] == 1) deln[k] = 2;
+//                    }
+//                } else if (ntot == 1) {
+//                    for (k = 0; k < nmodes[m]; k++) {
+//                        if (deln[k] == 1) deln[k] = 3;
+//                    }
+//                } else if (ntot == 0) {
+//                    log << "Error! The off-diagonal element must differ in q.n." << endl;
+//                    MPI_Abort(MPI_COMM_WORLD,-8);
+//                }
+//                // check ntot with maxdis in quantum number space:
+//                if (ntot < maxdis) {
+//
+//                    if (ntot % 2 == 0) {
+//                        value = V_intra;  // V=0.03 as requirement.
+//                    } else {
+//                        value = -V_intra;
+//                    }
+//                    if (intra_detector_coupling) {
+//                        do (random_number = 2*((double(rand())/RAND_MAX)-0.5)  ); while (random_number==0) ;
+//                        value = value * (1+intra_detector_coupling_noise * random_number);
+//                    }
+//                    for (k = 0; k < nmodes[m]; k++) {
+//                        value = value * pow(aij[m][k]* nbar[k], deln[k]);
+//                    }
+//                    if ( (*dmat_ptr)[i] != (*dmat_ptr)[j] ) {
+//                        lij = abs(value / ((*dmat_ptr)[i] - (*dmat_ptr)[j]));
+//                        if (lij > cutoff) {
+//                            dmat[m].push_back(value);
+//                            dirow[m].push_back(i);
+//                            dicol[m].push_back(j);
+//                        }
+//                    } else {
+//                        dmat[m].push_back(value);
+//                        dirow[m].push_back(i);
+//                        dicol[m].push_back(j);
+//                    }
+//                }
+//            }
+//        }
+//    }
 }
 
 void detector:: broadcast_dmatnum_doffnum(){
@@ -590,6 +670,10 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
     initial_detector_state= new int * [stlnum];
     initial_Detector_energy= new double [stlnum];
     bright_state_energy= new double [stlnum];
+
+    double Dissociation_frequency = 32924;
+    double v_alpha = 2 * Dissociation_frequency / (mfreq[0][0]);
+
     for(m=0;m<stlnum;m++){
         bright_state[m]= new int [nmodes[m]];
         initial_detector_state[m]= new int [nmodes[m]];
@@ -635,7 +719,8 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
             bright_state[m][i]=initial_detector_state[m][i];
         }
         for(i=0;i<nmodes[m];i++){
-            initial_Detector_energy[m]= initial_Detector_energy[m] + initial_detector_state[m][i] * mfreq[m][i];
+            initial_Detector_energy[m]= initial_Detector_energy[m] + (initial_detector_state[m][i]) * mfreq[m][i] -
+                    mfreq[0][i] * pow(initial_detector_state[m][i],2) / (2*v_alpha);
             bright_state_energy[m] = bright_state_energy[m] + bright_state[m][i] * mfreq[m][i];
         }
     }

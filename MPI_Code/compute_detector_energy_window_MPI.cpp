@@ -157,6 +157,12 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
         double high_initial_state_energy = max(d.initial_Detector_energy[0] , d.initial_Detector_energy[1]);
         double low_initial_state_energy = min(d.initial_Detector_energy[0],d.initial_Detector_energy[1]);
 
+        double Dissociation_frequency = 32924;
+        double energy_cut_off = 5921;
+        double v_alpha = 2 * Dissociation_frequency / (d.mfreq[0][0]);
+        double energy_sum_1; // sum of energy for mode 1,2,3.
+        double energy_sum_2; // sum of energy for mode 4,5,6.
+
         ndetector0[0] = -1; // this is for:  when we go into code: ndetector0[i]= ndetector0[i]+1, our first state is |000000>
         while (1) {
             label2:;  // label2 is for detector1 to jump out of while(1) loop (this is inner layer of while(1))
@@ -173,11 +179,17 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
             }
             // calculate detector 0 energy
             for (i = 0; i < d.nmodes[0]; i++) {
-                detector0_energy = detector0_energy + ndetector0[i] * d.mfreq[0][i];
+                detector0_energy = detector0_energy + (ndetector0[i]) * d.mfreq[0][i] - d.mfreq[0][i] * pow(ndetector0[i],2)/(2*v_alpha)  ;
+            }
+            energy_sum_1 = 0;
+            for(i=0;i<3;i++){
+                energy_sum_1 = energy_sum_1 +  (ndetector0[i]) * d.mfreq[0][i] - d.mfreq[0][i] * pow(ndetector0[i],2)/(2*v_alpha);
+            }
+            energy_sum_2 = 0;
+            for(i=3;i<6;i++){
+                energy_sum_2 = energy_sum_2 + (ndetector0[i]) * d.mfreq[0][i] - d.mfreq[0][i] * pow(ndetector0[i],2)/(2*v_alpha);
             }
 
-            //--------------------------------------------------------------------------------------------
-            // criteria below make sure detector 0 's energy is reasonable.
             if (detector0_energy > d.initial_Detector_energy[0] + d.detector_energy_window_size) {
                 // detector 0's energy can not be larger than its initial energy + photon energy
                 // jump to next detector state.
@@ -195,15 +207,26 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
                 goto label2;
             }
 
-            //------------------------------------------------------------------------------------------------
-            // criteria below make sure detector 1 can not be too far away from bright state and lower bright state.
+//            if(energy_sum_1 > energy_cut_off or energy_sum_2 > energy_cut_off ){
+//                k = 0;
+//                while (ndetector0[k] == 0) {
+//                    ndetector0[k] = d.nmax[0][k];
+//                    k++;
+//                    if (k >= d.nmodes[0]) {
+//                        break;
+//                    }
+//                }
+//                if (k < d.nmodes[0]) {
+//                    ndetector0[k] = d.nmax[0][k];
+//                }
+//                goto label2;
+//            }
 
             lower_bright_state_distance = state_distance(ndetector0, d.initial_detector_state[0], d.nmodes[0]);
             // we do not use distance constraint for state whose energy is between two
             if ( lower_bright_state_distance > Rmax) {
                 goto label2;
             }
-
 
             //--------------------------------------insert this state in detector's state.-----------------------------------------------------------
             location=find_position_for_insert_binary(vmode0, ndetector0, exist);  // we check if this mode exist and the location we have to insert this state at the same time.
