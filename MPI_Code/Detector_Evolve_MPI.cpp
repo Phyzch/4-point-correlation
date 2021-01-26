@@ -729,14 +729,16 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                                         -d.yd[d.initial_state_index_in_nearby_state_index_list][i]));
     }
     MPI_Allreduce(&de,&de_all,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-//    // shift Hamiltonian by detector energy de_all:
-//    if(my_id == 0){
-//        cout <<"Shift Hamiltonian by energy of system  "<< de_all << endl;
-//        log << "Shift Hamiltonian by energy of system  " << de_all <<endl;
-//    }
-//    for(i=0;i<d.dmatsize[0];i++){
-//        d.dmat[0][i] = d.dmat[0][i] - de_all;
-//    }
+    if(not Chebychev_method){
+        // shift Hamiltonian by detector energy de_all:
+        if(my_id == 0){
+            cout <<"Shift Hamiltonian by energy of system  "<< de_all << endl;
+            log << "Shift Hamiltonian by energy of system  " << de_all <<endl;
+        }
+        for(i=0;i<d.dmatsize[0];i++){
+            d.dmat[0][i] = d.dmat[0][i] - de_all;
+        }
+    }
 
 
     final_time[0] = 0;
