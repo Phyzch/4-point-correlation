@@ -219,6 +219,29 @@ public:
                          int nlev, int maxit);
 
     void diagonalize(double * eigenvalue_list, int & numlam,  ofstream & eigenvalue_log_file);
+
+
+    // variable for Chebychev method
+    double Chebychev_e0;
+    double Chebychev_R;
+    double Chebychev_Rt;
+    double Chebychev_expr;
+    double Chebychev_expi;
+    int Nchev; // order of Chebychev polynomial.
+    double * Bessel_function_array;
+
+    double ** shifted_total_dmat;
+    double ** shifted_dmat;
+
+    vector<double> * Chebychev_polyn;
+    double ** recv_polyn;
+    double ** send_polyn;
+
+    void update_polyn23();
+
+    void prepare_evolution_Chebychev_method(ofstream & log);
+    void Chebychev_method_one_step();
+    void delete_variable_for_Chebychev_method();
 };
 
 class full_system {

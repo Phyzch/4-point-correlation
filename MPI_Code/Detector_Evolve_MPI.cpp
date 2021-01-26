@@ -705,6 +705,10 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     // prepare sendbuffer and recv_buffer and corresponding index.
     d.prepare_evolution();
 
+    if(Chebychev_method){
+        d.prepare_evolution_Chebychev_method(log);
+    }
+
     // -----  compute state's energy and shift it before doing simulation -------------
     vector<complex<double>>  H_phi;
     H_phi.resize(d.dmatsize[0]);
@@ -725,14 +729,14 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                                         -d.yd[d.initial_state_index_in_nearby_state_index_list][i]));
     }
     MPI_Allreduce(&de,&de_all,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-    // shift Hamiltonian by detector energy de_all:
-    if(my_id == 0){
-        cout <<"Shift Hamiltonian by energy of system  "<< de_all << endl;
-        log << "Shift Hamiltonian by energy of system  " << de_all <<endl;
-    }
-    for(i=0;i<d.dmatsize[0];i++){
-        d.dmat[0][i] = d.dmat[0][i] - de_all;
-    }
+//    // shift Hamiltonian by detector energy de_all:
+//    if(my_id == 0){
+//        cout <<"Shift Hamiltonian by energy of system  "<< de_all << endl;
+//        log << "Shift Hamiltonian by energy of system  " << de_all <<endl;
+//    }
+//    for(i=0;i<d.dmatsize[0];i++){
+//        d.dmat[0][i] = d.dmat[0][i] - de_all;
+//    }
 
 
     final_time[0] = 0;
@@ -1084,10 +1088,20 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
             }
             t= t+ delt;
-            d.SUR_onestep_MPI(cf);
+            if(not Chebychev_method){
+                d.SUR_onestep_MPI(cf);
+            }
+            else{
+                d.Chebychev_method_one_step();
+            }
         }
         final_time[0] = t;
     }
+
+    if (Chebychev_method){
+        d.delete_variable_for_Chebychev_method();
+    }
+
     if(save_state){
         d.save_detector_state_MPI(path,final_time,log,initial_state_choice);
     }
