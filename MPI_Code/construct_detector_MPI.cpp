@@ -153,7 +153,8 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
                 output << nmodes[i] << " " << proptime[i] << endl;
             }
             for(j=0;j<nmodes[i];j++){
-                aij[i][j] = a_intra * pow(double(mfreq[i][j]),0.5) / pow(double(mfreq[0][0] /2),0.5);
+                // aij[i][j] = f^{0.5} / 270
+                aij[i][j] = pow(double(mfreq[i][j]),0.5) / 270 ;
                 // aij corresponding to scaling factor for f= f_{bright}/2 cm^{-1}.
                 if (! Detector_Continue_Simulation) {
                     output << mfreq[i][j] << " " << nmax[i][j] << " " << modtype[i][j] << " " << premodcoup[i][j]
@@ -464,15 +465,19 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
                 if (ntot < maxdis) {
 
                     if (ntot % 2 == 0) {
-                        value = V_intra;  // V=0.03 as requirement.
+                        value = V_intra;  // V_intra == 3050 as in model
                     } else {
                         value = -V_intra;
                     }
+
+                    // noise term
                     if (intra_detector_coupling) {
                         do (random_number = 2*((double(rand())/RAND_MAX)-0.5)  ); while (random_number==0) ;
                         value = value * (1+intra_detector_coupling_noise * random_number);
                     }
+
                     for (k = 0; k < nmodes[m]; k++) {
+                        // aij  = f^{1/2} / 270
                         value = value * pow(aij[m][k]* nbar[k], deln[k]);
                     }
                     if ( (*dmat_ptr)[i] != (*dmat_ptr)[j] ) {

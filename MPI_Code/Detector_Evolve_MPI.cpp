@@ -915,15 +915,15 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     four_point_correlation_output<<endl;
                 }
                 // ------------- output overlap with initial state and n_offdiag_total for all state |b> we choose:
-                if(my_id == 0){
-                    n_offdiag_total_output <<"Time:  "<<t << endl;
-                    for(i=0; i< nearby_state_index_size; i++){
-                        for(j=0;j<d.nmodes[0];j++){
-                            n_offdiag_total_output << std::norm(n_offdiag_total[j][i]) <<"  ";
-                        }
-                        n_offdiag_total_output << endl;
-                    }
-                }
+//                if(my_id == 0){
+//                    n_offdiag_total_output <<"Time:  "<<t << endl;
+//                    for(i=0; i< nearby_state_index_size; i++){
+//                        for(j=0;j<d.nmodes[0];j++){
+//                            n_offdiag_total_output << std::norm(n_offdiag_total[j][i]) <<"  ";
+//                        }
+//                        n_offdiag_total_output << endl;
+//                    }
+//                }
 
                 // -------- output another form of OTOC ------------------------------
                 compute_another_form_of_OTOC(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
