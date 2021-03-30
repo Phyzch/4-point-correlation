@@ -169,6 +169,15 @@ void full_system::Quantum_evolution() {
         }
     }
 
+    if(compute_eigenvector_use_MKL_module){
+        if(my_id == 0){
+            ofstream Eigenvector_solver(path + "MKL_eigenvalue_Eigenvector.txt");
+            MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],Eigenvector_solver);
+            cout <<"Finish solving eigenvector and eigenvalue " << endl;
+            Eigenvector_solver.close();
+        }
+    }
+
 }
 
 void full_system::compute_eigenstate_overlap_with_initial_state(){

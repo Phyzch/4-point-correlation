@@ -23,6 +23,7 @@
 #include<stdlib.h>
 #include<mpi/mpi.h>
 #include<sys/resource.h>
+#include "mkl.h"
 //using namespace concurrency;
 #define pi2 3.141592653589793*2
 using namespace std;
@@ -58,6 +59,8 @@ extern bool Evolve_dynamics;  // bool variable to decide if we run Detector_Evol
 extern bool compute_eigenvalue_spectrum; // bool variable to decide if use Lanczos algorithm to compute spectrum of syste
 extern bool no_coupling;  // if this is Ture, we do not have off-diagonal coupling
 extern bool compute_overlap_with_eigenstate; // If this is True, we will use MFD to compute overlap of initial state with eigenvalue
+extern bool compute_eigenvector_use_MKL_module;
+extern double Emin, Emax; // range to solve eigenvalue and eigenvector using Intel MKL.  We will read it from input file.
 
 // define function here
 float ran2(long& idum);
@@ -66,7 +69,10 @@ void convert_dv(const vector<vector<int>> & vec_2d, vector <int>  & vec_1d , vec
 // used for cnostruct buffer for communication between process for matrix multiplication.
 int construct_send_buffer_index(int * remoteVecCount, int * remoteVecPtr, int * remoteVecIndex, int * tosendVecCount_element, int * tosendVecPtr_element, int * & tosendVecIndex_ptr);
 
+void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize , int dmatnum, ofstream & Eigenvector_output ) ;
+
 int compar(const void * a, const void * b);
+
 
 #endif //QUANTUM_MEASUREMENT_UTIL_H
 
