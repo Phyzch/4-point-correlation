@@ -159,9 +159,9 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
 
     // to use dfeast_scsrev, we have to stall value in MKL_INT format
     // row format should be special for CSR form , pay attention to that.
-    int  rows  [dmatsize + 1];
-    int  cols  [dmatnum];
-    double  val [dmatnum];
+    int * rows = new int   [dmatsize + 1];
+    int * cols = new int   [dmatnum];
+    double * val = new double  [dmatnum];
     for (i=0;i<dmatsize;i++){
         rows[i] = dirow_CSR_form_fortran[i];
     }
@@ -202,6 +202,9 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
         MPI_Abort(MPI_COMM_WORLD, -21);
     }
 
+    cout << "Min energy for system:  " << dmat_list_min << endl;
+    cout <<" Max energy for system:   "<< dmat_list_max << endl;
+    cout <<"dmatsize :   " << dmatsize << "   dmatnum:   " << dmatnum << endl;
     for(i=0;i<dmatsize;i++){
         if(dmat_list[i] > Emin and dmat_list[i] < Emax){
             L = L + 1;
@@ -272,17 +275,22 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
     );
     // X eigenvector have the form: M(row) * dmatsize(column). Here M is number of eigenvector found.
     printf("FEAST OUTPUT INFO %d \n",info);
-    if ( info != 0 )
-    {
-        printf("Routine dfeast_scsrev returns code of ERROR: %i", (int)info);
-        Eigenvector_output.close();
-        MPI_Abort(MPI_COMM_WORLD, -21);
-    }
+//    if ( info != 0 )
+//    {
+//        printf("Routine dfeast_scsrev returns code of ERROR: %i", (int)info);
+//        Eigenvector_output.close();
+//        MPI_Abort(MPI_COMM_WORLD, -21);
+//    }
 
     printf("Number of eigenvalues found %d \n", M);
 
     // check normalization and orthogonality of eigenvector by computing Y =  X^{transpose} * X - I
-    double       Y[M][M];        /* Y=(X')*X-I */
+    /* Y=(X')*X-I */
+    double **      Y = new double * [M];
+    for(i=0;i<M;i++){
+        Y[i] = new double [M];
+    }
+
     double  **   Matrix_X = new double * [M];
     for(i=0;i<M;i++){
         Matrix_X[i] = new double [dmatsize];
@@ -329,12 +337,16 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
 
     // delete dynamics array X. (if not used)
     delete [] X ;
-//    delete [] rows;
-//    delete [] cols;
-//    delete [] val;
+    delete [] rows;
+    delete [] cols;
+    delete [] val;
 
     for(i=0;i<M;i++){
         delete [] Matrix_X[i];
     }
     delete [] Matrix_X;
+    for(i=0;i<M;i++){
+        delete [] Y[i];
+    }
+    delete [] Y;
 }
