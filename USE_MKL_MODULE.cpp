@@ -211,14 +211,16 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
         }
     }
 
+    L = L * 1.5;
+
     MKL_INT      M0;            /* Initial guess for subspace dimension to be used */
     MKL_INT      M;             /* Total number of eigenvalues found in the interval */
 
-    double       E[dmatsize];         /* Eigenvalues */
+    double *   E = new double [dmatsize];         /* Eigenvalues */
     double * X = new double [dmatsize * dmatsize]; /* Eigenvectors */
 //    double       X[dmatsize * dmatsize];        /* Eigenvectors */
 
-    double       res[dmatsize];       /* Residual */
+    double * res = new double [dmatsize];       /* Residual */
     MKL_INT      info;          /* Errors */
 
     /* Initialize matrix X */
@@ -254,7 +256,7 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
 
     /* Step 2. Solve the standard Ax = ex eigenvalue problem. */
     printf("Testing dfeast_scsrev routine:\n");
-
+    printf("M value estimated %d \n",M);
     dfeast_scsrev(
             &UPLO,   /* IN: UPLO = 'F', stores the full matrix */
             &dmatsize,      /* IN: Size of the problem */
@@ -284,6 +286,12 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
 
     printf("Number of eigenvalues found %d \n", M);
 
+    if(M<0 or M > dmatsize){
+        printf("Bad M value returned from dfeast_scsrev. Exit.");
+        Eigenvector_output.close();
+        MPI_Abort(MPI_COMM_WORLD,-22);
+    }
+    
     // check normalization and orthogonality of eigenvector by computing Y =  X^{transpose} * X - I
     /* Y=(X')*X-I */
     double **      Y = new double * [M];
@@ -302,6 +310,7 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
             index ++ ;
         }
     }
+    printf("Finish constructing Matrix_X \n");
     for(i=0;i<M;i++){
         for(j=0;j<M;j++){
             Y[i][j] = 0;
@@ -314,7 +323,7 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
     for(i=0;i<M;i++){
         Y[i][i] = Y[i][i] - 1;
     }
-
+    printf("Finsih computing Y \n");
     double small_value = 0;
     for(i=0;i<M;i++){
         for(j=0;j<M;j++){
@@ -349,4 +358,6 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
         delete [] Y[i];
     }
     delete [] Y;
+    delete [] E;
+    delete [] res;
 }
