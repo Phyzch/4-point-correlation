@@ -92,6 +92,7 @@ void full_system:: read_input_with_MPI(){
     // used to rescale the matrix element amplitude.
     cf = 0.0299792458*delt * pi2;
     d.cf = cf;
+    d.tprint = tprint;
 }
 
 

@@ -146,7 +146,10 @@ void convert_COO_to_CSR(const int * dirow_list, const int * dicol_list, const do
 
 }
 
-void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize , int dmatnum, ofstream & Eigenvector_output){
+int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize , int dmatnum, ofstream & Eigenvector_output,
+                                                              double * &E , double ** &Matrix_X){
+    // E :[M] eigenvalue found .  Matrix_X: eigenvector found [M, dmatsize]. M is returned by function.
+
     // for CSR format, row index should be row_num + 1, which last element should be row_num + 1. (be careful about that)
     int i, j , k;
     vector<int>  dirow_CSR_form_fortran;
@@ -216,7 +219,7 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
     MKL_INT      M0;            /* Initial guess for subspace dimension to be used */
     MKL_INT      M;             /* Total number of eigenvalues found in the interval */
 
-    double *   E = new double [dmatsize];         /* Eigenvalues */
+    E = new double [dmatsize];         /* Eigenvalues */
     double * X = new double [dmatsize * dmatsize]; /* Eigenvectors */
 //    double       X[dmatsize * dmatsize];        /* Eigenvectors */
 
@@ -291,15 +294,15 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
         Eigenvector_output.close();
         MPI_Abort(MPI_COMM_WORLD,-22);
     }
-    
+
     // check normalization and orthogonality of eigenvector by computing Y =  X^{transpose} * X - I
     /* Y=(X')*X-I */
-    double **      Y = new double * [M];
+    double ** Y = new double * [M];
     for(i=0;i<M;i++){
         Y[i] = new double [M];
     }
 
-    double  **   Matrix_X = new double * [M];
+    Matrix_X = new double * [M];
     for(i=0;i<M;i++){
         Matrix_X[i] = new double [dmatsize];
     }
@@ -333,6 +336,10 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
         }
     }
     printf("Maximum value in X*X - I is %f \n" , small_value);
+    for(i=0;i<dmatsize;i++){
+        Eigenvector_output << dmat_list[i] << " ";
+    }
+    Eigenvector_output << endl;
 
     for(i=0;i<M;i++){
         // output eigenvalue
@@ -350,14 +357,12 @@ void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list, 
     delete [] cols;
     delete [] val;
 
-    for(i=0;i<M;i++){
-        delete [] Matrix_X[i];
-    }
-    delete [] Matrix_X;
+
     for(i=0;i<M;i++){
         delete [] Y[i];
     }
     delete [] Y;
-    delete [] E;
     delete [] res;
+
+    return M;
 }

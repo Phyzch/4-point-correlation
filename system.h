@@ -76,7 +76,7 @@ public:
     double ** xd_all, ** yd_all;
 	vector<double> * dmat; // matrix
 	double *proptime; // we set proptime for two different mode to be the same
-
+    double tprint;
 
     int ** remoteVecCount,  ** remoteVecPtr,  **  remoteVecIndex;
     int ** tosendVecCount,  **tosendVecPtr,  ** tosendVecIndex;
@@ -219,6 +219,28 @@ public:
                          int nlev, int maxit);
 
     void diagonalize(double * eigenvalue_list, int & numlam,  ofstream & eigenvalue_log_file);
+
+
+    // algorithm used to compute Eigenstate and Thermal OTOC
+    int eigenstate_num; // denote as M
+    double * Eigenvalue_list; // [M]
+    double ** Eigenstate_list; // [M, total_dmatsize[0]]
+    double * Eigenstate_energy_std_list ;
+    void Broadcast_eigenstate_and_eigenvalue();
+    void compute_eigenstate_energy_std();
+
+    vector<vector<int>> neighbor_state_index_list_for_all_state ; // store nearby state index. size: [total_dmat_size[0], dof * 2]
+    void construct_neighbor_state_index_list_for_all_state();  // construct nearby state index
+
+    double *** phi_ladder_operator_phi;
+    void compute_phi_ladder_operator_phi();
+
+    void  compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, double time, complex<double> *** Eigenstate_OTOC ,
+                                            complex<double> **** l_M_m , complex<double> **** l_M_m_local , int * recv_count, int * displs  );
+    void compute_Eigenstate_OTOC();
+
+    // time is in unit of ps. energy is in unit of cm^{-1} as in spectroscopy.
+    double cf2 = 0.0299792458* pi2;
 };
 
 class full_system {
@@ -269,7 +291,7 @@ private:
     vector<int>  local_irow;
     vector <int>  local_icol;
 
-    // used for recving and sending vector x,y for computing system_energy
+
 
 public:
 	class system s;

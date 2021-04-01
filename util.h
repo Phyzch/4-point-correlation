@@ -69,8 +69,8 @@ void convert_dv(const vector<vector<int>> & vec_2d, vector <int>  & vec_1d , vec
 // used for cnostruct buffer for communication between process for matrix multiplication.
 int construct_send_buffer_index(int * remoteVecCount, int * remoteVecPtr, int * remoteVecIndex, int * tosendVecCount_element, int * tosendVecPtr_element, int * & tosendVecIndex_ptr);
 
-void MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize , int dmatnum, ofstream & Eigenvector_output ) ;
-
+int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize , int dmatnum, ofstream & Eigenvector_output,
+                                                             double * &E , double ** &Matrix_X);
 int compar(const void * a, const void * b);
 
 
