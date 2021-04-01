@@ -48,14 +48,12 @@ vector<Matrix_COO_element> merge_sort(const vector<Matrix_COO_element> & v1, con
             column_index_difference = v1[v1_index].col - v2[v2_index].col;
             if(column_index_difference < 0){
                 v3.push_back(v1[v1_index]);
-                v3.push_back(v2[v2_index]);
+                v1_index ++ ;
             }
             else{
                 v3.push_back(v2[v2_index]);
-                v3.push_back(v1[v1_index]);
+                v2_index++;
             }
-            v1_index++;
-            v2_index++;
         }
     }
     if(v1_index<size1){
@@ -254,7 +252,7 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
         }
     }
 
-    L = L * 1.5;
+    L = L * 2;
 
     MKL_INT      M0 = 0;            /* Initial guess for subspace dimension to be used */
     MKL_INT      M = 0;             /* Total number of eigenvalues found in the interval */
@@ -321,6 +319,8 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
     );
     // X eigenvector have the form: M(row) * dmatsize(column). Here M is number of eigenvector found.
     printf("FEAST OUTPUT INFO %d \n",info);
+
+
 //    if ( info != 0 )
 //    {
 //        printf("Routine dfeast_scsrev returns code of ERROR: %i", (int)info);
@@ -377,10 +377,33 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
         }
     }
     printf("Maximum value in X*X - I is %f \n" , small_value);
-    for(i=0;i<dmatsize;i++){
-        Eigenvector_output << dmat_list[i] << " ";
+
+    // ---- for debug ------
+    for(i=0;i<dmatsize+1;i++){
+        Eigenvector_output << rows[i] <<"  ";
     }
     Eigenvector_output << endl;
+
+    for(i=0;i<dmatnum;i++){
+        Eigenvector_output << cols[i] <<"  ";
+    }
+    Eigenvector_output << endl;
+
+    for(i=0;i<dmatnum;i++){
+        Eigenvector_output << val[i] <<"  ";
+    }
+    Eigenvector_output << endl;
+
+    // ---- for debug --------
+
+    for(i=0;i<num_proc;i++){
+        for(j=0;j<dmat_size_each_process[i];j++){
+            index = dmat_offset_each_process[i] + j;
+            Eigenvector_output<< dmat_list[index] <<" ";
+        }
+    }
+    Eigenvector_output << endl;
+
 
     for(i=0;i<M;i++){
         // output eigenvalue
