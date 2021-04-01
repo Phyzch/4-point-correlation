@@ -61,6 +61,7 @@ extern bool no_coupling;  // if this is Ture, we do not have off-diagonal coupli
 extern bool compute_overlap_with_eigenstate; // If this is True, we will use MFD to compute overlap of initial state with eigenvalue
 extern bool compute_eigenvector_use_MKL_module;
 extern double Emin, Emax; // range to solve eigenvalue and eigenvector using Intel MKL.  We will read it from input file.
+extern bool compute_Eigenstate_OTOC_bool;
 
 // define function here
 float ran2(long& idum);
@@ -69,7 +70,9 @@ void convert_dv(const vector<vector<int>> & vec_2d, vector <int>  & vec_1d , vec
 // used for cnostruct buffer for communication between process for matrix multiplication.
 int construct_send_buffer_index(int * remoteVecCount, int * remoteVecPtr, int * remoteVecIndex, int * tosendVecCount_element, int * tosendVecPtr_element, int * & tosendVecIndex_ptr);
 
-int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize , int dmatnum, ofstream & Eigenvector_output,
+int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize , int dmatnum,
+                                                             const int * dmat_size_each_process,
+                                                             const int * dmat_offset_each_process, ofstream & Eigenvector_output,
                                                              double * &E , double ** &Matrix_X);
 int compar(const void * a, const void * b);
 

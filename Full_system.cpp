@@ -173,7 +173,8 @@ void full_system::Quantum_evolution() {
 
         if(my_id == 0){
             ofstream Eigenvector_solver(path + "MKL_eigenvalue_Eigenvector.txt");
-            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],Eigenvector_solver,d.Eigenvalue_list,d.Eigenstate_list);
+            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
+                                                                                      d.dmatsize_each_process[0] , d.dmat_offset_each_process[0],Eigenvector_solver,d.Eigenvalue_list,d.Eigenstate_list);
             cout <<"Finish solving eigenvector and eigenvalue " << endl;
             Eigenvector_solver.close();
         }
@@ -181,18 +182,36 @@ void full_system::Quantum_evolution() {
         // Broadcast eigenstate and eigenvalue found to all other process.
         d.Broadcast_eigenstate_and_eigenvalue();
 
-        // Use eigenstate and eigenvalue to compute OTOC.
-        // first for every state construct neighbor state index.
-        d.construct_neighbor_state_index_list_for_all_state();
+        if (compute_Eigenstate_OTOC_bool){
+            // Use eigenstate and eigenvalue to compute OTOC.
+            // first for every state construct neighbor state index.
+            d.construct_neighbor_state_index_list_for_all_state();
 
-        // compute eigenstate energy spectrum on basis set
-        d.compute_eigenstate_energy_std();
+            // compute eigenstate energy spectrum on basis set
+            d.compute_eigenstate_energy_std();
 
-        // comput <phi_m | a_{i} | phi_l> and <phi_m | a^{+}_{i} | phi_l>. result in 3d array: phi_ladder_operator_phi
-        d.compute_phi_ladder_operator_phi();
+            // comput <phi_m | a_{i} | phi_l> and <phi_m | a^{+}_{i} | phi_l>. result in 3d array: phi_ladder_operator_phi
+            d.compute_phi_ladder_operator_phi();
 
-        // compute OTOC for eigenstate solved and output to file.
-        d.compute_Eigenstate_OTOC();
+            // compute OTOC for eigenstate solved and output to file.
+            d.compute_Eigenstate_OTOC();
+
+            if(my_id == 0){
+                cout <<" Finish computing Eigenstate OTOC ." << endl;
+            }
+
+            delete [] d.Eigenstate_energy_std_list;
+
+            // free space for phi_ladder_operator_phi
+            for(i=0;i<2*d.nmodes[0];i++){
+                for(j=0;j< d.eigenstate_num;j++){
+                    delete [] d.phi_ladder_operator_phi[i][j];
+                }
+                delete [] d.phi_ladder_operator_phi[i];
+            }
+            delete [] d.phi_ladder_operator_phi;
+
+        }
 
 
         // all process free the space
@@ -201,16 +220,6 @@ void full_system::Quantum_evolution() {
             delete [] d.Eigenstate_list[i];
         }
         delete [] d.Eigenstate_list;
-        delete [] d.Eigenstate_energy_std_list;
-
-        // free space for phi_ladder_operator_phi
-        for(i=0;i<2*d.nmodes[0];i++){
-            for(j=0;j< d.eigenstate_num;j++){
-                delete [] d.phi_ladder_operator_phi[i][j];
-            }
-            delete [] d.phi_ladder_operator_phi[i];
-        }
-        delete [] d.phi_ladder_operator_phi;
 
     }
 

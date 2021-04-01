@@ -68,15 +68,28 @@ void detector::Broadcast_eigenstate_and_eigenvalue(){
 }
 
 void detector::compute_eigenstate_energy_std(){
-    int i , j;
+    int i , j , k;
+    int index;
+    int index1 ;
     Eigenstate_energy_std_list = new double [eigenstate_num];
     for(i = 0; i<eigenstate_num ; i++){
         Eigenstate_energy_std_list[i] = 0;
         // \sum (E_{n} - eigenvalue)^2 * |<n|\phi>|^2
-        for(j=0;j<total_dmat_size[0];j++){
-            Eigenstate_energy_std_list[i] = Eigenstate_energy_std_list[i] +
-                    pow(Eigenvalue_list[i] - total_dmat[0][j] , 2) * pow(Eigenstate_list[i][j] , 2);
+
+        // As diagonal part is partitioned in different location in total_dmat. we have to find them in different place
+        index1 = 0;
+        for(j=0;j<num_proc;j++){
+            for(k=0;k<dmatsize_each_process[0][j];k++){
+              index = dmat_offset_each_process[0][j] + k;
+
+              Eigenstate_energy_std_list[i] = Eigenstate_energy_std_list[i] +
+                                                pow(Eigenvalue_list[i] - total_dmat[0][index] , 2) * pow(Eigenstate_list[i][index1] , 2);
+
+              index1 = index1 + 1;
+
+            }
         }
+
         Eigenstate_energy_std_list[i] = sqrt(Eigenstate_energy_std_list[i]);
     }
 }
@@ -382,12 +395,6 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
             for(i=0;i< 2*nmodes[0] ; i++){
                 for(j=0;j<2*nmodes[0];j++){
                     Eigenstate_OTOC_output << real(Eigenstate_OTOC[i][j][m]) <<" ";
-                }
-            }
-            Eigenstate_OTOC_output << endl;
-            for(i=0;i< 2*nmodes[0] ; i++){
-                for(j=0;j<2*nmodes[0];j++){
-                    Eigenstate_OTOC_output << imag(Eigenstate_OTOC[i][j][m]) <<" ";
                 }
             }
             Eigenstate_OTOC_output << endl;
