@@ -304,10 +304,6 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
         }
     }
 
-    if(my_id == 0){
-        cout <<"Finsh computing  l M m local " << endl;
-    }
-
     // transfer l_M_m_local to l_M_m
     for(i=0;i<2 * nmodes[0] ; i++){
         for(j=0;j<2 * nmodes[0]; j++){
@@ -335,10 +331,6 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
         }
     }
 
-    if(my_id == 0){
-        cout <<"Finsh transfer l M m local to l_M_m" << endl;
-    }
-
     complex<double> local_l_M_m_sum ;
     double local_l_M_m_sum_real;
     double local_l_M_m_sum_imag;
@@ -364,8 +356,11 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
                 local_l_M_m_sum_real = real(local_l_M_m_sum);
                 local_l_M_m_sum_imag = imag(local_l_M_m_sum);
 
-                MPI_Reduce(&local_l_M_m_sum_real, &l_M_m_sum_real, num_proc, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(&local_l_M_m_sum_imag , &l_M_m_sum_imag, num_proc, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+                l_M_m_sum_real = 0;
+                l_M_m_sum_imag = 0;
+
+                MPI_Reduce(&local_l_M_m_sum_real, &l_M_m_sum_real, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+                MPI_Reduce(&local_l_M_m_sum_imag , &l_M_m_sum_imag, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
                 if(my_id == 0){
                     Eigenstate_OTOC[i][j][m] = complex<double> ( l_M_m_sum_real , l_M_m_sum_imag);
@@ -374,6 +369,8 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
             }
         }
     }
+
+
 
     // output to Eigenstate_OTOC_output
     if(my_id == 0){
@@ -398,6 +395,11 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
 
     }
 
+
+    delete [] send_local_l_M_m_real;
+    delete [] send_local_l_M_m_imag;
+    delete [] recv_l_M_m_real;
+    delete [] recv_l_M_m_imag;
 
 }
 
@@ -462,12 +464,11 @@ void detector::compute_Eigenstate_OTOC(){
     for(i=0;i<num_proc-1;i++){
         recv_count [i] = int(eigenstate_num / num_proc) ;
     }
-    recv_count[num_proc - 1] = int(eigenstate_num - int(eigenstate_num / num_proc) * (num_proc - 1));
+    recv_count[num_proc - 1] = eigenstate_num -  int(eigenstate_num / num_proc) * (num_proc - 1);
     displs[0] = 0;
     for(i=1;i<num_proc;i++){
         displs[i] = displs[i - 1] + recv_count[ i - 1 ];
     }
-
 
     ofstream Eigenstate_OTOC_output;
     if(my_id == 0){
@@ -488,20 +489,11 @@ void detector::compute_Eigenstate_OTOC(){
 
     }
 
-    if(my_id == 0){
-        cout <<"Begin computing Eigenstate OTOC " << endl;
-    }
-
     // compute Eigenstate OTOC and output
     for(i=0;i<Time_series_len;i++){
         t = Time_series[i];
         compute_Eigenstate_OTOC_submodule(Eigenstate_OTOC_output,t,Eigenstate_OTOC, l_M_m, l_M_m_local,recv_count,displs);
     }
-
-    if(my_id == 0){
-        cout <<"Finish computing Eigenstate OTOC " << endl;
-    }
-
 
     // free space:
     if(my_id == 0){
