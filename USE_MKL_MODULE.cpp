@@ -174,34 +174,6 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
         val[i] = sorted_dmat[i];
     }
 
-    // ----------- For debug -------------------:
-//    cout <<" Rows:" << endl;
-//    for(i=0;i<100;i++){
-//        cout << rows[i] << " ";
-//    }
-//    cout << endl;
-//
-//    cout << "Cols :  " << endl;
-//    for(i=0;i<100;i++){
-//        cout << cols[i] << " ";
-//    }
-//
-//    cout << "Vals:  " << endl;
-//    for(i=0;i<100;i++){
-//        cout << val[i] <<" ";
-//    }
-//    cout << endl;
-
-//    cout << "diagonal part of Matrix : " << endl;
-//    for(i=0;i<num_proc;i++){
-//        for(j=0;j<dmat_size_each_process[i];j++){
-//            k = dmat_offset_each_process[i] + j;
-//            cout << dmat_list[k] <<" ";
-//        }
-//    }
-//    cout << endl;
-
-    // ----------------------------------------
 
 /* Declaration of FEAST variables */
     char          UPLO = 'F'; /* Type of matrix: (F means full matrix, L/U - lower/upper triangular part of matrix) */
@@ -331,7 +303,7 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
     printf("Number of eigenvalues found %d \n", M);
 
     if(M<0 or M > dmatsize){
-        printf("Bad M value returned from dfeast_scsrev. Exit.");
+        printf("Bad M value returned from dfeast_scsrev:  Exit.");
         Eigenvector_output.close();
         MPI_Abort(MPI_COMM_WORLD,-22);
     }
@@ -379,20 +351,20 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
     printf("Maximum value in X*X - I is %f \n" , small_value);
 
     // ---- for debug ------
-    for(i=0;i<dmatsize+1;i++){
-        Eigenvector_output << rows[i] <<"  ";
-    }
-    Eigenvector_output << endl;
-
-    for(i=0;i<dmatnum;i++){
-        Eigenvector_output << cols[i] <<"  ";
-    }
-    Eigenvector_output << endl;
-
-    for(i=0;i<dmatnum;i++){
-        Eigenvector_output << val[i] <<"  ";
-    }
-    Eigenvector_output << endl;
+//    for(i=0;i<dmatsize+1;i++){
+//        Eigenvector_output << rows[i] <<"  ";
+//    }
+//    Eigenvector_output << endl;
+//
+//    for(i=0;i<dmatnum;i++){
+//        Eigenvector_output << cols[i] <<"  ";
+//    }
+//    Eigenvector_output << endl;
+//
+//    for(i=0;i<dmatnum;i++){
+//        Eigenvector_output << val[i] <<"  ";
+//    }
+//    Eigenvector_output << endl;
 
     // ---- for debug --------
 
