@@ -77,5 +77,27 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
 int compar(const void * a, const void * b);
 
 
+struct phi_operator_phi_tuple{
+    // record phi_operator_phi information with value larger than criteria
+    int eigenstate_index;  // state m linked to state l
+    double phi_operator_phi_value;  // <phi_m | a_{i} | phi_l>
+    phi_operator_phi_tuple(int state_index , double phi_operator_phi_value1){
+        eigenstate_index = state_index;
+        phi_operator_phi_value = phi_operator_phi_value1;
+    }
+};
+
+struct phi_operator_phi_tuple_complex{
+    // record phi_operator_phi information with value larger than criteria
+    int eigenstate_index;  // state m linked to state l
+    complex<double> phi_operator_phi_value;  // <phi_m | a_{i} | phi_l>
+    phi_operator_phi_tuple_complex(int state_index , complex<double> phi_operator_phi_value1){
+        eigenstate_index = state_index;
+        phi_operator_phi_value = phi_operator_phi_value1;
+    }
+};
+
+
+
 #endif //QUANTUM_MEASUREMENT_UTIL_H
 

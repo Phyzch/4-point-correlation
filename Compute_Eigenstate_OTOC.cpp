@@ -5,6 +5,7 @@
 #include "system.h"
 using namespace std;
 
+
 void detector::construct_neighbor_state_index_list_for_all_state(){
     int i, j;
     // for neighbor_state_index_for_all_state_list
@@ -252,6 +253,37 @@ void detector:: compute_phi_ladder_operator_phi( ){
         }
     }
 
+    Eigenstate_OTOC_sift_criteria = double(1) / (total_dmat_size[0] ) ;
+
+    // construct phi_operator_phi_tuple_list : size : [2 * nmodes[0] , eigenstate_num ] (list)
+    // phi_ladder_operator_phi_tuple_list record <l | a_{i} | m> for all state m. in this list, it will have state l which have value of operator larger than criteria.
+    int Total_Element_num = 0;
+    for(i=0; i< 2 * nmodes[0] ; i++ ){
+        vector<vector<phi_operator_phi_tuple>> phi_operator_phi_tuple_for_dof ;
+        for(m=0;m<eigenstate_num ; m++){
+            vector< phi_operator_phi_tuple > phi_operator_phi_tuple_for_state;
+            for(l=0;l<eigenstate_num;l++){
+
+                if(phi_ladder_operator_phi[i][l][m]  > Eigenstate_OTOC_sift_criteria){
+                    Total_Element_num ++ ;
+                    phi_operator_phi_tuple Tuple1 (l,phi_ladder_operator_phi[i][l][m]);
+                    phi_operator_phi_tuple_for_state.push_back(Tuple1);
+                }
+
+            }
+
+            phi_operator_phi_tuple_for_dof .push_back (phi_operator_phi_tuple_for_state );
+        }
+        phi_ladder_operator_phi_tuple_list.push_back(phi_operator_phi_tuple_for_dof);
+    }
+
+    double Non_zero_Ratio;
+    Non_zero_Ratio = double(Total_Element_num) / ( 2 * nmodes[0] * eigenstate_num * eigenstate_num )  ;
+
+    if(my_id == 0){
+        cout << "for phi_operator_phi, nonzero ratio is :  " << Non_zero_Ratio << endl;
+    }
+
     // free space
     for(i=0;i<2*nmodes[0];i++){
         delete [] phi_ladder_operator_phi_1d[i];
@@ -261,7 +293,41 @@ void detector:: compute_phi_ladder_operator_phi( ){
 
 }
 
-void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, double time, complex<double> *** Eigenstate_OTOC ,
+int Binary_search_phi_operator_phi_tuple_complex(const vector<phi_operator_phi_tuple_complex> & List, int state_index){
+    int Size = List.size();
+    if(Size == 0){
+        return -1;
+    }
+    int begin_index = 0;
+    int end_index = Size - 1;
+
+    int index = int(begin_index + end_index) / 2;
+    while(begin_index < end_index){
+        index = int(begin_index + end_index) / 2;
+        if(state_index < List[index].eigenstate_index){
+            end_index = index - 1;
+            index = (begin_index + end_index) / 2;
+        }
+        else if (state_index > List[index].eigenstate_index){
+            begin_index = index + 1;
+            index = (begin_index + end_index ) / 2;
+        }
+        else{
+            return index;
+        }
+    }
+
+    if(state_index == List[index].eigenstate_index){
+        return index;
+    }
+    else{
+        return -1;
+    }
+
+}
+
+void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, double time, double *** Eigenstate_OTOC ,
+                                                  double *** local_Eigenstate_OTOC,
                                                   complex<double> **** l_M_m , complex<double> **** l_M_m_local , int * recv_count, int * displs ){
     int l, m,  p; // index for state
     int i, j, k; // index for dof
@@ -283,39 +349,75 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
     double * recv_l_M_m_real = new double [eigenstate_num];
     double * recv_l_M_m_imag = new double [eigenstate_num];
 
-    // compute l_M_m_local
+    // set l_M_m_local[i][j][l][m] to 0.
     for(i=0;i<2*nmodes[0];i++){
-        for(j=0;j<2*nmodes[0];j++){
+        for(j=0;j<2*nmodes[0];j++) {
             for(l=0;l<eigenstate_num;l++){
                 for(m=0;m<local_eigenstate_num;m++){
-                    state_m_index = local_eigenstate_begin_index + m;
-                    state_l_index = l;
-                    // compute <l [a_{i}(t) , a_{j}] | m>
-                    // phi_ladder_operator_phi = <l | a_{i} | p>
                     l_M_m_local[i][j][l][m] = 0;
-                    for(p=0;p<eigenstate_num;p++){
-                        if(phi_ladder_operator_phi[i][state_l_index][p] != 0 and phi_ladder_operator_phi[j][p][state_m_index] != 0 ){
-                            A = std::exp(complex<double>(1j * cf2 *( Eigenvalue_list[state_l_index] - Eigenvalue_list[p] ) * time )  )
-                                   *  complex<double>( phi_ladder_operator_phi[i][state_l_index][p] * phi_ladder_operator_phi[j][p][state_m_index]  );
-                        }
-                        else{
-                            A = 0 ;
-                        }
-                        if( phi_ladder_operator_phi[j][state_l_index][p] != 0 and phi_ladder_operator_phi[i][p][state_m_index] != 0 ){
-                            B = std::exp( complex<double>(  1j * cf2 * time * (Eigenvalue_list[p] - Eigenvalue_list[state_m_index])  ) )
-                                    * complex<double> ( phi_ladder_operator_phi[j][state_l_index][p] * phi_ladder_operator_phi[i][p][state_m_index]  );
-                        }
-                        else{
-                            B = 0;
-                        }
-
-                        l_M_m_local[i][j][l][m] = l_M_m_local[i][j][l][m] +  (A - B );
-                    }
-
                 }
             }
         }
     }
+
+    int m_phi_ladder_phi_list_length = 0;
+    int p_phi_ladder_phi_list_length = 0;
+    int index_m;
+    int index_p;
+    double Value1;
+    double Value2;
+    vector<phi_operator_phi_tuple> * ptr1;
+    vector<phi_operator_phi_tuple> * ptr2;
+
+    // compute l_M_m_local
+    for(i=0;i<2*nmodes[0];i++){
+        for(j=0;j<2*nmodes[0];j++){
+            for(m=0;m< local_eigenstate_num ; m++){
+                state_m_index = local_eigenstate_begin_index + m;
+
+                // first compute part : <l | a_{i}(t) a_{j} | m>
+                ptr1 = & phi_ladder_operator_phi_tuple_list[j][state_m_index];  // List for a_{j}|m>
+                m_phi_ladder_phi_list_length = (*ptr1) .size();
+                for(index_m = 0; index_m < m_phi_ladder_phi_list_length; index_m ++){
+                    Value1 = (*ptr1)[index_m].phi_operator_phi_value;  // <p| a_{j} | m>
+                    p = (*ptr1)[index_m].eigenstate_index;  // index for eigenstate p;
+
+                    ptr2 = & phi_ladder_operator_phi_tuple_list[i][p];  // a_{i}|p>
+                    p_phi_ladder_phi_list_length = (*ptr2).size();
+                    for (index_p=0; index_p < p_phi_ladder_phi_list_length ; index_p ++){
+                        Value2 = (*ptr2)[index_p].phi_operator_phi_value;  // <l| a_{i} | p>
+                        l = (*ptr2)[index_p].eigenstate_index;
+
+                        l_M_m_local[i][j][l][m] = l_M_m_local[i][j][l][m] +  complex<double> (Value1 * Value2) *
+                                std::exp(complex<double>(1j * cf2 *  time * ( Eigenvalue_list[l] - Eigenvalue_list[p] )  )  );
+                    }
+
+                }
+
+                // second compute part : <l|a_{j} a_{i}(t) | m>
+                ptr1 = & phi_ladder_operator_phi_tuple_list[i][state_m_index];
+                m_phi_ladder_phi_list_length = (*ptr1).size();
+                for(index_m = 0; index_m < m_phi_ladder_phi_list_length; index_m ++ ){
+                    Value1 = (*ptr1)[index_m].phi_operator_phi_value; // <p|a_{i}|m>
+                    p = (*ptr1)[index_m].eigenstate_index;
+
+                    ptr2 = & phi_ladder_operator_phi_tuple_list[j][p]; // a_{j}|p>
+                    p_phi_ladder_phi_list_length = (*ptr2).size();
+                    for(index_p = 0; index_p < p_phi_ladder_phi_list_length ; index_p ++){
+                        Value2 = (*ptr2)[index_p].phi_operator_phi_value; // <l | a_{j} | p >
+                        l = (*ptr2)[index_p].eigenstate_index;
+
+                        l_M_m_local[i][j][l][m] = l_M_m_local[i][j][l][m] - complex<double> (Value1 * Value2) *
+                                std::exp(complex<double> ( 1j * cf2 * time * (Eigenvalue_list[p] - Eigenvalue_list[state_m_index])  ) );
+                    }
+
+                }
+
+            }
+
+        }
+    }
+
 
     // transfer l_M_m_local to l_M_m
     for(i=0;i<2 * nmodes[0] ; i++){
@@ -344,46 +446,78 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
         }
     }
 
-    complex<double> local_l_M_m_sum ;
-    double local_l_M_m_sum_real;
-    double local_l_M_m_sum_imag;
-
-    double l_M_m_sum_real;
-    double l_M_m_sum_imag;
-
-    for (m=0;m<eigenstate_num;m++){
-        for(i=0;i<2 * nmodes[0] ; i++){
-            for(j=0; j<2 * nmodes[0] ; j++){
-                local_l_M_m_sum = 0;
-                // (M^{\dagger})_{ik}^{ml} *M_{kj}^{lm} here lm is index for state. i,j is index for dof
-                // Here we first sum over state k in each process, then MPI_sum over state l.
-                for(l=0;l<local_eigenstate_num;l++){
-                        state_l_index = l + local_eigenstate_begin_index;
-                        // sum over dof k
-                        for(k=0 ; k< 2* nmodes[0] ; k++){
-                            local_l_M_m_sum = local_l_M_m_sum + conj(l_M_m[k][i][state_l_index][m])
-                                    * l_M_m[k][j][state_l_index][m];
-                        }
+    // sparsify result:
+    // l_M_m_nonzero (size : [ 2 * nmodes[0], 2*nmodes[0] , eigenstate_num, list]
+    vector< vector< vector< vector<phi_operator_phi_tuple_complex> > > > l_M_m_nonzero;
+    for(i=0;i<2*nmodes[0];i++){
+        vector< vector< vector<phi_operator_phi_tuple_complex> > >  l_M_m_nonzero_1;
+        for(j=0;j<2*nmodes[0];j++){
+            vector< vector<phi_operator_phi_tuple_complex> > l_M_m_nonzero_2;
+            for(m=0;m<eigenstate_num;m++) {
+                vector<phi_operator_phi_tuple_complex> l_M_m_nonzero_3;
+                for(l=0;l<eigenstate_num;l++){
+                    if( abs(l_M_m[i][j][l][m]) > Eigenstate_OTOC_sift_criteria){
+                        phi_operator_phi_tuple_complex Tuple1(l, l_M_m[i][j][l][m]);
+                        l_M_m_nonzero_3.push_back(Tuple1);
+                    }
                 }
-
-                local_l_M_m_sum_real = real(local_l_M_m_sum);
-                local_l_M_m_sum_imag = imag(local_l_M_m_sum);
-
-                l_M_m_sum_real = 0;
-                l_M_m_sum_imag = 0;
-
-                MPI_Reduce(&local_l_M_m_sum_real, &l_M_m_sum_real, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-                MPI_Reduce(&local_l_M_m_sum_imag , &l_M_m_sum_imag, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-
-                if(my_id == 0){
-                    Eigenstate_OTOC[i][j][m] = complex<double> ( l_M_m_sum_real , l_M_m_sum_imag);
-                }
-
+                l_M_m_nonzero_2.push_back(l_M_m_nonzero_3);
             }
+            l_M_m_nonzero_1.push_back(l_M_m_nonzero_2);
         }
+        l_M_m_nonzero.push_back(l_M_m_nonzero_1);
     }
 
+    // compute Eigenstate_OTOC in each process and stored in local_Eigenstate_OTOC
+    int a_i_a_j_m_index  = 0;
+    int l_M_m_nonzero_m_list_length = 0;
+    vector<phi_operator_phi_tuple_complex> * ptr3;
+    vector<phi_operator_phi_tuple_complex> * ptr4;
+    complex<double> Value3;
+    complex<double> Value4;
+    complex<double> local_l_M_m_sum ;
+    int position ;
+   for(m=0;m<local_eigenstate_num;m++){
+       for(i=0;i<2 * nmodes[0] ; i++){
+           for(j=0; j<2 * nmodes[0] ; j++){
+               local_l_M_m_sum = 0;
 
+                state_m_index = local_eigenstate_begin_index + m;
+
+                for(k=0;k<2 * nmodes[0] ; k++){
+                    ptr3 = & l_M_m_nonzero[k][i][state_m_index];   // l_M_m[k][i][:][state_m]
+                    l_M_m_nonzero_m_list_length = (*ptr3).size();
+                    ptr4 = & l_M_m_nonzero[k][j][state_m_index]; // l_M_m[k][j][:][state_m]
+
+                    // loop for a_i_a_j_m_index is equivalent to loop for state l
+                    for(a_i_a_j_m_index = 0; a_i_a_j_m_index < l_M_m_nonzero_m_list_length ; a_i_a_j_m_index ++ ){
+                        l = (*ptr3)[a_i_a_j_m_index].eigenstate_index;
+                        Value3 = (*ptr3)[a_i_a_j_m_index].phi_operator_phi_value;  // l_M_m[k][i][l][state_m]
+
+                        position = Binary_search_phi_operator_phi_tuple_complex((*ptr4) , l );
+                        if(position != -1){
+                            // state l have non-negligible contribution
+                            Value4 = (*ptr4)[position].phi_operator_phi_value; // l_M_m[k][j][l][state_m]
+                            local_l_M_m_sum = local_l_M_m_sum +  conj(Value3) * Value4;
+
+                        }
+
+                    }
+
+                }
+
+                local_Eigenstate_OTOC[i][j][m] = real(local_l_M_m_sum);
+           }
+       }
+   }
+
+   // Gather local_Eigenstate_OTOC to Eigenstate_OTOC
+   for(i=0;i<2*nmodes[0];i++){
+       for(j=0;j<2*nmodes[0]; j++){
+           MPI_Gatherv(&local_Eigenstate_OTOC[i][j][0], local_eigenstate_num, MPI_DOUBLE,
+                       &Eigenstate_OTOC[i][j][0], &recv_count[0], &displs[0], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+       }
+   }
 
     // output to Eigenstate_OTOC_output
     if(my_id == 0){
@@ -394,7 +528,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
         for(m=0;m<eigenstate_num;m++){
             for(i=0;i< 2*nmodes[0] ; i++){
                 for(j=0;j<2*nmodes[0];j++){
-                    Eigenstate_OTOC_output << real(Eigenstate_OTOC[i][j][m]) <<" ";
+                    Eigenstate_OTOC_output << Eigenstate_OTOC[i][j][m] <<" ";
                 }
             }
             Eigenstate_OTOC_output << endl;
@@ -428,17 +562,25 @@ void detector::compute_Eigenstate_OTOC(){
 
 
     // size: [eigenstate_num , 2* nmodes[0], 2* nmodes[0]] store final result
-    complex<double> *** Eigenstate_OTOC;
-    if(my_id == 0){
+    double *** Eigenstate_OTOC;
 
-        Eigenstate_OTOC = new complex<double> ** [2 * nmodes[0]];
-        for(i=0;i<2 * nmodes[0];i++){
-            Eigenstate_OTOC[i] = new complex<double> * [ 2*nmodes[0]];
-            for(j=0;j<2*nmodes[0];j++){
-                Eigenstate_OTOC[i][j] = new complex<double> [eigenstate_num];
-            }
+    Eigenstate_OTOC = new double ** [2 * nmodes[0]];
+    for(i=0;i<2 * nmodes[0];i++){
+        Eigenstate_OTOC[i] = new double * [ 2*nmodes[0]];
+        for(j=0;j<2*nmodes[0];j++){
+            Eigenstate_OTOC[i][j] = new double [eigenstate_num];
         }
+    }
 
+
+
+    double *** local_Eigenstate_OTOC;
+    local_Eigenstate_OTOC = new double ** [2*nmodes[0]];
+    for(i=0;i<2*nmodes[0];i++){
+        local_Eigenstate_OTOC[i] = new  double * [ 2 * nmodes[0]];
+        for(j=0;j<2*nmodes[0]; j++){
+            local_Eigenstate_OTOC[i][j] = new  double  [local_eigenstate_num];
+        }
     }
 
 
@@ -499,21 +641,27 @@ void detector::compute_Eigenstate_OTOC(){
     // compute Eigenstate OTOC and output
     for(i=0;i<Time_series_len;i++){
         t = Time_series[i];
-        compute_Eigenstate_OTOC_submodule(Eigenstate_OTOC_output,t,Eigenstate_OTOC, l_M_m, l_M_m_local,recv_count,displs);
+        compute_Eigenstate_OTOC_submodule(Eigenstate_OTOC_output,t,Eigenstate_OTOC, local_Eigenstate_OTOC, l_M_m, l_M_m_local,recv_count,displs);
     }
 
     // free space:
-    if(my_id == 0){
-        for(i=0;i< 2 * nmodes[0] ;i++){
-            for(j=0;j<2*nmodes[0];j++){
-                delete [] Eigenstate_OTOC[i][j];
-            }
-            delete [] Eigenstate_OTOC[i];
+    for(i=0;i< 2 * nmodes[0] ;i++){
+        for(j=0;j<2*nmodes[0];j++){
+            delete [] Eigenstate_OTOC[i][j];
         }
-        delete [ ] Eigenstate_OTOC;
-
-
+        delete [] Eigenstate_OTOC[i];
     }
+    delete [ ] Eigenstate_OTOC;
+    
+
+    for(i=0;i< 2 * nmodes[0] ;i++){
+        for(j=0;j<2*nmodes[0];j++){
+            delete [] local_Eigenstate_OTOC[i][j];
+        }
+        delete [] local_Eigenstate_OTOC[i];
+    }
+    delete [ ] local_Eigenstate_OTOC;
+
 
     for(i=0;i<2*nmodes[0];i++){
         for(j=0;j<2*nmodes[0];j++){

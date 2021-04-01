@@ -226,6 +226,7 @@ public:
     double * Eigenvalue_list; // [M]
     double ** Eigenstate_list; // [M, total_dmatsize[0]]
     double * Eigenstate_energy_std_list ;
+    double Eigenstate_OTOC_sift_criteria;  // criteria used to discard small value in OTOC computation.
     void Broadcast_eigenstate_and_eigenvalue();
     void compute_eigenstate_energy_std();
 
@@ -233,9 +234,10 @@ public:
     void construct_neighbor_state_index_list_for_all_state();  // construct nearby state index
 
     double *** phi_ladder_operator_phi;
+    vector<vector<vector<phi_operator_phi_tuple>>> phi_ladder_operator_phi_tuple_list ;
     void compute_phi_ladder_operator_phi();
 
-    void  compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, double time, complex<double> *** Eigenstate_OTOC ,
+    void  compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, double time, double *** Eigenstate_OTOC , double *** local_Eigenstate_OTOC,
                                             complex<double> **** l_M_m , complex<double> **** l_M_m_local , int * recv_count, int * displs  );
     void compute_Eigenstate_OTOC();
 
