@@ -46,6 +46,23 @@ void detector::construct_neighbor_state_index_list_for_all_state(){
         neighbor_state_index_for_all_state_list.push_back(neighbor_state_index);
     }
 
+// ----------- For debug ----------------------
+    // Find maximum eigenstate index in all eigenstate.
+    int * Maximum_eigenstate_index = new int [eigenstate_num];
+    double maximum_eigenstate_component = 0;
+    for(i=0;i<eigenstate_num;i++){
+        maximum_eigenstate_component = 0;
+        Maximum_eigenstate_index[i] = -1;
+        for(j=0;j< total_dmat_size[0]; j++){
+            if( abs(Eigenstate_list[i][j]) > maximum_eigenstate_component ){
+                maximum_eigenstate_component = abs(Eigenstate_list[i][j]);
+                Maximum_eigenstate_index[i] = j ;
+            }
+        }
+    }
+
+    i = 0;
+    // ------------------ For debug ---------------------
 }
 
 void detector::Broadcast_eigenstate_and_eigenvalue(){
@@ -124,6 +141,9 @@ void detector:: compute_phi_ladder_operator_phi( ){
     int basis_set_state_index;
     int nearby_basis_set_state_index;
     double local_ladder_operator_value;
+
+    double Energy_sift_criteria = 0;
+
     for(i=0;i<2 * nmodes[0]; i++){
         for(m=0;m<local_eigenstate_num;m++){
             for(l=0;l<eigenstate_num;l++){
@@ -142,10 +162,17 @@ void detector:: compute_phi_ladder_operator_phi( ){
                 energy_difference = abs( Eigenvalue_list[eigenstate_l_index] +
                         ladder_operator_energy_change - Eigenvalue_list[eigenstate_m_index] );
 
-                if(energy_difference > 2 * (Eigenstate_energy_std_list[eigenstate_m_index] + Eigenstate_energy_std_list[eigenstate_l_index] )){
-                    local_phi_ladder_operator_phi[i][m][l] = 0;
+
+                Energy_sift_criteria =  5 * (Eigenstate_energy_std_list[eigenstate_l_index] + Eigenstate_energy_std_list[eigenstate_m_index]);
+                if(Energy_sift_criteria < 10){
+                    Energy_sift_criteria = 10;
+                }
+
+                if(energy_difference > Energy_sift_criteria ){
+                     local_phi_ladder_operator_phi[i][m][l] = 0;
                 }
                 else{
+
                     // we need to compute <\phi_m | a_{i} | phi_l> or <\phi_m | a_{i}^{+} | \phi_l>
                     local_ladder_operator_value = 0;
                     for(j=0;j<total_dmat_size[0]; j++){
@@ -160,12 +187,12 @@ void detector:: compute_phi_ladder_operator_phi( ){
                             if(i<nmodes[0]){
                                 // lowering operator
                                 local_ladder_operator_value = local_ladder_operator_value + Eigenstate_list[eigenstate_l_index][basis_set_state_index] *
-                                                    Eigenstate_list[eigenstate_m_index][ nearby_basis_set_state_index ] * sqrt(dv_all[0][basis_set_state_index][i]);
+                                                                                            Eigenstate_list[eigenstate_m_index][ nearby_basis_set_state_index ] * sqrt(dv_all[0][basis_set_state_index][i]);
                             }
                             else{
                                 // raising operator
                                 local_ladder_operator_value = local_ladder_operator_value + Eigenstate_list[eigenstate_l_index][basis_set_state_index] *
-                                            Eigenstate_list[eigenstate_m_index][ nearby_basis_set_state_index ] * sqrt(dv_all[0][basis_set_state_index][i - nmodes[0] ] + 1);
+                                                                                            Eigenstate_list[eigenstate_m_index][ nearby_basis_set_state_index ] * sqrt(dv_all[0][basis_set_state_index][i - nmodes[0] ] + 1);
                             }
 
                         }
@@ -173,7 +200,9 @@ void detector:: compute_phi_ladder_operator_phi( ){
                     }
                     local_phi_ladder_operator_phi[i][m][l]  = local_ladder_operator_value;
 
+
                 }
+
 
             }
         }
@@ -253,7 +282,7 @@ void detector:: compute_phi_ladder_operator_phi( ){
         }
     }
 
-    Eigenstate_OTOC_sift_criteria = double(1) / (total_dmat_size[0] ) ;
+    Eigenstate_OTOC_sift_criteria = double(1) / (100) ;
 
     // construct phi_operator_phi_tuple_list : size : [2 * nmodes[0] , eigenstate_num ] (list)
     // phi_ladder_operator_phi_tuple_list record <l | a_{i} | m> for all state m. in this list, it will have state l which have value of operator larger than criteria.
@@ -264,7 +293,7 @@ void detector:: compute_phi_ladder_operator_phi( ){
             vector< phi_operator_phi_tuple > phi_operator_phi_tuple_for_state;
             for(l=0;l<eigenstate_num;l++){
 
-                if(phi_ladder_operator_phi[i][l][m]  > Eigenstate_OTOC_sift_criteria){
+                if( abs(phi_ladder_operator_phi[i][l][m])  > Eigenstate_OTOC_sift_criteria){
                     Total_Element_num ++ ;
                     phi_operator_phi_tuple Tuple1 (l,phi_ladder_operator_phi[i][l][m]);
                     phi_operator_phi_tuple_for_state.push_back(Tuple1);
@@ -652,7 +681,7 @@ void detector::compute_Eigenstate_OTOC(){
         delete [] Eigenstate_OTOC[i];
     }
     delete [ ] Eigenstate_OTOC;
-    
+
 
     for(i=0;i< 2 * nmodes[0] ;i++){
         for(j=0;j<2*nmodes[0];j++){

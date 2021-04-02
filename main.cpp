@@ -27,7 +27,7 @@ bool compute_Eigenstate_OTOC_bool = true ;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/Eigenstate OTOC/Try/";
+                       "/Eigenstate OTOC/V=300/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=300/";
  //   string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";
