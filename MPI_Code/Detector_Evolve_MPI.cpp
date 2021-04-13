@@ -863,50 +863,50 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             output_step_for_all_state = int(output_all_state_time_unit / delt);
 
             // ----- output state real and imaginary part for all state in simulation ----------------------
-            if(k%output_step_for_all_state==0){
-                MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
-                            &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],
-                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
-                MPI_Gatherv(&d.yd[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize[0], MPI_DOUBLE,
-                            &d.yd_all[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize_each_process[0],
-                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
-                if(my_id == 0){
-                    Detector_precoup_all_state_output << t << endl;
-                    for(i=0;i<d.total_dmat_size[0];i++){
-                        Detector_precoup_all_state_output << d.xd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
-                    }
-                    Detector_precoup_all_state_output << endl;
-                    for(i=0;i<d.total_dmat_size[0];i++){
-                        Detector_precoup_all_state_output << d.yd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
-                    }
-                    Detector_precoup_all_state_output << endl;
-                }
-            }
+//            if(k%output_step_for_all_state==0){
+//                MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
+//                            &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],
+//                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+//                MPI_Gatherv(&d.yd[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize[0], MPI_DOUBLE,
+//                            &d.yd_all[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize_each_process[0],
+//                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+//                if(my_id == 0){
+//                    Detector_precoup_all_state_output << t << endl;
+//                    for(i=0;i<d.total_dmat_size[0];i++){
+//                        Detector_precoup_all_state_output << d.xd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
+//                    }
+//                    Detector_precoup_all_state_output << endl;
+//                    for(i=0;i<d.total_dmat_size[0];i++){
+//                        Detector_precoup_all_state_output << d.yd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
+//                    }
+//                    Detector_precoup_all_state_output << endl;
+//                }
+//            }
             // --------- output IPR for all state --------------------------------------
-            if(k%output_step_for_all_state == 0){
-                for(i=0;i<nearby_state_index_size;i++){
-                    inverse_IPR_in_one_process[i] = 0;
-                    for(j=0;j<d.dmatsize[0];j++){
-                        inverse_IPR_in_one_process[i] = inverse_IPR_in_one_process[i] + pow(pow(d.xd[i][j],2) + pow(d.yd[i][j],2),2);
-                    }
-                }
-
-                MPI_Reduce(&inverse_IPR_in_one_process[0],&inverse_IPR_all[0],nearby_state_index_size,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-
-                if(my_id == 0){
-                    for(i=0;i<nearby_state_index_size;i++){
-                        IPR_all[i] = 1/ inverse_IPR_all[i];
-                    }
-
-                    // output result
-                    IPR_for_all_state_output << t << endl;
-                    for(i=0;i<nearby_state_index_size;i++){
-                        IPR_for_all_state_output << IPR_all[i] <<" ";
-                    }
-                    IPR_for_all_state_output << endl;
-                }
-
-            }
+//            if(k%output_step_for_all_state == 0){
+//                for(i=0;i<nearby_state_index_size;i++){
+//                    inverse_IPR_in_one_process[i] = 0;
+//                    for(j=0;j<d.dmatsize[0];j++){
+//                        inverse_IPR_in_one_process[i] = inverse_IPR_in_one_process[i] + pow(pow(d.xd[i][j],2) + pow(d.yd[i][j],2),2);
+//                    }
+//                }
+//
+//                MPI_Reduce(&inverse_IPR_in_one_process[0],&inverse_IPR_all[0],nearby_state_index_size,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+//
+//                if(my_id == 0){
+//                    for(i=0;i<nearby_state_index_size;i++){
+//                        IPR_all[i] = 1/ inverse_IPR_all[i];
+//                    }
+//
+//                    // output result
+//                    IPR_for_all_state_output << t << endl;
+//                    for(i=0;i<nearby_state_index_size;i++){
+//                        IPR_for_all_state_output << IPR_all[i] <<" ";
+//                    }
+//                    IPR_for_all_state_output << endl;
+//                }
+//
+//            }
 
 
             if(k % output_step ==0) {
