@@ -187,16 +187,20 @@ public:
     double *** receive_yd_for_xp;
 
     complex<double> compute_c_overlap(int state_m, int state_l, int mode_k,
-                                      vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
+                                      vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
+                                      vector<vector<int>> * index_for_xp_sparsify);
+
 
     void compute_M_matrix(int state_m, int state_l, complex<double> ** M_matrix ,
-                          vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
+                          vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
+                          vector<vector<int>> * index_for_xp_sparsify);
 
     void compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_spectrum_for_xp, complex<double>  ** Lyapunov_spectrum_for_xp_from_single_state,
                                           complex<double> ** M_matrix,
                                           vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp,
+                                          vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
+                                          vector<vector<int>> * index_for_xp_sparsify,
                                           double t ,ofstream & Every_states_contribution_to_OTOC_xp);
-
     void prepare_computing_Lyapunovian_for_xp();
 
     void delete_variable_for_computing_Lyapunovian_xp();
@@ -207,7 +211,9 @@ public:
     vector<int> construct_send_buffer_index_for_xp(int ** remoteVecCount_for_xp, int ** remoteVecPtr_for_xp, int ** remoteVecIndex_for_xp,
                                     int ** tosendVecCount_for_xp, int ** tosendVecPtr_for_xp, int ** tosendVecIndex_for_xp);
 
-    void update_xd_yd_for_xp(vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp);
+    void update_xd_yd_for_xp(vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp,
+                             vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
+                             vector<vector<int>> * index_for_xp_sparsify, double cutoff_criteria);
 
     void prepare_computation_for_Lanczos();
     void allocate_space_for_vector_in_Lanczos(double * &local_v, double * &local_vold,

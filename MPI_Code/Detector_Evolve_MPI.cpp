@@ -684,6 +684,13 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         yd_for_xp[i] = v2;
     }
 
+    //------ Allocate space for sparse version of xd_for_xp and yd_for_xp
+    vector<vector<double>> * xd_for_xp_sparsify = new vector<vector<double>> [1 + 2 * d.nmodes[0]];
+    vector<vector<double>> * yd_for_xp_sparsify = new vector<vector<double>> [1 + 2* d.nmodes[0] ];
+    vector<vector<int>> * index_for_xp_sparsify = new vector<vector<int>> [1+ 2* d.nmodes[0] ];
+// size [ 1 + 2*d.nmodes[0] , 2* d.nmodes[0], dmatsize[0] ]
+
+
     // ---------- Allocate space for stability matrix L:  ---------------------
     // L = sum_{b} (sum_{k}| <a |n_{k}(t)|b> |^{2}* (n_{i}^{b} - n_{i}^{a})* (n_{j}^{b} - n_{j}^{b}) ) here k,i,j is dof, a,b is state
     double ** Stability_Matrix;
@@ -940,7 +947,11 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
 
 //                 ----------- output Lyapunovian spectrum for xp ---------------------------------------
-                d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Lyapunov_spectrum_for_xp_from_single_state,Matrix_M,xd_for_xp,yd_for_xp,t,Every_states_contribution_to_OTOC_xp);
+                d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Lyapunov_spectrum_for_xp_from_single_state,
+                                                   Matrix_M,
+                                                   xd_for_xp,yd_for_xp,
+                                                   xd_for_xp_sparsify, yd_for_xp_sparsify, index_for_xp_sparsify,
+                                                   t,Every_states_contribution_to_OTOC_xp);
                 if(my_id == 0){
                     Lyapunov_spectrum_for_xp_output << t <<endl;
                     for(i=0;i< 2 * d.nmodes[0];i++){
