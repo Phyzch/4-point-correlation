@@ -58,6 +58,7 @@ extern bool Evolve_dynamics;  // bool variable to decide if we run Detector_Evol
 extern bool compute_eigenvalue_spectrum; // bool variable to decide if use Lanczos algorithm to compute spectrum of syste
 extern bool no_coupling;  // if this is Ture, we do not have off-diagonal coupling
 extern bool compute_overlap_with_eigenstate; // If this is True, we will use MFD to compute overlap of initial state with eigenvalue
+extern bool compute_state_space_and_coupling_suing_symmetry_bool;
 
 // define function here
 float ran2(long& idum);

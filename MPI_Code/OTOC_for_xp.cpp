@@ -12,7 +12,7 @@ complex<double> detector:: compute_c_overlap(int state_m, int relative_position_
     // yd_for_xp contain imaginary part of state. (for trajectory of initial state)
     // if our simulation do not contain that neighbor state , we set xd_for_xp and yd_for_xp for that state as 0
     // relative_position_to_initial_state is first index for xd_for_xp, yd_for_xp. If our state of choice l is initial state, relative_position == 0
-    // else if it's state near initial state, it can be in range [0,nmodes[0]] if it has one quanta lower or in range[0,range[0]] if have one quanta higher
+    // else if it's state near initial state, it can be in range [0,nmodes[0]] if it has one quanta lower or in range[nmodes[0], 2 * nmodes[0]] if have one quanta higher
     int i, j ;
     complex<double> c_overlap = 0;  // c_overlap = <m| c_{k}(t) | l>
     complex<double> c_overlap_sum = 0;
@@ -120,23 +120,27 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
 //    if(my_id == 0){
 //        Every_states_contribution_to_OTOC_xp << t <<endl;
 //    }
-
     for(m=0;m<nearby_state_index_size;m++){
 
         // go through state m
-        if(bool_neighbor_state_all_in_nearby_state_index[m]){
-            compute_M_matrix(m,initial_state_index_in_nearby_state_index_list,M_matrix,xd_for_xp,yd_for_xp);
-            for(i=0;i<2*nmodes[0];i++){
-                for(j=0;j<2*nmodes[0];j++){
-                    Lyapunov_spectrum_for_xp_from_single_state[i][j] = 0;
-                    for(k=0;k<2*nmodes[0];k++){
-                        Lyapunov_spectrum_for_xp[i][j] = Lyapunov_spectrum_for_xp[i][j] +
-                                                         std::conj(M_matrix[k][i]) * M_matrix[k][j];  // \sum_{k} (M_{ki})^{*} * M_{kj}
-                        Lyapunov_spectrum_for_xp_from_single_state[i][j] = Lyapunov_spectrum_for_xp_from_single_state[i][j] +
-                                std::conj(M_matrix[k][i]) * M_matrix[k][j];
-                    }
+
+        compute_M_matrix(m,initial_state_index_in_nearby_state_index_list,M_matrix,xd_for_xp,yd_for_xp);
+        for(i=0;i<2*nmodes[0];i++){
+            for(j=0;j<2*nmodes[0];j++){
+                Lyapunov_spectrum_for_xp_from_single_state[i][j] = 0;
+                for(k=0;k<2*nmodes[0];k++){
+                    Lyapunov_spectrum_for_xp[i][j] = Lyapunov_spectrum_for_xp[i][j] +
+                                                     std::conj(M_matrix[k][i]) * M_matrix[k][j];  // \sum_{k} (M_{ki})^{*} * M_{kj}
+//                        Lyapunov_spectrum_for_xp_from_single_state[i][j] = Lyapunov_spectrum_for_xp_from_single_state[i][j] +
+//                                std::conj(M_matrix[k][i]) * M_matrix[k][j];
                 }
             }
+        }
+
+
+
+
+
             // output each states' contribution to OTOC for xp
             // real part
 //            if(my_id == 0){
@@ -155,8 +159,12 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
 //                Every_states_contribution_to_OTOC_xp << endl;
 //            }
 
-        }
 
+
+    }
+
+    if(my_id == 0){
+        cout << "finish computing one step " << endl;
     }
 }
 

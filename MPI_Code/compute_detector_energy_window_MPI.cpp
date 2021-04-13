@@ -414,3 +414,241 @@ void full_system:: compute_detector_matrix_size_MPI_cubed( ){
 
     }
 }
+
+
+void full_system:: construct_state_space_using_symmetry_submodule(int distance_cutoff, vector<vector<int>> * old_layer_mode_ptr,
+                                                                  vector<vector<int>> * new_layer_mode_ptr,
+                                                                  vector<double> * old_layer_energy_ptr,
+                                                                  vector<double> * new_layer_energy_ptr
+                                                                  ){
+    // as input: new_ptr point to empty vector. old_ptr point to initial mode index.
+    // as output: These should all be empty. Result store in vmode0, dmat0
+    int i, j, k , l , m;
+    int old_layer_state_num;
+    int order_3_coupling_num = d.Mode_combination_list3[0].size();
+    int order_4_coupling_num = d.Mode_combination_list4[0].size();
+    int order_coupling_num;
+
+    vector<vector<int>> * layer3_mode_ptr;
+    vector<double> * layer3_energy_ptr;
+
+    vector<vector<int>> * Mode_combination_list;
+    vector<vector<int>> * Mode_raising_lowering_list;
+
+    int norder;
+    int mode_index;
+    bool allowed;
+    double energy_change;
+    double sign;
+    double coupling_strength;
+    double coupling_nquanta;
+    double criteria;
+
+    double start_state_energy;
+    double new_state_energy;
+
+    bool exist;
+    int location;
+
+    for(i=0;i<distance_cutoff;i++){
+        // Rmax is upper bound for number of layers.
+        old_layer_state_num = (*old_layer_mode_ptr).size();
+
+        for(j=0;j<old_layer_state_num;j++){
+            vector<int> Start_state = (*old_layer_mode_ptr)[j];
+            start_state_energy = (*old_layer_energy_ptr)[j];
+
+            for(m=0;m<2;m++){ // m is index for 3rd order or 4th order coupling. ==0 3rd order. == 1 : 4th order
+                if(m==0){
+                    Mode_combination_list = & d.Mode_combination_list3[0];
+                    Mode_raising_lowering_list = & d.mode_raising_lowering_list3[0];
+                    norder = 3;
+                    order_coupling_num = order_3_coupling_num;
+                }
+                else{
+                    Mode_combination_list = & d.Mode_combination_list4[0];
+                    Mode_raising_lowering_list = & d.mode_raising_lowering_list4[0];
+                    norder = 4;
+                    order_coupling_num = order_4_coupling_num;
+                }
+
+                // check 3rd or 4th order coupling
+                for(k=0;k<order_coupling_num;k++){
+                    vector<int> New_state = Start_state;
+                    vector<int> coupling_mode_index = (*Mode_combination_list)[k];
+                    vector<int> raising_lowering_operator = (*Mode_raising_lowering_list)[k];
+
+                    allowed = true;
+                    for(l=0;l < norder ; l++ ){
+                        mode_index = coupling_mode_index[l];
+                        if(raising_lowering_operator[l] == 0){
+                            New_state[mode_index] = New_state[mode_index] - 1;
+                        }
+                        else{
+                            New_state[mode_index] = New_state[mode_index] + 1;
+                        }
+                        if(New_state[mode_index] < 0 or New_state[mode_index] > d.nmax[0][mode_index]){
+                            allowed = false;
+                            break;
+                        }
+
+                    }
+                    // newly constructed state is not allowed, continue
+                    if(!allowed){
+                        continue;
+                    }
+
+                    // check V/ \Delta E criteria
+                    // compute \Delta E
+                    energy_change = 0;
+                    for(l=0;l<norder;l++){
+                        mode_index = coupling_mode_index[l];
+                        if(raising_lowering_operator[l] == 0){
+                            sign = -1;
+                        }
+                        else{
+                            sign = + 1;
+                        }
+                        energy_change = energy_change + sign *  d.mfreq[0][mode_index];
+                    }
+
+                    // compute V
+                    coupling_strength = 3050;
+                    for(l=0;l<norder;l++){
+                        mode_index = coupling_mode_index[l];
+                        coupling_nquanta = double(Start_state[mode_index]);
+                        if(raising_lowering_operator[l] == 1){
+                            coupling_nquanta = coupling_nquanta + 1;
+                        }
+
+                        coupling_strength = coupling_strength * ( sqrt(double(d.mfreq[0][mode_index]) * coupling_nquanta) / 270 );
+                    }
+
+                    criteria = abs( coupling_strength / energy_change);
+                    if( criteria > d.cutoff  ){
+                        // check if Newly constructed state already exists.
+                        location = find_position_for_insert_binary(vmode0, New_state, exist);
+                        if(!exist){
+                            vmode0.insert(vmode0.begin() + location, New_state);
+                            new_state_energy = start_state_energy + energy_change ;
+                            dmat0.insert(dmat0.begin() + location, new_state_energy);
+
+                            // construct new generation
+                            (*new_layer_mode_ptr).push_back(New_state);
+                            (*new_layer_energy_ptr).push_back(new_state_energy);
+
+                        }
+                    }
+
+                }
+
+            }
+
+        }
+
+        // Change new_layer as old_layer so we can construct new state on top of it
+        (*old_layer_mode_ptr).clear();
+        (*old_layer_energy_ptr).clear();
+
+        layer3_mode_ptr =  old_layer_mode_ptr;
+        old_layer_mode_ptr = new_layer_mode_ptr;
+        new_layer_mode_ptr = layer3_mode_ptr;
+
+        layer3_energy_ptr = old_layer_energy_ptr;
+        old_layer_energy_ptr = new_layer_energy_ptr;
+        new_layer_energy_ptr = layer3_energy_ptr;
+
+    }
+
+    (*old_layer_energy_ptr).clear();
+    (*old_layer_mode_ptr).clear();
+}
+
+void full_system:: construct_state_space_using_symmetry(){
+    // Number of layers is given by Rmax.
+    // For each layer, we have to record newly constructed states' mode and its energy.
+    // each time when constructing new layer, we use information for previous layer. Tree-type structure
+
+    // These two list will contain mode quanta in last generation and new generation and interchange at the end of each generation
+    vector<vector<int>> Layer1_mode;
+    vector<vector<int>> Layer2_mode;
+
+    vector<vector<int>> * old_layer_mode_ptr;
+    vector<vector<int>> * new_layer_mode_ptr;
+
+    // These two list will contain old generation's states' energy and new generations' states energy and will interchange at the end of geenration
+    vector<double> Layer1_energy;
+    vector<double> Layer2_energy;
+
+    vector<double> * old_layer_energy_ptr;
+    vector<double> * new_layer_energy_ptr;
+
+
+    int i, j, k , l , m;
+    double sign;
+
+    bool exist;
+    int location;
+    old_layer_mode_ptr = & Layer1_mode;
+    new_layer_mode_ptr = & Layer2_mode;
+
+    old_layer_energy_ptr = & Layer1_energy;
+    new_layer_energy_ptr = & Layer2_energy;
+
+    vector<int> initial_state_mode;
+    for(i=0;i<d.nmodes[0];i++){
+        initial_state_mode.push_back( d.initial_detector_state[0][i] );
+    }
+
+    // first push initial state and energy into list
+    vmode0.push_back(initial_state_mode);
+    (*old_layer_mode_ptr).push_back(initial_state_mode);
+
+    dmat0.push_back(d.initial_Detector_energy[0]);
+    (*old_layer_energy_ptr).push_back(d.initial_Detector_energy[0]);
+
+
+    // use submodule. As return. old_layer_ptr and new_layer_ptr are all empty
+    construct_state_space_using_symmetry_submodule(Rmax,old_layer_mode_ptr,new_layer_mode_ptr,old_layer_energy_ptr,new_layer_energy_ptr);
+
+    // put nearby state into list
+    for(i=0; i< d.nmodes[0];i++){
+        for(j=0;j<2;j++){
+            if(j==0) {
+                sign = -1;
+            }
+            else{
+                sign = 1;
+            }
+            vector<int> nearby_state_mode = initial_state_mode;
+            double nearby_state_energy;
+            nearby_state_mode[i] = initial_state_mode[i]  + sign ;
+            nearby_state_energy = d.initial_Detector_energy[0] + sign *  d.mfreq[0][i];
+            if(nearby_state_mode[i] >=0 and nearby_state_mode[i] <= d.nmax[0][i]){
+                location = find_position_for_insert_binary(vmode0, nearby_state_mode, exist);
+                if(!exist){
+                    // if not exist. start constructing states from nearby state.
+                    vmode0.insert(vmode0.begin() + location, nearby_state_mode);
+                    dmat0.insert(dmat0.begin() + location,  nearby_state_energy);
+                    (*old_layer_mode_ptr).push_back(nearby_state_mode);
+                    (*old_layer_energy_ptr).push_back(nearby_state_energy);
+                }
+
+            }
+        }
+    }
+    int vmode_size = vmode0.size();
+    if(my_id == 0){
+        cout << "number of states around initial state " << vmode_size << endl;
+    }
+
+    int distance_cutoff_for_nearby_state = 1 ;
+    construct_state_space_using_symmetry_submodule(distance_cutoff_for_nearby_state, old_layer_mode_ptr, new_layer_mode_ptr,old_layer_energy_ptr,new_layer_energy_ptr);
+
+    int vmode_size2 = vmode0.size();
+    int vmode_diff = vmode_size2 - vmode_size;
+    if(my_id == 0){
+        cout << "number of states in layers starting from states next to initial state   " << vmode_diff << endl;
+    }
+
+}

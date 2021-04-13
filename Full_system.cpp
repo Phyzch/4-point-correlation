@@ -49,6 +49,9 @@ full_system::full_system(string path1, string cvpt_path1) {
 	d.read_MPI(input, output, log, s.tlnum, s.tldim,path);
     d.construct_bright_state_MPI(input,output);
 
+    // use symmetry to construct allowed mode combination.
+    d.construct_Mode_combination_list();
+
     detector_only = true;
 	if(energy_window) {
 	    if(detector_only){ // construct matrix for detector only.
@@ -62,12 +65,19 @@ full_system::full_system(string path1, string cvpt_path1) {
                 }
 	        }
 	        else {
-	            if(Sphere_cutoff_in_state_space){
-                    compute_detector_matrix_size_MPI_sphere();
+
+	            if(not compute_state_space_and_coupling_suing_symmetry_bool){
+                    if(Sphere_cutoff_in_state_space){
+                        compute_detector_matrix_size_MPI_sphere();
+                    }
+                    else{
+                        compute_detector_matrix_size_MPI_cubed();
+                    }
 	            }
 	            else{
-                    compute_detector_matrix_size_MPI_cubed();
-                }
+	                construct_state_space_using_symmetry();
+	            }
+
                 d.construct_dmatrix_MPI(input,output,log,dmat0,dmat1,vmode0,vmode1);
 	            if(save_state){
                     d.save_detector_Hamiltonian_MPI(path,log);
@@ -86,7 +96,7 @@ full_system::full_system(string path1, string cvpt_path1) {
             log<<" This mode is now not supported."<<endl;
             exit(-1);
         }
-        dimension_check(); // check if all matrix's dimension is right.
+        // dimension_check(); // check if all matrix's dimension is right.
 	}
 }
 
@@ -164,8 +174,8 @@ void full_system::Quantum_evolution() {
         end_time = clock();
         duration = end_time - start_time;
         if(my_id == 0) {
-            log << "The total run time for parallel computing is " << (double(duration) /CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
-            cout << "The total run time for parallel computing is " << (double(duration)/CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << tmax << endl;
+            log << "The total run time for parallel computing is " << (double(duration) /CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << d.proptime[0] << endl;
+            cout << "The total run time for parallel computing is " << (double(duration)/CLOCKS_PER_SEC)/60 << " minutes  for simulation time  " << d.proptime[0] << endl;
         }
     }
 

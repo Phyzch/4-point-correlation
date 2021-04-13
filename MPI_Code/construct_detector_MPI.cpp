@@ -68,6 +68,13 @@ void detector::allocate_space(int tlnum) {
         dmat_offset_each_process[i] = new int [num_proc];
     }
 
+    // Symmetry of mode
+    Mode_Symmetry = new int * [tlnum];
+
+    Mode_combination_list3 = new vector<vector<int>>  [tlnum];
+    Mode_combination_list4 = new vector<vector<int>>  [tlnum] ;
+    mode_raising_lowering_list3 = new vector<vector<int>> [tlnum];
+    mode_raising_lowering_list4 = new vector<vector<int>> [tlnum];
 };
 
 void detector:: allocate_space_single_detector(int detector_index){
@@ -78,6 +85,10 @@ void detector:: allocate_space_single_detector(int detector_index){
     aij[i] = new double[nmodes[i]];
     modcoup[i] = new double[nmodes[i]];
     premodcoup[i] = new double[nmodes[i]];
+
+    // Symmetry of mode
+    Mode_Symmetry[i] = new int [nmodes[i]];
+
 }
 
 // read parameters for detector matrix construction.
@@ -103,7 +114,7 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
             input >> nmodes[i] >> proptime[i];
             allocate_space_single_detector(i);
             for (j = 0; j < nmodes[i]; j++) {
-                input >> mfreq[i][j] >> nmax[i][j] >> modtype[i][j] >> premodcoup[i][j] >> modcoup[i][j];
+                input >> mfreq[i][j] >> nmax[i][j] >> modtype[i][j] >> premodcoup[i][j] >> modcoup[i][j] >> Mode_Symmetry[i][j];
             }
         }
         // -----------------------------------------------------------------------------------------------------
@@ -158,7 +169,7 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
                 // aij corresponding to scaling factor for f= f_{bright}/2 cm^{-1}.
                 if (! Detector_Continue_Simulation) {
                     output << mfreq[i][j] << " " << nmax[i][j] << " " << modtype[i][j] << " " << premodcoup[i][j]
-                    << " " << modcoup[i][j] << endl;
+                    << " " << modcoup[i][j] << "  " << Mode_Symmetry[i][j]  <<endl;
                 }
             }
         }
@@ -189,6 +200,9 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
         MPI_Bcast(&premodcoup[i][0],nmodes[i],MPI_DOUBLE,0,MPI_COMM_WORLD);
         MPI_Bcast(&modcoup[i][0],nmodes[i],MPI_DOUBLE,0,MPI_COMM_WORLD);
         MPI_Bcast(&aij[i][0],nmodes[i],MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+        // Broadcast Mode_Symmetry:
+        MPI_Bcast(&Mode_Symmetry[i][0], nmodes[i] , MPI_INT, 0, MPI_COMM_WORLD);
     }
     ndegre = nmodes[0];
     ndegrx2 = ndegre * 2;
@@ -227,7 +241,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     broadcast_total_dmat();
 
     if(my_id==0){
-        for(m=0;m<stlnum;m++){
+        for(m=0;m<1;m++){
             if (! Detector_Continue_Simulation) {
                 output << "Matrix for detector " << m << " : " << total_dmat_size[m] << "  " << total_dmat_off_num[m] << endl;
                 if (intra_detector_coupling) {
@@ -427,7 +441,7 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
     int position;
     double random_number;
     // different process do different amount of work.
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         if(m==0){
             vmode_ptr = &(vmode0);
             dmat_ptr= &(dmat0);
@@ -501,22 +515,22 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
 void detector:: broadcast_dmatnum_doffnum(){
     int m,i;
     // compute dmatnum and doffnum and dmatnum_each_process, total_dmatnum, total_doffnum etc.
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         dmatnum[m]= dmat[m].size();
         doffnum[m]=dmatnum[m] - dmatsize[m];
     }
     // compute toatl_dmatnum, total_dmatoffnum
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         MPI_Allreduce(&dmatnum[m],&total_dmat_num[m],1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
         MPI_Allreduce(&doffnum[m],&total_dmat_off_num[m],1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
     }
     // broadcast detector matrix number and detector matrix off-diagonal number in each process.
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         MPI_Allgather(&dmatnum[m],1,MPI_INT,&dmatnum_each_process[m][0],1,MPI_INT,MPI_COMM_WORLD);
         MPI_Allgather(&doffnum[m], 1, MPI_INT, &doffnum_each_process[m][0], 1, MPI_INT,MPI_COMM_WORLD);
     }
     // compute offset of detector matrix for each process.
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         dmat_offset_each_process[m][0]=0;
         for(i=1;i<num_proc;i++){
             dmat_offset_each_process[m][i] = dmat_offset_each_process[m][i-1] + dmatnum_each_process[m][i-1];
@@ -534,7 +548,7 @@ void detector:: broadcast_total_dmat(){
     total_dirow= new int * [stlnum];
     total_dicol= new int * [stlnum];
     int m;
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         total_dmat[m] = new double [total_dmat_num[m]];
         total_dirow[m] = new int [total_dmat_num[m]];
         total_dicol[m] = new int [total_dmat_num[m]];
@@ -548,7 +562,7 @@ void detector:: broadcast_total_dmat(){
 }
 
 //-------------------------------- Construct detector wave function ------------------------------
-void detector::initialize_detector_state_MPI(ofstream & log, int initial_state_choice) {
+void detector::initialize_detector_state_MPI(ofstream & log) {
     // this is the code for initializing detector state's wavefunction.
     int m, i,j;
     double norm;
@@ -661,17 +675,13 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
 void detector:: update_initial_and_bright_detector_energy(){
     // we update energy of initial and bright state of detector. since in Van Vleck transformation, the energy level is shhifted.
     int m,i;
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         initial_Detector_energy[m] = 0;
         bright_state_energy[m] = 0;
         if(my_id == initial_state_pc_id[m]) {
             initial_Detector_energy[m] = dmat[m][initial_state_index[m]];
         }
-        if(my_id == bright_state_pc_id[m] and bright_state_index[m]<dmatsize[m]){
-            bright_state_energy[m] = dmat[m][bright_state_index[m]];
-        }
         MPI_Bcast(&initial_Detector_energy[m],1,MPI_DOUBLE,initial_state_pc_id[m],MPI_COMM_WORLD);
-        MPI_Bcast(&bright_state_energy[m],1,MPI_DOUBLE,bright_state_index[m],MPI_COMM_WORLD);
     }
     initial_energy= system_energy + initial_Detector_energy[0] + initial_Detector_energy[1]; // update initial energy as system + detector.
 }
@@ -687,54 +697,44 @@ void detector:: compute_important_state_index(){
     int position;
     bool exist;
     bool * exist_bool_for_pc = new bool [num_proc];
-    bright_state_index = new int [2];
     initial_state_index = new int [2];
-    bright_state_pc_id = new int [2];
     initial_state_pc_id = new int [2];
     // we initialize bright_state_index and initial_state_index.
     // We do this because sometimes we may not include bright state in our simulation, then this index need to be initialized.
     for(m=0;m<stlnum;m++){
-        bright_state_index[m] = 0;
         initial_state_index[m]=0;
-        bright_state_pc_id[m] = 0;
         initial_state_pc_id[m] = 0;
     }
-    for(index =0 ; index <1; index ++) {    // when you want to consider bright state, set index<=1
-        // loop for bright state and initial state
-        if(index == 0) {
-            special_state = initial_detector_state;
-            special_state_index = initial_state_index;
-            special_state_pc_id = initial_state_pc_id;
+
+    // loop for bright state and initial state
+    special_state = initial_detector_state;
+    special_state_index = initial_state_index;
+    special_state_pc_id = initial_state_pc_id;
+
+    // loop for two detector.
+    for (m = 0; m < 1; m++) {
+        special_state_vec.clear();
+        for (i = 0; i < nmodes[m]; i++) {
+            special_state_vec.push_back(special_state[m][i]);
         }
-        else{
-            special_state = bright_state;
-            special_state_index = bright_state_index;
-            special_state_pc_id = bright_state_pc_id;
+        position=find_position_for_insert_binary(dv[m],special_state_vec,exist);
+        MPI_Allgather(&exist,1,MPI_C_BOOL,&exist_bool_for_pc[0],1,MPI_C_BOOL,MPI_COMM_WORLD);
+        special_state_pc_id [m] = -1;
+        for(i=0;i<num_proc;i++){
+            if(exist_bool_for_pc[i]){
+                special_state_pc_id[m] = i;
+            }
         }
-        // loop for two detector.
-        for (m = 0; m < stlnum; m++) {
-            special_state_vec.clear();
-            for (i = 0; i < nmodes[m]; i++) {
-                special_state_vec.push_back(special_state[m][i]);
+        if(special_state_pc_id[m] == -1){
+            if(my_id==0){
+                cout<<" Can not find initial state or bright state in all vmode. Must have bug here."<<endl;
+                MPI_Abort(MPI_COMM_WORLD,-7);
             }
-            position=find_position_for_insert_binary(dv[m],special_state_vec,exist);
-            MPI_Allgather(&exist,1,MPI_C_BOOL,&exist_bool_for_pc[0],1,MPI_C_BOOL,MPI_COMM_WORLD);
-            special_state_pc_id [m] = -1;
-            for(i=0;i<num_proc;i++){
-                if(exist_bool_for_pc[i]){
-                    special_state_pc_id[m] = i;
-                }
-            }
-            if(special_state_pc_id[m] == -1){
-                if(my_id==0){
-                    cout<<" Can not find initial state or brigth state in all vmode. Must have bug here."<<endl;
-                    MPI_Abort(MPI_COMM_WORLD,-7);
-                }
-            }
-            MPI_Bcast(&position,1, MPI_INT,special_state_pc_id[m],MPI_COMM_WORLD);
-            special_state_index [m] = position;
         }
+        MPI_Bcast(&position,1, MPI_INT,special_state_pc_id[m],MPI_COMM_WORLD);
+        special_state_index [m] = position;
     }
+
     delete [] exist_bool_for_pc;
 }
 
@@ -782,11 +782,8 @@ void detector:: output_state_density(vector<double> & dmat0,  vector<double> & d
         for (i = 0; i < total_dmat_size[0]; i++) {
             dmat_energy_level0.push_back(dmat0[i]);  // dmat0 is diagonal part in all matrix.
         }
-        for (i = 0; i < total_dmat_size[1]; i++) {
-            dmat_energy_level1.push_back(dmat1[i]);
-        }
         compute_detector_state_density(state_density0, dmat_energy_level0, energy_range0);
-        compute_detector_state_density(state_density1, dmat_energy_level1, energy_range1);
+
         block_number = state_density0.size();
         state_density_output << "Detector 1 Range of energy block: " << endl;
         for (i = 0; i <= block_number; i++) {
@@ -798,18 +795,9 @@ void detector:: output_state_density(vector<double> & dmat0,  vector<double> & d
             state_density_output << state_density0[i] << " ";
         }
         state_density_output << endl;
-        state_density_output << " Detector 2 Range of energy block" << endl;
-        for (i = 0; i <= block_number; i++) {
-            state_density_output << energy_range1[i] << " ";
-        }
-        state_density_output << endl;
-        state_density_output << "Detector 2 density of state " << endl;
-        for (i = 0; i < block_number; i++) {
-            state_density_output << state_density1[i] << " ";
-        }
-        state_density_output << endl;
+
         // output initial state's energy
-        for (i = 0; i < 2; i++) {
+        for (i = 0; i < 1; i++) {
             state_density_output << initial_Detector_energy[i] << "  " << bright_state_energy[i] << " ";
         }
         state_density_output.close();

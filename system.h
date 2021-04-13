@@ -107,7 +107,7 @@ public:
 
     vector<vector<int>>  neighbor_state_index_list; // state_index with 1 quanta difference from states in nearby_state_index. [2*dof] , (1up,2up,3up, etc, 1down, 2down, 3down, etc). If not exist, choose -1.
     vector<vector<int>>  neighbor_state_in_nearby_state_index_list;
-    vector<bool> bool_state_one_mode_quanta_below_all_in_nearby_state_index; // bool variable: indicating if all
+    vector<bool> bool_state_one_mode_quanta_below_all_in_nearby_state_index; // bool variable: indicating if all mode with one quanta below in list. Used to compute another form of OTOC
 
     vector<bool> bool_neighbor_state_all_in_nearby_state_index;
     vector<vector<int>> neighbor_state_index_for_all_state_list;  // to compute OTOC for x and p , I need to record all states' nearby states.
@@ -139,7 +139,7 @@ public:
     void update_dy(int nearby_state_list_size);
     void SUR_onestep_MPI(double cf);
     void construct_bright_state_MPI(ifstream & input, ofstream & output);
-    void initialize_detector_state_MPI(ofstream & log, int initial_state_choice);
+    void initialize_detector_state_MPI(ofstream & log);
     void save_detector_Hamiltonian_MPI(string path, ofstream & log);
     void load_detector_Hamiltonian_MPI(string path, ofstream & log);
     void save_detector_state_MPI(string path,double * final_time,ofstream & log,int initial_state_choice);
@@ -219,6 +219,16 @@ public:
                          int nlev, int maxit);
 
     void diagonalize(double * eigenvalue_list, int & numlam,  ofstream & eigenvalue_log_file);
+
+
+    // code to construct state from initial state including symmetry.
+    vector<vector<int>> * Mode_combination_list3; // for 3nd order anharmonicity
+    vector<vector<int>> * mode_raising_lowering_list3;
+    vector<vector<int>> * Mode_combination_list4; // for 4th order anharmonicity
+    vector<vector<int>> * mode_raising_lowering_list4;
+
+    int ** Mode_Symmetry; // Symmetry for mode. read from input file. size[stlnum , nmodes]
+    void construct_Mode_combination_list ();
 };
 
 class full_system {
@@ -401,6 +411,15 @@ public:
                                       int initial_state_index_in_total_dmatrix ,
                                       double * another_OTOC);
     void compute_eigenstate_overlap_with_initial_state();
+
+
+    // using symmetry to construct state space for molecules:
+    void construct_state_space_using_symmetry();
+    void construct_state_space_using_symmetry_submodule(int distance_cutoff, vector<vector<int>> * old_layer_mode_ptr,
+                                                        vector<vector<int>> * new_layer_mode_ptr,
+                                                        vector<double> * old_layer_energy_ptr,
+                                                        vector<double> * new_layer_energy_ptr
+    );
 };
 
 
