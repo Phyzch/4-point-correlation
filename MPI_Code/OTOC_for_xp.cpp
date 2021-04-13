@@ -161,6 +161,8 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
      */
     int i,j,k,m;
     int nearby_state_index_size = nearby_state_index.size();
+    int   sparsify_M_matrix_element_len;
+    int mode_index1, mode_index2;
     for(i=0;i<2*nmodes[0];i++){
         for(j=0;j<2*nmodes[0];j++){
             Lyapunov_spectrum_for_xp[i][j] = 0;
@@ -178,16 +180,43 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
         compute_M_matrix(m,initial_state_index_in_nearby_state_index_list,M_matrix,
                          xd_for_xp_sparsify, yd_for_xp_sparsify, index_for_xp_sparsify);
 
-        for(i=0;i<2*nmodes[0];i++){
-            for(j=0;j<2*nmodes[0];j++){
-                for(k=0;k<2*nmodes[0];k++){
-                    Lyapunov_spectrum_for_xp[i][j] = Lyapunov_spectrum_for_xp[i][j] +
-                                                     std::conj(M_matrix[k][i]) * M_matrix[k][j];  // \sum_{k} (M_{ki})^{*} * M_{kj}
+        if(my_id == 0){
+
+            // sparsify M_matrix and speed up simulation.
+            vector<vector<complex<double>>> M_matrix_sparsify ;
+            vector<vector<int>> M_matrix_sparsify_index;
+            for(i=0;i<2*nmodes[0];i++){
+                vector<complex<double>> M_matrix_sparsify_element;
+                vector<int> M_matrix_sparsify_index_element;
+                for(j=0;j<2*nmodes[0];j++){
+
+                    if(abs(M_matrix[i][j]) > cutoff_criteria){
+                        M_matrix_sparsify_element.push_back(M_matrix[i][j]);
+                        M_matrix_sparsify_index_element.push_back(j);
+                    }
 
                 }
-            }
-        }
+                M_matrix_sparsify.push_back(M_matrix_sparsify_element);
+                M_matrix_sparsify_index.push_back(M_matrix_sparsify_index_element);
 
+            }
+
+            for(k=0;k<2*nmodes[0];k++){
+                sparsify_M_matrix_element_len = M_matrix_sparsify_index[k].size();
+                for(i=0;i<sparsify_M_matrix_element_len; i++){
+                    mode_index1 = M_matrix_sparsify_index[k][i];
+                    for(j=0;j<sparsify_M_matrix_element_len;j++){
+                        mode_index2 = M_matrix_sparsify_index[k][j];
+
+                        Lyapunov_spectrum_for_xp[mode_index1][mode_index2] = Lyapunov_spectrum_for_xp[mode_index1][mode_index2] +
+                                                                             std::conj(M_matrix[k][mode_index1]) * M_matrix[k][mode_index2];
+
+                    }
+                }
+
+            }
+
+        }
 
 
 
