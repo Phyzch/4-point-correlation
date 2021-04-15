@@ -219,11 +219,26 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
 
             }
 
+            M_matrix_sparsify.clear();
+            M_matrix_sparsify_index.clear();
+
+            M_matrix_sparsify.shrink_to_fit();
+            M_matrix_sparsify_index.shrink_to_fit();
         }
 
 
 
 
+    }
+
+    for(i=0;i<2*nmodes[0] + 1 ; i++){
+        xd_for_xp_sparsify[i].clear();
+        yd_for_xp_sparsify[i].clear();
+        index_for_xp_sparsify[i].clear();
+
+        xd_for_xp_sparsify[i].shrink_to_fit();
+        yd_for_xp_sparsify[i].shrink_to_fit();
+        index_for_xp_sparsify[i].shrink_to_fit();
     }
 
     if(my_id == 0){
@@ -325,6 +340,10 @@ void detector:: update_xd_yd_for_xp(vector<vector<double>> * xd_for_xp, vector<v
                 xd_for_xp_sparsify[i].push_back(xd_for_xp_sparsify_one_mode);
                 yd_for_xp_sparsify[i].push_back(yd_for_xp_sparsify_one_mode);
                 index_for_xp_sparsify[i].push_back(index_for_xp_sparsify_one_mode);
+
+                xd_for_xp_sparsify_one_mode.clear();
+                yd_for_xp_sparsify_one_mode.clear();
+                index_for_xp_sparsify_one_mode.clear();
 
             }
             sparsify_ratio = double(state_num) / (2* nmodes[0] * dmatsize[0]);

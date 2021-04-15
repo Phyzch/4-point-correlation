@@ -911,16 +911,16 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
             if(k % output_step ==0) {
                 // ---------------------------------output 4-point correlation function -------------------------------------------------
-               compute_4_point_corre_for_single_state(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
-                                                      n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,initial_state_index_in_total_dmatrix,
-                                                      four_point_correlation_function_at_initial_state);
-                if(my_id == 0){
-                    four_point_correlation_output << "Time:   " << t << endl;
-                    for(i=0;i<d.nmodes[0];i++){
-                        four_point_correlation_output << four_point_correlation_function_at_initial_state[i] << " ";
-                    }
-                    four_point_correlation_output<<endl;
-                }
+//               compute_4_point_corre_for_single_state(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
+//                                                      n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,initial_state_index_in_total_dmatrix,
+//                                                      four_point_correlation_function_at_initial_state);
+//                if(my_id == 0){
+//                    four_point_correlation_output << "Time:   " << t << endl;
+//                    for(i=0;i<d.nmodes[0];i++){
+//                        four_point_correlation_output << four_point_correlation_function_at_initial_state[i] << " ";
+//                    }
+//                    four_point_correlation_output<<endl;
+//                }
                 // ------------- output overlap with initial state and n_offdiag_total for all state |b> we choose:
 //                if(my_id == 0){
 //                    n_offdiag_total_output <<"Time:  "<<t << endl;
@@ -950,6 +950,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 if(my_id == 0){
                     cout << "nearby_state_index_size:  " << nearby_state_index_size << endl;
                 }
+
                 d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Lyapunov_spectrum_for_xp_from_single_state,
                                                    Matrix_M,
                                                    xd_for_xp,yd_for_xp,
@@ -972,6 +973,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     Lyapunov_spectrum_for_xp_output << endl;
 
                 }
+
 
                 // ---------- output 4-point correlation function average over states and variance -------------------
 //                compute_4_point_corre_for_multiple_states(state_for_average_size,nearby_state_index_size,n_offdiag_element,
@@ -1099,6 +1101,10 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             }
             t= t+ delt;
             d.SUR_onestep_MPI(cf);
+            if(my_id == 0){
+                cout << "Finish SUR one step " << endl;
+            }
+
         }
         final_time[0] = t;
     }
@@ -1254,4 +1260,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     delete [] total_mode_quanta;
     delete [] start_time;
     delete [] final_time;
+
+    delete [] xd_for_xp_sparsify;
+    delete [] yd_for_xp_sparsify;
+    delete [] index_for_xp_sparsify;
+
 };

@@ -428,6 +428,8 @@ void full_system:: construct_state_space_using_symmetry_submodule(int distance_c
     int order_3_coupling_num = d.Mode_combination_list3[0].size();
     int order_4_coupling_num = d.Mode_combination_list4[0].size();
     int order_coupling_num;
+    int end_coupling_num; // because coupling criteria is ordered from large to small. When coupling criteria doesn't meet, we jump other coupling
+    bool change_end_coupling_num ;
 
     vector<vector<int>> * layer3_mode_ptr;
     vector<double> * layer3_energy_ptr;
@@ -473,7 +475,10 @@ void full_system:: construct_state_space_using_symmetry_submodule(int distance_c
                 }
 
                 // check 3rd or 4th order coupling
-                for(k=0;k<order_coupling_num;k++){
+                end_coupling_num = order_coupling_num;
+                change_end_coupling_num = true;
+
+                for(k=0; k<end_coupling_num ;k++){
                     vector<int> New_state = Start_state;
                     vector<int> coupling_mode_index = (*Mode_combination_list)[k];
                     vector<int> raising_lowering_operator = (*Mode_raising_lowering_list)[k];
@@ -539,8 +544,23 @@ void full_system:: construct_state_space_using_symmetry_submodule(int distance_c
 
                         }
                     }
+                    else{
+
+                        if(change_end_coupling_num){
+                            // we will end this early.
+                            change_end_coupling_num = false;
+                            end_coupling_num = min(k + int(order_coupling_num / 10) , order_coupling_num);
+                        }
+
+                    }
+
+                    if(k == end_coupling_num -1){
+                        double xx = 1;
+                    }
 
                 }
+
+
 
             }
 
@@ -630,9 +650,10 @@ void full_system:: construct_state_space_using_symmetry(){
                     // if not exist. start constructing states from nearby state.
                     vmode0.insert(vmode0.begin() + location, nearby_state_mode);
                     dmat0.insert(dmat0.begin() + location,  nearby_state_energy);
-                    (*old_layer_mode_ptr).push_back(nearby_state_mode);
-                    (*old_layer_energy_ptr).push_back(nearby_state_energy);
                 }
+
+                (*old_layer_mode_ptr).push_back(nearby_state_mode);
+                (*old_layer_energy_ptr).push_back(nearby_state_energy);
 
             }
         }

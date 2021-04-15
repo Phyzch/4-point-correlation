@@ -4,7 +4,7 @@
 //
 # include "util.h"
 # include "system.h"
-
+void order_coupling_term(vector<vector<int>> & Mode_combination_list, vector<vector<int>> & mode_raising_lowering_list, vector<double> & criteria_list );
 // Here A1 == 0, A2 == 1, B1 == 2, B2 == 3
 int Symmetry_Table [4][4] = {
         {0, 1 ,2 ,3},
@@ -12,6 +12,18 @@ int Symmetry_Table [4][4] = {
         {2, 3, 0, 1},
         {3, 2, 1, 0}
 };
+
+struct sort_coupling_element{
+    double criteria;
+    vector<int> mode_combination;
+    vector<int> mode_raising_lowering;
+    sort_coupling_element(double criteria1, const vector<int> & mode_combination_1, const vector<int> & mode_raising_lowering_1){
+        criteria = criteria1;
+        mode_combination = mode_combination_1;
+        mode_raising_lowering = mode_raising_lowering_1;
+    }
+};
+
 
 void construct_allowed_mode_combination( int norder, vector<vector<int>> & Mode_combination_list,
                                          vector<vector<int>> & mode_raising_lowering_list ,
@@ -95,6 +107,8 @@ void construct_allowed_mode_combination( int norder, vector<vector<int>> & Mode_
     int sign ;
     bool continue_bool ;
     double criteria;
+
+    vector<double> criteria_list ;
     for(i=0;i<symmetry_allowed_list_size;i++){
         vector<int> Mode_combination = symmetry_allowed_candidate_Mode_combination_list[i];
 
@@ -156,6 +170,7 @@ void construct_allowed_mode_combination( int norder, vector<vector<int>> & Mode_
             if( criteria > cutoff ){
                 Mode_combination_list.push_back(Mode_combination);
                 mode_raising_lowering_list.push_back(raising_lowering_tuple);
+                criteria_list.push_back(criteria);
             }
 
         }
@@ -168,13 +183,115 @@ void construct_allowed_mode_combination( int norder, vector<vector<int>> & Mode_
         cout << "order coupling :  " << norder <<"  allowed combination by symmetry and cutoff criteria:  " << Mode_combination_list_size << endl;
     }
 
+    // In each order, we should order the coupling respective to their resonance. (criteria)
+    order_coupling_term(Mode_combination_list,mode_raising_lowering_list, criteria_list);
+
 }
+
+vector<sort_coupling_element> merge_sort(const vector<sort_coupling_element> & v1, const vector<sort_coupling_element> & v2){
+    int size1= v1.size();
+    int size2= v2.size();
+    if(size1 == 0) return v2;
+    if(size2 == 0) return v1;
+    int v1_index = 0;
+    int v2_index = 0;
+    double criteria_difference;
+    int i;
+    vector <sort_coupling_element> v3;
+    while(v1_index<size1 and v2_index<size2){
+        criteria_difference = v1[v1_index].criteria - v2[v2_index].criteria;
+        if(criteria_difference > 0){
+            v3.push_back(v1[v1_index]);
+            v1_index++;
+        }
+        else if (criteria_difference < 0){
+            v3.push_back(v2[v2_index]);
+            v2_index++;
+        }
+        else{
+            // energy change is the same
+            v3.push_back(v1[v1_index]);
+            v3.push_back(v2[v2_index]);
+            v1_index++;
+            v2_index++;
+        }
+    }
+    if(v1_index<size1){
+        for(i=v1_index; i <size1; i++){
+            v3.push_back(v1[i]);
+        }
+    }
+    if(v2_index<size2){
+        for(i=v2_index;i<size2;i++){
+            v3.push_back(v2[i]);
+        }
+    }
+    return v3;
+}
+
+// Sort coupling according to their criteria
+void order_coupling_term(vector<vector<int>> & Mode_combination_list, vector<vector<int>> & mode_raising_lowering_list, vector<double> & criteria_list ){
+    // order coupling term by its energy change
+    // use merge sort algorithm
+    int i,j;
+    int coupling_num = Mode_combination_list.size();
+    vector<sort_coupling_element> list_to_sort;
+    // construct sort_element for merge_sort
+    for(i=0;i<coupling_num;i++){
+        sort_coupling_element element(criteria_list[i],Mode_combination_list[i],mode_raising_lowering_list[i]);
+        list_to_sort.push_back(element);
+    }
+
+    // start merge sorting
+    vector <vector<sort_coupling_element>> List_for_list_old;
+    vector<vector<sort_coupling_element>> * old_ptr = & List_for_list_old;
+    vector<vector<sort_coupling_element>> List_for_list_new;
+    vector<vector<sort_coupling_element>> * new_ptr = & List_for_list_new;
+    vector<vector<sort_coupling_element>> * list_ptr_3;
+    vector<sort_coupling_element> v3;
+    int list_size = coupling_num;
+    for(i=0;i<coupling_num;i++){
+        vector<sort_coupling_element> small_list;
+        small_list.push_back(list_to_sort[i]);
+        List_for_list_old.push_back(small_list);
+    }
+
+    while(list_size>1){
+        for(i=0;i+1<list_size;i=i+2){
+            v3 = merge_sort( (*old_ptr)[i], (*old_ptr)[i+1] );
+            (*new_ptr).push_back(v3);
+        }
+        if(list_size % 2 == 1){
+            (*new_ptr).push_back( (*old_ptr)[list_size -1] );
+        }
+        list_size = (list_size + 1 ) /2;
+        //exchange two list
+        (*old_ptr).clear();
+        (*old_ptr).shrink_to_fit();
+
+        list_ptr_3 = old_ptr;
+        old_ptr = new_ptr;
+        new_ptr = list_ptr_3;
+    }
+    list_to_sort.clear();
+    Mode_combination_list.clear();
+    mode_raising_lowering_list.clear();
+    criteria_list.clear();
+    list_to_sort = (*old_ptr)[0];  // sorting result store in *old_ptr
+    for(i=0;i<coupling_num;i++){
+        Mode_combination_list.push_back(list_to_sort[i].mode_combination);
+        mode_raising_lowering_list.push_back(list_to_sort[i].mode_raising_lowering);
+        criteria_list.push_back(list_to_sort[i].criteria);
+    }
+}
+
+
 
 void detector::construct_Mode_combination_list() {
     int norder ;
     int i;
 
-    double nquanta_mean_estimate = nmax[0][0]; // used to compute coupling strength for mode combination.
+    double nquanta_mean_estimate = 3; // used to compute coupling strength for mode combination.
     if(my_id == 0){
         cout << " nquanta for estimating allowed operator :  " << nquanta_mean_estimate << endl;
     }
