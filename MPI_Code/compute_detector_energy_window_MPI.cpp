@@ -554,10 +554,6 @@ void full_system:: construct_state_space_using_symmetry_submodule(int distance_c
 
                     }
 
-                    if(k == end_coupling_num -1){
-                        double xx = 1;
-                    }
-
                 }
 
 
@@ -585,91 +581,95 @@ void full_system:: construct_state_space_using_symmetry_submodule(int distance_c
 }
 
 void full_system:: construct_state_space_using_symmetry(){
-    // Number of layers is given by Rmax.
-    // For each layer, we have to record newly constructed states' mode and its energy.
-    // each time when constructing new layer, we use information for previous layer. Tree-type structure
 
-    // These two list will contain mode quanta in last generation and new generation and interchange at the end of each generation
-    vector<vector<int>> Layer1_mode;
-    vector<vector<int>> Layer2_mode;
+     if(my_id == 0){
+         // Number of layers is given by Rmax.
+         // For each layer, we have to record newly constructed states' mode and its energy.
+         // each time when constructing new layer, we use information for previous layer. Tree-type structure
 
-    vector<vector<int>> * old_layer_mode_ptr;
-    vector<vector<int>> * new_layer_mode_ptr;
+         // These two list will contain mode quanta in last generation and new generation and interchange at the end of each generation
+         vector<vector<int>> Layer1_mode;
+         vector<vector<int>> Layer2_mode;
 
-    // These two list will contain old generation's states' energy and new generations' states energy and will interchange at the end of geenration
-    vector<double> Layer1_energy;
-    vector<double> Layer2_energy;
+         vector<vector<int>> * old_layer_mode_ptr;
+         vector<vector<int>> * new_layer_mode_ptr;
 
-    vector<double> * old_layer_energy_ptr;
-    vector<double> * new_layer_energy_ptr;
+         // These two list will contain old generation's states' energy and new generations' states energy and will interchange at the end of geenration
+         vector<double> Layer1_energy;
+         vector<double> Layer2_energy;
 
-
-    int i, j, k , l , m;
-    double sign;
-
-    bool exist;
-    int location;
-    old_layer_mode_ptr = & Layer1_mode;
-    new_layer_mode_ptr = & Layer2_mode;
-
-    old_layer_energy_ptr = & Layer1_energy;
-    new_layer_energy_ptr = & Layer2_energy;
-
-    vector<int> initial_state_mode;
-    for(i=0;i<d.nmodes[0];i++){
-        initial_state_mode.push_back( d.initial_detector_state[0][i] );
-    }
-
-    // first push initial state and energy into list
-    vmode0.push_back(initial_state_mode);
-    (*old_layer_mode_ptr).push_back(initial_state_mode);
-
-    dmat0.push_back(d.initial_Detector_energy[0]);
-    (*old_layer_energy_ptr).push_back(d.initial_Detector_energy[0]);
+         vector<double> * old_layer_energy_ptr;
+         vector<double> * new_layer_energy_ptr;
 
 
-    // use submodule. As return. old_layer_ptr and new_layer_ptr are all empty
-    construct_state_space_using_symmetry_submodule(Rmax,old_layer_mode_ptr,new_layer_mode_ptr,old_layer_energy_ptr,new_layer_energy_ptr);
+         int i, j, k , l , m;
+         double sign;
 
-    // put nearby state into list
-    for(i=0; i< d.nmodes[0];i++){
-        for(j=0;j<2;j++){
-            if(j==0) {
-                sign = -1;
-            }
-            else{
-                sign = 1;
-            }
-            vector<int> nearby_state_mode = initial_state_mode;
-            double nearby_state_energy;
-            nearby_state_mode[i] = initial_state_mode[i]  + sign ;
-            nearby_state_energy = d.initial_Detector_energy[0] + sign *  d.mfreq[0][i];
-            if(nearby_state_mode[i] >=0 and nearby_state_mode[i] <= d.nmax[0][i]){
-                location = find_position_for_insert_binary(vmode0, nearby_state_mode, exist);
-                if(!exist){
-                    // if not exist. start constructing states from nearby state.
-                    vmode0.insert(vmode0.begin() + location, nearby_state_mode);
-                    dmat0.insert(dmat0.begin() + location,  nearby_state_energy);
-                }
+         bool exist;
+         int location;
+         old_layer_mode_ptr = & Layer1_mode;
+         new_layer_mode_ptr = & Layer2_mode;
 
-                (*old_layer_mode_ptr).push_back(nearby_state_mode);
-                (*old_layer_energy_ptr).push_back(nearby_state_energy);
+         old_layer_energy_ptr = & Layer1_energy;
+         new_layer_energy_ptr = & Layer2_energy;
 
-            }
-        }
-    }
-    int vmode_size = vmode0.size();
-    if(my_id == 0){
-        cout << "number of states around initial state " << vmode_size << endl;
-    }
+         vector<int> initial_state_mode;
+         for(i=0;i<d.nmodes[0];i++){
+             initial_state_mode.push_back( d.initial_detector_state[0][i] );
+         }
 
-    int distance_cutoff_for_nearby_state = 1 ;
-    construct_state_space_using_symmetry_submodule(distance_cutoff_for_nearby_state, old_layer_mode_ptr, new_layer_mode_ptr,old_layer_energy_ptr,new_layer_energy_ptr);
+         // first push initial state and energy into list
+         vmode0.push_back(initial_state_mode);
+         (*old_layer_mode_ptr).push_back(initial_state_mode);
 
-    int vmode_size2 = vmode0.size();
-    int vmode_diff = vmode_size2 - vmode_size;
-    if(my_id == 0){
-        cout << "number of states in layers starting from states next to initial state   " << vmode_diff << endl;
-    }
+         dmat0.push_back(d.initial_Detector_energy[0]);
+         (*old_layer_energy_ptr).push_back(d.initial_Detector_energy[0]);
+
+
+         // use submodule. As return. old_layer_ptr and new_layer_ptr are all empty
+         construct_state_space_using_symmetry_submodule(Rmax,old_layer_mode_ptr,new_layer_mode_ptr,old_layer_energy_ptr,new_layer_energy_ptr);
+
+         // put nearby state into list
+         for(i=0; i< d.nmodes[0];i++){
+             for(j=0;j<2;j++){
+                 if(j==0) {
+                     sign = -1;
+                 }
+                 else{
+                     sign = 1;
+                 }
+                 vector<int> nearby_state_mode = initial_state_mode;
+                 double nearby_state_energy;
+                 nearby_state_mode[i] = initial_state_mode[i]  + sign ;
+                 nearby_state_energy = d.initial_Detector_energy[0] + sign *  d.mfreq[0][i];
+                 if(nearby_state_mode[i] >=0 and nearby_state_mode[i] <= d.nmax[0][i]){
+                     location = find_position_for_insert_binary(vmode0, nearby_state_mode, exist);
+                     if(!exist){
+                         // if not exist. start constructing states from nearby state.
+                         vmode0.insert(vmode0.begin() + location, nearby_state_mode);
+                         dmat0.insert(dmat0.begin() + location,  nearby_state_energy);
+                     }
+
+                     (*old_layer_mode_ptr).push_back(nearby_state_mode);
+                     (*old_layer_energy_ptr).push_back(nearby_state_energy);
+
+                 }
+             }
+         }
+         int vmode_size = vmode0.size();
+         if(my_id == 0){
+             cout << "number of states around initial state " << vmode_size << endl;
+         }
+
+         int distance_cutoff_for_nearby_state = 1 ;
+         construct_state_space_using_symmetry_submodule(distance_cutoff_for_nearby_state, old_layer_mode_ptr, new_layer_mode_ptr,old_layer_energy_ptr,new_layer_energy_ptr);
+
+         int vmode_size2 = vmode0.size();
+         int vmode_diff = vmode_size2 - vmode_size;
+         if(my_id == 0){
+             cout << "number of states in layers starting from states next to initial state   " << vmode_diff << endl;
+         }
+     }
+
 
 }
