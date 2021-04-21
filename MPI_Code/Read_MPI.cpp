@@ -6,7 +6,10 @@
 #include"../system.h"
 
 void full_system:: read_input_with_MPI(){
+    coupling_strength_to_mode0 = new double [2];
     if(my_id==0) {
+        double coupling_strength_to_mode_spin_up ;
+        double coupling_strength_to_mode_spin_down;
         input.open(path + "input.txt"); // information recorded in input.txt
         if (!input.is_open()) {
             cout << "THE INFILE FAILS TO OPEN!" << endl;
@@ -16,11 +19,19 @@ void full_system:: read_input_with_MPI(){
         input >> intra_detector_coupling >> inter_detector_coupling >> Continue_Simulation >> energy_window
               >> detector_only >> Detector_Continue_Simulation >> Random_bright_state;
         input >> intra_detector_coupling_noise >> inter_detector_coupling_noise >> energy_window_size >> initial_energy
-              >> noise_strength >> Rmax >> d.V_intra >> d.detector_energy_window_size
-              >>detector_lower_bright_state_energy_window_shrink >> distance_cutoff_for_4_piont_corre
-              >> Energy_Range_4_point_corre_function_average >> Distance_Range_4_point_corre_function_average ;
-        // read time used for simulation.  delt: time step. tstart: time start to turn on coupling. tmax: maximum time for simulation.   tprint: time step to print result.
-        input >> delt >> tstart >> tmax >> tprint;
+              >> noise_strength >> Rmax >> d.V_intra >> d.a_intra  >> d.detector_energy_window_size
+              >>detector_lower_bright_state_energy_window_shrink ;
+
+        // coupling strength of electronic state to mode 0 coordinate.
+        input >> coupling_strength_to_mode_spin_up >> coupling_strength_to_mode_spin_down;
+
+        coupling_strength_to_mode0[0] = coupling_strength_to_mode_spin_up;
+      coupling_strength_to_mode0[1] = coupling_strength_to_mode_spin_down ;
+
+      input >> Coupling_between_electronic_state ;
+
+// read time used for simulation.  delt: time step. tstart: time start to turn on coupling. tmax: maximum time for simulation.   tprint: time step to print result.
+      input >> delt >> tstart >> tmax >> tprint;
         // check if input is valid
         if ( !Detector_Continue_Simulation) {
             log.open(path + "log.txt");  // log to record the error information
@@ -76,9 +87,8 @@ void full_system:: read_input_with_MPI(){
     MPI_Bcast(&d.V_intra,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&d.detector_energy_window_size,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&detector_lower_bright_state_energy_window_shrink,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(&distance_cutoff_for_4_piont_corre,1,MPI_INT,0,MPI_COMM_WORLD);
-    MPI_Bcast(&Energy_Range_4_point_corre_function_average,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(&Distance_Range_4_point_corre_function_average,1,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(&coupling_strength_to_mode0[0], 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&Coupling_between_electronic_state, 1, MPI_DOUBLE, 0 , MPI_COMM_WORLD);
 
     // Bcast delt tstart tmax tprint to other process.
     MPI_Bcast(&delt, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);

@@ -63,6 +63,9 @@ public:
 	double ** total_dmat;
 	int ** total_dirow, ** total_dicol; // dirow, dicol, dmat in all process.
 
+	// == dmat0. energy of state in all process.
+	vector<double> dmat_energy;
+
     double average_coupling_strength;
 
 	vector<vector<vector<int>>> dv;  //dv: the q.n. for states (m,i) at coordinate j.  [m][i][j]: [detector][state][mode]
@@ -100,20 +103,10 @@ public:
 	double * initial_Detector_energy;
 	double * bright_state_energy;  // energy of detector's bright state.
 
-	vector<int> nearby_state_index; // states that we simulate dynamics, |b> for computing <a|n(t)|b>
-	vector<int> states_for_4_point_correlation_average; // nearby states index for average over all these states 4 point correlation function.
-    vector<int> states_for_average_in_nearby_state_index_list;
-    // For states in states_for_4_point_correlation_average, we compute its index in nearby_state_index
+	vector<int> sampling_state_index; // states that we simulate dynamics, |b> for computing <a|n(t)|b>
+    vector<int> initial_state_in_sampling_state_index_list;
+    // For states in states_for_4_point_correlation_average, we compute its index in sampling_state_index
 
-    vector<vector<int>>  neighbor_state_index_list; // state_index with 1 quanta difference from states in nearby_state_index. [2*dof] , (1up,2up,3up, etc, 1down, 2down, 3down, etc). If not exist, choose -1.
-    vector<vector<int>>  neighbor_state_in_nearby_state_index_list;
-    vector<bool> bool_state_one_mode_quanta_below_all_in_nearby_state_index; // bool variable: indicating if all
-
-    vector<bool> bool_neighbor_state_all_in_nearby_state_index;
-    vector<vector<int>> neighbor_state_index_for_all_state_list;  // to compute OTOC for x and p , I need to record all states' nearby states.
-
-	int initial_state_index_in_nearby_state_index_list;
-    int initial_state_index_in_states_for_4_point_correlation_list;
 
 	detector();
 	~detector();
@@ -138,13 +131,10 @@ public:
     void update_dx(int nearby_state_list_size);
     void update_dy(int nearby_state_list_size);
     void SUR_onestep_MPI(double cf);
-    void construct_bright_state_MPI(ifstream & input, ofstream & output);
-    void initialize_detector_state_MPI(ofstream & log, int initial_state_choice);
+    void construct_initial_state_MPI(ifstream & input, ofstream & output);
+    void initialize_detector_state_MPI(ofstream & log);
     void save_detector_Hamiltonian_MPI(string path, ofstream & log);
     void load_detector_Hamiltonian_MPI(string path, ofstream & log);
-    void save_detector_state_MPI(string path,double * final_time,ofstream & log,int initial_state_choice);
-    void load_detector_state_MPI(string path,double * start_time,ofstream & log,int initial_state_choice);
-
     // used to broadcast dv_all , vmode0, vmode1 , dmat0, dmat1
     void Broadcast_dv_all();
     // for Van Vleck transformation
@@ -156,65 +146,10 @@ public:
     void compute_important_state_index();
 
     void output_state_density(vector<double> & dmat0,  vector<double> & dmat1);
-    void compute_n_off_diag_element(int index_b, int index_a, complex <double> * n_off_diag_element);
-
-    void compute_n_off_diag_element_one_mode_quanta_below(int index_b, int index_a, complex<double> * n_off_diag_element);
-
-    void replace_4_point_corr_second_line(double detector_tprint);
-
-    // prepare variable for 4 point correlation function:
-    void prepare_variable_for_4_point_correlation_function(vector<double> & dmat0, vector<double> & dmat1,ofstream & log);
 
     // compute density of states:
     void compute_local_density_of_state(ofstream & output,vector<double> & dmat0);
 
-    // compute OTOC for x, p variable:
-    int ** remoteVecCount_for_xp ;
-    int ** remoteVecPtr_for_xp ;
-    int ** remoteVecIndex_for_xp ;
-    int ** Index_in_remoteVecIndex_for_xp ;
-    vector<int> to_receive_buffer_len_list_for_xp;
-
-    int ** tosendVecCount_for_xp;
-    int ** tosendVecPtr_for_xp ;
-    int ** tosendVecIndex_for_xp ;
-    vector<int> to_send_buffer_len_list_for_xp;
-
-    double *** send_xd_for_xp;
-    double *** send_yd_for_xp;
-
-    double *** receive_xd_for_xp;
-    double *** receive_yd_for_xp;
-
-    complex<double> compute_c_overlap(int state_m, int state_l, int mode_k,
-                                      vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
-                                      vector<vector<int>> * index_for_xp_sparsify);
-
-
-    void compute_M_matrix(int state_m, int state_l, complex<double> ** M_matrix ,
-                          vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
-                          vector<vector<int>> * index_for_xp_sparsify);
-
-    void compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_spectrum_for_xp, complex<double>  ** Lyapunov_spectrum_for_xp_from_single_state,
-                                          complex<double> ** M_matrix,
-                                          vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp,
-                                          vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
-                                          vector<vector<int>> * index_for_xp_sparsify,
-                                          double t ,ofstream & Every_states_contribution_to_OTOC_xp);
-
-    void prepare_computing_Lyapunovian_for_xp();
-
-    void delete_variable_for_computing_Lyapunovian_xp();
-
-    vector<int>  construct_receive_buffer_index_for_xp(int ** remoteVecCount_for_xp, int ** remoteVecPtr_for_xp, int ** remoteVecIndex_for_xp,
-                                                       int ** Index_in_remoteVecIndex_for_xp);
-
-    vector<int> construct_send_buffer_index_for_xp(int ** remoteVecCount_for_xp, int ** remoteVecPtr_for_xp, int ** remoteVecIndex_for_xp,
-                                    int ** tosendVecCount_for_xp, int ** tosendVecPtr_for_xp, int ** tosendVecIndex_for_xp);
-
-    void update_xd_yd_for_xp(    vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp,
-                                vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
-                                vector<vector<int>> * index_for_xp_sparsify, double cutoff_criteria);
 
     void prepare_computation_for_Lanczos();
     void allocate_space_for_vector_in_Lanczos(double * &local_v, double * &local_vold,
@@ -226,6 +161,10 @@ public:
                          int nlev, int maxit);
 
     void diagonalize(double * eigenvalue_list, int & numlam,  ofstream & eigenvalue_log_file);
+
+    void construct_sampling_state_index(vector<double> & dmat0);
+
+    void shift_detector_Hamiltonian(ofstream & log);
 };
 
 class full_system {
@@ -307,106 +246,11 @@ public:
 
     // MPI version of code:
     void read_input_with_MPI();
-    void compute_detector_matrix_size_MPI_cubed();
     void compute_detector_matrix_size_MPI_sphere();
     void pre_coupling_evolution_MPI(int initial_state_choice);
-    void construct_fullmatrix_with_energy_window_MPI();
-    void compute_sstate_dstate_diagpart_dirow_dicol_MPI( );
-    void construct_quotient_state_all_MPI();
-    vector<vector<quotient_state>>  Gather_quotient_state_vec();
-    vector<quotient_state> sort_d1list(vector<vector<quotient_state>> & d1list_each_proces);
-    void Scatter_sorted_d1list(vector<quotient_state> & sorted_d1list);
-    void construct_q_index_MPI();
-    void rearrange_d1list();
-    void compute_offdiagonal_part_MPI();
-    void compute_dmat_off_diagonal_matrix_in_full_matrix_one_dmat_MPI(int index,vector < double > & mat,
-            vector<int> & irow, vector<int> & icol);
-    void compute_dmat_off_diagonal_matrix_in_full_matrix_MPI(vector < double > & mat,vector  <int> & irow, vector<int> & icol);
-    void compute_sys_detector_coupling_MPI(vector < double > * sys_detector_mat, vector  <int> * sys_detector_irow,
-            vector<int> * sys_detector_icol);
-    void rearrange_off_diagonal_term(vector < double > & mat,vector  <int> & irow, vector<int> & icol);
-    void  combine_offdiagonal_term(vector <double> * sys_detector_mat, vector<int> * sys_detector_irow, vector<int> * sys_detector_icol,
-                                   vector<double> & d_off_mat, vector<int> & d_off_irow, vector<int> & d_off_icol,
-                                   vector<double> & d_d_mat, vector<int> & d_d_irow, vector<int> & d_d_icol);
-    void compute_detector_detector_coupling_MPI(vector <double> & d_d_mat, vector<int> & d_d_irow, vector<int> & d_d_icol);
 
-    void Initial_state_MPI();
 
-    // function to prepare and evolve photon+detector system:
-    int construct_recvbuffer_index();
-    void prepare_evolution();
-    void  update_x_y();
-    void update_x();
-    void update_y();
-    void full_system_SUR_one_step();
-    // Output function MPI version
 
-    void evaluate_system_output_MPI(double *hx, double * hy, double &se, double &s0, double &s1, double &s2,
-                                    double &trsr2, double * de,  double ** mode_quanta, complex<double> ** sr,
-                                    complex<double> ** dr, complex<double> ** total_dr);
-
-    void etot_MPI(double * hx, double * hy);
-    void compute_sys_energy_MPI(double & s0, double & s1, double &s2, double & se);
-
-    // variable for compute detenergy_MPI:
-    vector<vector<int>> dr_index_list;
-    int * remote_vec_count_for_detenergy, * remote_vec_ptr_for_detenergy, * remote_vec_index_for_detenergy;
-    int total_remote_vec_num_for_detenergy;
-    int * to_send_vec_count_for_detenergy, * to_send_vec_ptr_for_detenergy, *to_send_vec_index_for_detenergy;
-    int total_to_send_vec_num_for_detenergy;
-
-    vector <int> local_vector_index_for_detenergy;
-
-    double * x_for_detenergy, *y_for_detenergy;
-    double * send_x_for_detenergy , * send_y_for_detenergy;
-
-    void prepare_detenergy_computation_MPI();
-    void update_x_y_for_detenergy();
-    void detenergy_MPI(double * de, complex <double> ** dr, complex <double> ** total_dr);
-
-    void average_vibrational_mode_quanta_MPI(complex <double> ** total_dr, double ** mode_quanta);
-    void shift_mat();
-
-    void gather_x_y(double * x_all, double * y_all); // gather x,y to save the state or load the state to file.
-    void scatter_x_y(double * x_all, double * y_all); // scatter x_all, y_all to x,y.
-    void gather_mat_irow_icol_sstate_dstate_sdmode_sdindex(double * mat_all, int * irow_all, int * icol_all ,
-                                                                        int * sstate_all, int ** dstate_all,  int ** sdmode_all, int ** sdindex_all);
-    void scatter_mat_irow_icol_sstate_dstate_sdmode_sdindex(double * mat_all, int * irow_all, int * icol_all ,
-                                                       int * sstate_all, int ** dstate_all, int ** sdmode_all, int ** sdindex_all);
-    // save and load data
-    void save_Hamiltonian_MPI();
-    void load_Hamiltonian_MPI();
-    void save_wave_function_MPI();
-    void load_wave_function_MPI();
-
-    void Normalize_wave_function();
-
-    // compute 4-point correlation function
-    void compute_4_point_corre_for_single_state(int nearby_state_index_size, complex<double> * n_offdiag_element,
-                                           complex<double> ** n_offdiag,double ** n_offdiag_real, double ** n_offdiag_imag,
-                                           complex<double> **n_offdiag_total, double ** n_offdiag_total_real, double ** n_offdiag_total_imag,
-                                           int initial_state_index_in_total_dmatrix ,
-                                           double * four_point_correlation_function_at_initial_state);
-    void compute_4_point_corre_for_multiple_states(int state_for_average_size,int nearby_state_index_size,
-                                                   complex<double> * n_offdiag_element,
-                                                   complex<double> *** n_offdiag_for_states_ensemble, double *** n_offdiag_for_states_ensemble_real,
-                                                   double *** n_offdiag_for_states_ensemble_imag,
-                                                   complex<double> *** n_offdiag_total_for_states_ensemble,
-                                                   double *** n_offdiag_total_for_states_ensemble_real, double *** n_offdiag_total_for_states_ensemble_imag,
-                                                   double * four_point_correlation_function_average_over_states, double * four_point_correlation_function_variance_over_states,
-                                                   double ** four_point_correlation_function_for_each_states);
-    void compute_Stability_Matrix( double ** Stability_Matrix,
-                                                int nearby_state_index_size,
-                                                complex<double> * n_offdiag_element, double * n_offdiag_element_real, double * n_offdiag_element_imag,
-                                                complex<double> * n_offdiag_element_all_pc, double * n_offdiag_element_real_all_pc, double * n_offdiag_element_imag_all_pc,
-                                                int initial_state_index_in_total_dmatrix );
-    void compute_another_form_of_OTOC(int nearby_state_index_size, complex<double> * n_offdiag_element,
-                                      complex<double> ** n_offdiag,double ** n_offdiag_real, double ** n_offdiag_imag,
-                                      complex<double> **n_offdiag_total, double ** n_offdiag_total_real, double ** n_offdiag_total_imag,
-                                      complex<double> ** n_offdiag_one_mode_quanta_below, double ** n_offdiag_one_mode_quanta_below_real, double ** n_offdiag_one_mode_quanta_below_imag,
-                                      complex<double> ** n_offdiag_total_one_mode_quanta_below, double ** n_offdiag_total_one_mode_quanta_below_real, double ** n_offdiag_total_one_mode_quanta_below_imag,
-                                      int initial_state_index_in_total_dmatrix ,
-                                      double * another_OTOC);
     void compute_eigenstate_overlap_with_initial_state();
 };
 

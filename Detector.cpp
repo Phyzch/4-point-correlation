@@ -12,7 +12,7 @@ detector::detector(){
 
 detector::~detector(){
     int i;
-    int nearby_state_index_size = nearby_state_index.size();
+    int sampling_state_index_size = sampling_state_index.size();
 
     delete [] dmatsize;
     delete [] dmatnum;
@@ -39,7 +39,7 @@ detector::~detector(){
         delete [] total_dirow[i];
         delete [] total_dicol[i];
     }
-   for(i=0;i<nearby_state_index_size;i++){
+   for(i=0;i<sampling_state_index_size;i++){
             delete [] xd_all[i];
             delete [] yd_all[i];
     }

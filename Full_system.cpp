@@ -33,6 +33,9 @@ double initial_energy;  // energy of system + detector.
 double system_energy;  // energy of photon
 bool Random_bright_state;
 
+double * coupling_strength_to_mode0 ;
+double Coupling_between_electronic_state;
+
 // initialization of parameters and do some pre-coupling set up
 full_system::full_system(string path1, string cvpt_path1) {
 
@@ -43,11 +46,11 @@ full_system::full_system(string path1, string cvpt_path1) {
     read_input_with_MPI();
 
     //  store energy of photon in system_energy
-    system_energy=initial_energy;
+//    system_energy=initial_energy;
 
 	s.read_MPI(input, output, log);
 	d.read_MPI(input, output, log, s.tlnum, s.tldim,path);
-    d.construct_bright_state_MPI(input,output);
+    d.construct_initial_state_MPI(input,output);
 
     detector_only = true;
 	if(energy_window) {
@@ -62,12 +65,9 @@ full_system::full_system(string path1, string cvpt_path1) {
                 }
 	        }
 	        else {
-	            if(Sphere_cutoff_in_state_space){
-                    compute_detector_matrix_size_MPI_sphere();
-	            }
-	            else{
-                    compute_detector_matrix_size_MPI_cubed();
-                }
+
+                compute_detector_matrix_size_MPI_sphere();
+
                 d.construct_dmatrix_MPI(input,output,log,dmat0,dmat1,vmode0,vmode1);
 	            if(save_state){
                     d.save_detector_Hamiltonian_MPI(path,log);
@@ -96,65 +96,6 @@ void full_system::Quantum_evolution() {
 	// Now we construct our wavefunction /phi for our detector and full_system. (For system it is already constructed in s.read())
     int i,j;
 	clock_t start_time, end_time, duration;
-
-
-    if(compute_eigenvalue_spectrum){
-        start_time = clock();
-        ofstream eigenvalue_log_file;
-        ofstream eigenvalue_output_file;
-        ofstream diagonal_state_mode_flie;
-        if(my_id == 0){
-            eigenvalue_log_file.open(path + "spectrum_log.txt");
-            eigenvalue_output_file.open(path + "spectrum.txt");
-            diagonal_state_mode_flie.open(path + "diagonal_state.txt");
-        }
-        double * eigenvalue_list = new double [d.total_dmat_size[0]];
-        int numlam = 0;
-
-        // diagonalize matrix using Lanczos algorithm. Eigenvalue store in eigenvalue list. nonzero number of eigenvalue is numlam
-        if(not no_coupling){
-            d.diagonalize(eigenvalue_list,numlam, eigenvalue_log_file);
-        }
-
-
-        if(my_id == 0){
-            if(not no_coupling){
-                eigenvalue_output_file << numlam << endl;
-                for(i=0;i<numlam;i++){
-                    eigenvalue_output_file << eigenvalue_list[i] <<" ";
-                }
-                eigenvalue_output_file << endl;
-            }
-            else{
-                // no off-diagonal coupling. Thus we have states whose energy is exactly same. just output diagonal term
-                eigenvalue_output_file << d.total_dmat_size[0] << endl;
-                for(i=0;i<d.total_dmat_size[0];i++){
-                    eigenvalue_output_file << dmat0[i] <<" ";
-                }
-                eigenvalue_output_file << endl;
-
-                diagonal_state_mode_flie << d.total_dmat_size[0] << endl;
-                for(i=0;i<d.total_dmat_size[0];i++){
-                    for(j=0;j<d.nmodes[0];j++){
-                        diagonal_state_mode_flie << vmode0[i][j] <<" ";
-                    }
-                    diagonal_state_mode_flie << endl;
-                }
-            }
-        }
-        if(my_id == 0){
-            eigenvalue_log_file.close();
-            eigenvalue_output_file.close();
-            diagonal_state_mode_flie.close();
-        }
-
-        delete [] eigenvalue_list;
-    }
-
-    // compute eigenstate of system using MFD
-    if(compute_overlap_with_eigenstate){
-        compute_eigenstate_overlap_with_initial_state();
-    }
 
     if(Evolve_dynamics){
         start_time = clock();

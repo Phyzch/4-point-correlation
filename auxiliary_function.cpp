@@ -6,60 +6,40 @@
 #include"util.h"
 using namespace std;
 
-// code used to reform the final output if we re-start our simulation
-void detector::replace_4_point_corr_second_line(double detector_tprint){
-    // This code is quite dumb... I find if I continue my simulation, I have to correct the endtime I give. so I have to rewrite whole output.txt for the first line.
-    ifstream fin;
-    ofstream temp;
-    int x;
-    if(my_id==0) {
-        string old_path = path + "4 point correlation.txt";
-        fin.open(old_path);
-        string new_path = path + "4 point correlation_new.txt";
-        temp.open(new_path);
-        string line;
-        getline(fin, line); // read first line
-        temp << line <<endl;
-        getline(fin,line); // read second line
-        temp << "total time: "  << " " << proptime[0] << " " << detector_tprint << endl;
-        while (std::getline(fin, line)) {
-            if (line != "") {
-                temp << line << endl;
-            }
-        }
-        temp.close();
-        fin.close();
-        if (remove(old_path.c_str()) == 0) {
-            rename(new_path.c_str(), old_path.c_str());
-        } else {
-            cout << "Remove file failed" << endl;
-            cin >> x;
-        }
+void detector:: shift_detector_Hamiltonian(ofstream & log){
+    int i;
+    int irow_index, icol_index;
+    // -----  compute state's energy and shift it before doing simulation -------------
+    vector<complex<double>>  H_phi;
+    H_phi.resize(dmatsize[0]);
+    for(i=0;i<dmatsize[0];i++){
+        H_phi[i] = 0;
     }
 
-    if(my_id==0) {
-        string old_path = path + "4 point correlation average over states.txt";
-        fin.open(old_path);
-        string new_path = path + "4 point correlation_new.txt";
-        temp.open(new_path);
-        string line;
-        getline(fin, line); // read first line
-        temp << line <<endl;
-        getline(fin,line); // read second line
-        temp << "total time: "  << " " << proptime[0] << " " << detector_tprint << endl;
-        while (std::getline(fin, line)) {
-            if (line != "") {
-                temp << line << endl;
-            }
-        }
-        temp.close();
-        fin.close();
-        if (remove(old_path.c_str()) == 0) {
-            rename(new_path.c_str(), old_path.c_str());
-        } else {
-            cout << "Remove file failed" << endl;
-            cin >> x;
-        }
+    double de;
+    double de_all;
+
+
+    // use ground electronic state specified in input.txt to compute energy and shift Hamiltonian according to it.
+    for(i=0;i<dmatnum[0];i++){
+        irow_index = local_dirow[0][i];
+        icol_index = local_dicol[0][i]; // compute to point to colindex in
+        H_phi[irow_index] = H_phi[irow_index] + dmat[0][i] * complex(xd[ initial_state_in_sampling_state_index_list[0] ][icol_index],
+                                                                       yd[ initial_state_in_sampling_state_index_list[0] ][icol_index]);
+    }
+    de=0;
+    for(i=0;i<dmatsize[0];i++){
+        de= de+ real(H_phi[i] * complex(xd[initial_state_in_sampling_state_index_list[0] ][i],
+                                        -yd[initial_state_in_sampling_state_index_list[0] ][i]));
+    }
+    MPI_Allreduce(&de,&de_all,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+    // shift Hamiltonian by detector energy de_all:
+    if(my_id == 0){
+        cout <<"Shift Hamiltonian by energy of system  "<< de_all << endl;
+        log << "Shift Hamiltonian by energy of system  " << de_all <<endl;
+    }
+    for(i=0;i<dmatsize[0];i++){
+        dmat[0][i] = dmat[0][i] - de_all;
     }
 }
 

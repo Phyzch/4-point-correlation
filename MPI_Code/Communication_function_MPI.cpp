@@ -35,7 +35,7 @@ void detector::Scatter_dirow_dicol_dmatrix(vector <double> * dmat_all, vector<in
     int v_size;
     // use MPI_Scatterv to scatter dmat to other process.
     int m;
-    for(m=0;m<stlnum;m++) {
+    for(m=0;m<1;m++) {
         // tell each process the size of vector they will receive.
         MPI_Scatter(&vector_size[m][0],1,MPI_INT,&v_size,1,MPI_INT,0,MPI_COMM_WORLD);
         // reserve space:
@@ -81,7 +81,7 @@ void detector::Scatter_dv(vector<int> & total_mat_num){
     vector_2d_displs = new int [num_proc];  // for sending 2d vector we need extra displacement.
     vector_2d_size = new int [num_proc];  // foor sending 2d vector we need new size of buffer.
     int m,p;
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         if(my_id==0){
             //--------------------------------------
             vmode_1d.clear();
@@ -132,7 +132,7 @@ void detector::Scatter_dv(vector<int> & total_mat_num){
 
 void detector::gather_xd_yd(){
     int i,j;
-    int nearby_state_list_size = nearby_state_index.size();
+    int nearby_state_list_size = sampling_state_index.size();
     int ** dmatsize_offset = new int * [stlnum];
     for(i=0;i<stlnum;i++){
         dmatsize_offset[i]= new int [num_proc];
@@ -163,7 +163,7 @@ void detector:: Scatter_xd_yd(){
     int m,i;
     int displacement;
     int ** dmatsize_offset;
-    int nearby_state_index_size = nearby_state_index.size();
+    int sampling_state_index_size = sampling_state_index.size();
     dmatsize_offset = new int * [2];
     for(m=0;m<stlnum;m++){
         dmatsize_offset[m] = new int [num_proc];
@@ -176,12 +176,12 @@ void detector:: Scatter_xd_yd(){
             displacement = displacement + dmatsize_each_process[m][i];
         }
     }
-    for(i=0;i< nearby_state_index_size;i++){
+    for(i=0;i< sampling_state_index_size;i++){
         xd[i].resize(dmatsize[0]);
         yd[i].resize(dmatsize[0]);
     }
 
-    for(m=0;m< nearby_state_index_size ;m++){
+    for(m=0;m< sampling_state_index_size ;m++){
         MPI_Scatterv(&xd_all[m][0],dmatsize_each_process[0],dmatsize_offset[0],MPI_DOUBLE,
                      &xd[m][0],dmatsize[0], MPI_DOUBLE,0,MPI_COMM_WORLD);
         MPI_Scatterv(&yd_all[m][0],dmatsize_each_process[0],dmatsize_offset[0],MPI_DOUBLE,
@@ -196,117 +196,8 @@ void detector:: Scatter_xd_yd(){
 
 }
 
-void full_system::gather_x_y(double * x_all, double * y_all){
-    // gather x,y to store the x,y state
-    // you have to allocate x_all, y_all outside this function
-    MPI_Gatherv(&x[0],matsize,MPI_DOUBLE,&x_all[0],matsize_each_process,matsize_offset_each_process,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Gatherv(&y[0],matsize,MPI_DOUBLE,&y_all[0],matsize_each_process,matsize_offset_each_process,MPI_DOUBLE,0,MPI_COMM_WORLD);
-}
 
-void full_system::scatter_x_y(double * x_all, double * y_all){
-    // scatter x_all, y_all to x,y.
-    // call this function when we load_wave_function from file.
-    double * x_pass, *y_pass;
-    int i;
-    x_pass = new double [matsize];
-    y_pass = new double [matsize];
-    MPI_Scatterv(&x_all[0],matsize_each_process,matsize_offset_each_process,MPI_DOUBLE,&x_pass[0],matsize,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Scatterv(&y_all[0],matsize_each_process,matsize_offset_each_process,MPI_DOUBLE,&y_pass[0],matsize,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    for(i=0;i<matsize;i++){
-        x.push_back(x_pass[i]);
-        y.push_back(y_pass[i]);
-    }
-    delete [] x_pass;
-    delete [] y_pass;
-}
 
-void full_system::gather_mat_irow_icol_sstate_dstate_sdmode_sdindex(double * mat_all, int * irow_all, int * icol_all ,
-                                                                    int * sstate_all, int ** dstate_all, int ** sdmode_all, int ** sdindex_all){
-    int i;
-    // gather mat, irow, icol to master process to save Hamiltonian.
-    // we have to allocate space for mat_all, irow_all, icol_all outside the function
-    MPI_Gatherv(&mat[0],matnum,MPI_DOUBLE,&mat_all[0],matnum_each_process,matnum_offset_each_process,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Gatherv(&irow[0],matnum,MPI_INT,&irow_all[0],matnum_each_process,matnum_offset_each_process,MPI_INT,0,MPI_COMM_WORLD);
-    MPI_Gatherv(&icol[0],matnum,MPI_INT,&icol_all[0],matnum_each_process,matnum_offset_each_process,MPI_INT,0,MPI_COMM_WORLD);
-    MPI_Gatherv(&sstate[0],matsize,MPI_INT,&sstate_all[0],matsize_each_process,matsize_offset_each_process,MPI_INT,0,MPI_COMM_WORLD);
-    for(i=0;i<s.tlnum;i++){
-        MPI_Gatherv(&dstate[i][0],matsize,MPI_INT,&dstate_all[i][0],matsize_each_process,matsize_offset_each_process,MPI_INT,0,MPI_COMM_WORLD);
-    }
-    for(i=0;i<s.tlnum;i++){
-        if(total_sd_num[i]>0) {
-            MPI_Gatherv(&sdmode[i][0], sdnum[i], MPI_INT, &sdmode_all[i][0], sdnum_each_process[i],
-                        sdnum_displacement_each_process[i], MPI_INT, 0, MPI_COMM_WORLD);
-            MPI_Gatherv(&sdindex[i][0], sdnum[i], MPI_INT, &sdindex_all[i][0], sdnum_each_process[i],
-                        sdnum_displacement_each_process[i], MPI_INT, 0, MPI_COMM_WORLD);
-        }
-    }
-
-}
-
-void full_system:: scatter_mat_irow_icol_sstate_dstate_sdmode_sdindex(double * mat_all, int * irow_all, int * icol_all ,
-                                                                      int * sstate_all, int ** dstate_all, int ** sdmode_all, int ** sdindex_all){
-    int i,m;
-    double * mat_pass = new double [matnum];
-    int * irow_pass = new int [matnum];
-    int * icol_pass = new int [matnum];
-    int * sstate_pass = new int [matsize];
-    int ** dstate_pass = new int * [s.tlnum];
-    int ** sdmode_pass = new int *[s.tlnum];
-    int ** sdindex_pass = new int * [s.tlnum];
-    for(i=0;i<s.tlnum;i++){
-        dstate_pass[i] = new int [matsize];
-        sdmode_pass[i] = new int [matsize];
-        sdindex_pass[i] = new int [matsize];
-    }
-    MPI_Scatterv(&mat_all[0],matnum_each_process,matnum_offset_each_process,MPI_DOUBLE,&mat_pass[0],matnum,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Scatterv(&irow_all[0],matnum_each_process,matnum_offset_each_process,MPI_INT,&irow_pass[0],matnum,MPI_INT,0,MPI_COMM_WORLD);
-    MPI_Scatterv(&icol_all[0],matnum_each_process,matnum_offset_each_process,MPI_INT,&icol_pass[0],matnum,MPI_INT,0,MPI_COMM_WORLD);
-    MPI_Scatterv(&sstate_all[0],matsize_each_process,matsize_offset_each_process,MPI_INT,&sstate_pass[0],matsize,MPI_INT,0,MPI_COMM_WORLD);
-    for(i=0;i<s.tlnum;i++){
-        MPI_Scatterv(&dstate_all[i][0],matsize_each_process,matsize_offset_each_process,MPI_INT,&dstate_pass[i][0],matsize,MPI_INT,0,MPI_COMM_WORLD);
-    }
-    for(i=0;i<s.tlnum;i++){
-        if(total_sd_num[i] > 0) {
-            MPI_Scatterv(&sdmode_all[i][0], sdnum_each_process[i], sdnum_displacement_each_process[i], MPI_INT,
-                         &sdmode_pass[i][0], sdnum[i], MPI_INT, 0, MPI_COMM_WORLD);
-            MPI_Scatterv(&sdindex_all[i][0], sdnum_each_process[i], sdnum_displacement_each_process[i], MPI_INT,
-                         &sdindex_pass[i][0], sdnum[i], MPI_INT, 0, MPI_COMM_WORLD);
-        }
-    }
-
-    // convert array to vector:
-    for(i=0;i<matnum;i++){
-        mat.push_back(mat_pass[i]);
-        irow.push_back(irow_pass[i]);
-        icol.push_back(icol_pass[i]);
-    }
-    for(i=0;i<matsize;i++){
-        sstate.push_back(sstate_pass[i]);
-    }
-    for(m=0;m<s.tlnum;m++){
-        for(i=0;i<matsize;i++) {
-            dstate[m].push_back(dstate_pass[m][i]);
-        }
-    }
-    for(m=0;m<s.tlnum;m++){
-        for(i=0;i<sdnum[m];i++){
-            sdmode[m].push_back(sdmode_pass[m][i]);
-            sdindex[m].push_back(sdindex_pass[m][i]);
-        }
-    }
-    delete [] mat_pass;
-    delete [] irow_pass;
-    delete [] icol_pass;
-    delete [] sstate_pass;
-    for(i=0;i<s.tlnum;i++){
-        delete [] dstate_pass[i];
-        delete [] sdmode_pass[i];
-        delete [] sdindex_pass[i];
-    }
-    delete [] dstate_pass;
-    delete [] sdindex_pass;
-    delete [] sdmode_pass;
-}
 
 void detector::Broadcast_dv_all(){
     int m,i,j;

@@ -2,6 +2,8 @@
 // Created by phyzch on 6/23/20.
 // This file contain function that use our previously coded programm to construct matrix.
 //
+#include <random>
+
 #include"../system.h"
 #include"../util.h"
 using namespace std;
@@ -86,7 +88,6 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
     int my_id;
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
 
-    a_intra= 0.2;
     stlnum=tlnum;
     stldim=tldim;
     allocate_space(tlnum);
@@ -153,6 +154,7 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
                 output << nmodes[i] << " " << proptime[i] << endl;
             }
             for(j=0;j<nmodes[i];j++){
+                // a_ij is scaling factor
                 aij[i][j] = a_intra * pow(double(mfreq[i][j]),0.5) / pow(double(mfreq[0][0] /2),0.5);
                 // aij corresponding to scaling factor for f= f_{bright}/2 cm^{-1}.
                 if (! Detector_Continue_Simulation) {
@@ -194,7 +196,7 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
 };
 
 void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstream & log,  vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1) {
-    int m, i , j;
+    int m;
     construct_dv_dirow_dicol_dmatrix_MPI(log, dmat0, dmat1, vmode0, vmode1);
     compute_important_state_index();
     // -------------------------- Two different way of constructing off-diagonal term for detector  -----------------------------
@@ -204,6 +206,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
             compute_detector_offdiag_part_MPI(log,dmat0,dmat1,vmode0,vmode1);
         }
     }
+
     else{
 //  2:  applying Van Vleck transformation:
         if (Turn_on_Vanvleck) {
@@ -216,9 +219,12 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
         }
     }
 
+    dmat_energy = dmat0;
 
     //--------------------------------------------------------------------------------------------------
-    update_initial_and_bright_detector_energy();
+
+    // if we do vanvleck transformation, we need to update initial state energy.
+    //update_initial_and_bright_detector_energy();
 
     output_state_density(dmat0,dmat1);
 
@@ -226,7 +232,7 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     broadcast_total_dmat();
 
     if(my_id==0){
-        for(m=0;m<stlnum;m++){
+        for(m=0;m<1 ;m++){
             if (! Detector_Continue_Simulation) {
                 output << "Matrix for detector " << m << " : " << total_dmat_size[m] << "  " << total_dmat_off_num[m] << endl;
                 if (intra_detector_coupling) {
@@ -239,12 +245,141 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
         }
 
     }
+
+    // construct sampling_state_index which contain states we want to compute IPR
+    construct_sampling_state_index(dmat0);
+
     // compute density of state
     compute_local_density_of_state(output,dmat0);
 
-    //prepare variable for 4 piont correlation function
+}
 
-    prepare_variable_for_4_point_correlation_function(dmat0,dmat1,log);
+void detector:: construct_sampling_state_index(vector<double> & dmat0){
+    // dmat0 is energy level for system
+    int i , j;
+    int state_number = dmat0.size();
+    double energy ;
+    int index;
+
+    int initial_state_index_in_all_process;
+    bool initial_state_exist;
+    int list_size;
+
+    double min_energy = * min_element(dmat0.begin(), dmat0.end());
+    double max_energy = * max_element(dmat0.begin(), dmat0.end());
+
+    int block_number = 20;
+    int element_num_in_each_block = 10;
+
+    double energy_step = (max_energy - min_energy) / block_number;
+    vector<vector<int>> state_in_energy_block_list ;
+
+
+    int sampling_state_num ;
+    int * sampling_state_array;
+
+
+    if(my_id == 0){
+
+        for (i=0; i<block_number; i++){
+            vector<int> v ;
+            state_in_energy_block_list.push_back(v);
+        }
+
+        for (i=0; i<state_number ; i++){
+            energy = dmat0[i];
+            index = int ( (energy - min_energy)/energy_step  );
+            // in case we encounter max_energy element
+            if(index == block_number){
+                index = block_number - 1;
+            }
+            state_in_energy_block_list[index].push_back(i);
+        }
+
+        for (i = 0; i<block_number; i++ ){
+            list_size = state_in_energy_block_list[i].size();
+            if( element_num_in_each_block >= list_size ){
+                for(j = 0; j < list_size; j++ ){
+                    sampling_state_index.push_back(state_in_energy_block_list[i][j]);
+                }
+            }
+            else{
+                // Shuffle the list and choose first several element.
+                std::shuffle(state_in_energy_block_list[i].begin(), state_in_energy_block_list[i].end() , std::mt19937(std::random_device()()));
+                for(j=0;j<element_num_in_each_block; j++){
+                    sampling_state_index.push_back(state_in_energy_block_list[i][j]);
+                }
+            }
+
+        }
+
+
+    }
+
+
+    // broadcasting element in sampling_state_index.
+    if(my_id == 0){
+        sampling_state_num = sampling_state_index.size();
+        sampling_state_array = new int [sampling_state_num];
+        for(i=0; i< sampling_state_num;i++){
+            sampling_state_array[i] = sampling_state_index[i];
+        }
+    }
+    MPI_Bcast(&sampling_state_num, 1, MPI_INT,0, MPI_COMM_WORLD );
+    if(my_id != 0){
+        sampling_state_array = new int [sampling_state_num];
+    }
+
+    MPI_Bcast(&sampling_state_array[0], sampling_state_num, MPI_INT, 0, MPI_COMM_WORLD);
+    if(my_id != 0){
+        for(i=0; i<sampling_state_num; i++ ){
+            sampling_state_index.push_back( sampling_state_array[i] );
+        }
+    }
+
+    delete [] sampling_state_array;
+
+
+    // check if initial_state is in sampling state index. If not , add it. Also find initial_state's index in sampling state index list
+    for(i=0;i<2;i++){
+        initial_state_in_sampling_state_index_list.push_back(0);
+    }
+    sampling_state_num = sampling_state_index.size();
+    for(i=0;i<2;i++){
+        // now initial_state_index record initial state in each electronic state
+        initial_state_index_in_all_process = initial_state_index[i] + initial_state_pc_id[i] * int( state_number / num_proc );
+
+        initial_state_exist = false;
+        for(j=0;j<sampling_state_num;j++){
+            if(initial_state_index_in_all_process == sampling_state_index[j]){
+                initial_state_exist = true;
+                initial_state_in_sampling_state_index_list[i] = j;
+                break;
+            }
+        }
+
+        if( not initial_state_exist ){
+            sampling_state_index.push_back(initial_state_index_in_all_process);
+            initial_state_in_sampling_state_index_list[i] = sampling_state_index.size();
+        }
+
+    }
+
+    sampling_state_num = sampling_state_index.size();
+
+    for (i = 0; i < sampling_state_num; i++) {
+        vector<double> v1 ;
+        v1.reserve(dmatsize[0]);
+        xd.push_back(v1);
+        yd.push_back(v1);
+    }
+    xd_all = new double * [ sampling_state_num ];
+    yd_all = new double * [ sampling_state_num ];
+    for(i=0;i< sampling_state_num ;i++){
+        xd_all[i] = new double [total_dmat_size[0]];
+        yd_all[i] = new double [total_dmat_size[0]];
+    }
+
 }
 
 
@@ -254,19 +389,13 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
     int displacement;
     if(my_id==0){
         total_dmat_size[0]= dmat0.size();
-        if(stlnum==2){
-            total_dmat_size[1] = dmat1.size();
-        }
-        else{
-            total_dmat_size[1]=0;
-        }
     }
     MPI_Bcast(&total_dmat_size[0],2,MPI_INT,0,MPI_COMM_WORLD);
     vector <int> * dirow_all, *dicol_all;
     vector< double> * dmat_all;
     int ** vector_size, ** displacement_list;
 
-    for(i=0;i<2;i++){
+    for(i=0;i<1;i++){
         vector<vector<int>> v1 ;
         dv_all.push_back(v1);
     }
@@ -278,13 +407,11 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
 
     Broadcast_dmat_vmode(stlnum, dmat0,dmat1,vmode0,vmode1); // broadcast dmat0, dmat1, vmode0, vmode1 to all process to compute off-diagonal matrix.
     dv_all[0] = vmode0;
-    dv_all[1] = vmode1;
 
     if(my_id==0) {
         dmat_all[0] = dmat0;
-        dmat_all[1] = dmat1;
         // prepare dirow, dicol for broadcasting.
-        for (m = 0; m < stlnum; m++) {
+        for (m = 0; m < 1; m++) {
             int size = dmat_all[m].size();
             for (i = 0; i < size; i++) {
                 dirow_all[m].push_back(i);
@@ -292,7 +419,7 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
             }
         }
         // prepare vector size and vector displacement:
-        for (m = 0; m < stlnum; m++) {
+        for (m = 0; m < 1 ; m++) {
             vsize = total_dmat_size[m] / num_proc;
             vsize2 = total_dmat_size[m] - (num_proc - 1) * vsize;
             vector_size[m] = new int[num_proc];  // size of vector to scatter to each process.
@@ -311,21 +438,21 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
     Scatter_dv(total_dmat_size);  // scatter dv_all
     // construct detector matrix size for each process.
     if(my_id != num_proc-1){
-        for(m=0;m<stlnum;m++) {
+        for(m=0;m<1;m++) {
             vsize= total_dmat_size[m]/num_proc;
             dmatsize[m] = vsize;
         }
     }
     else{
-        for(m=0;m<stlnum;m++){
+        for(m=0;m<1;m++){
             vsize= total_dmat_size[m] - total_dmat_size[m]/num_proc *(num_proc-1);
             dmatsize[m]=vsize;
         }
     }
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         MPI_Allgather(&dmatsize[m],1, MPI_INT,&dmatsize_each_process[m][0],1,MPI_INT,MPI_COMM_WORLD);
     }
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         dmatsize_offset_each_process[m][0] = 0;
         for(i=1;i<num_proc;i++){
             dmatsize_offset_each_process[m][i] = dmatsize_offset_each_process[m][i-1] + dmatsize_each_process[m][i-1];
@@ -333,7 +460,7 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
     }
 
     if(my_id == 0) {
-        for (m = 0; m < stlnum; m++) {
+        for (m = 0; m < 1; m++) {
             delete[] vector_size[m];
             delete[] displacement_list[m];
         }
@@ -346,22 +473,18 @@ void detector:: construct_dv_dirow_dicol_dmatrix_MPI(ofstream & log,vector<doubl
 
 void Broadcast_dmat_vmode(int stlnum, vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1){
     int i,j,m;
-    int dmat0_size, dmat1_size;
+    int dmat0_size;
     // we broadcast dmat0, dmat1, .. to all other process. This is need for us to compute off diagonal matrix
     // first allocate space for dmat0 , dmat1.
     if(my_id==0){
         dmat0_size= dmat0.size();
-        dmat1_size= dmat1.size();
     }
     MPI_Bcast(&dmat0_size,1,MPI_INT,0,MPI_COMM_WORLD);
-    MPI_Bcast(&dmat1_size,1,MPI_INT,0,MPI_COMM_WORLD);
     if(my_id!=0) {
         dmat0.resize(dmat0_size);
-        dmat1.resize(dmat1_size);
     }
     // Broadcast dmat0, dmat1
     MPI_Bcast((void *) dmat0.data(),dmat0_size,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast((void *) dmat1.data(),dmat1_size,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
     // ----------------Broadcast vmode0, vmode1 -------------------------------
     vector<vector<int>> * v_ptr;
@@ -372,7 +495,7 @@ void Broadcast_dmat_vmode(int stlnum, vector<double> & dmat0,  vector<double> & 
     int vmode_1d_size;
     int element_number;
 //-------------------------------------------
-    for (m = 0; m < stlnum; m++) {
+    for (m = 0; m < 1 ; m++) {
         vmode_1d.clear();
         displacement.clear();
         element_size.clear();
@@ -412,7 +535,14 @@ void Broadcast_dmat_vmode(int stlnum, vector<double> & dmat0,  vector<double> & 
     }
 }
 
-
+double factorial(int n ){
+    double f = 1;
+    int i;
+    for(i=2; i<=n ;i++){
+        f = f * i;
+    }
+    return f;
+}
 
 
 void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1){
@@ -425,35 +555,48 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
     bool exist;
     int position;
     double random_number;
+
+    bool Other_vibrational_state_same;
+    int Minimum_Mode_1_index;
+    double tunneling_matrix_element;
+    double factorial_coefficient;
+    int m_index , n_index;
+
+    // alpha = (\lambda_{up} + \lambda_{down} ) / \hbar \omega_{0}.  \omega_{0} is frequency of vibrational state couple to electronic state, here is mfreq[0][1]
+    double Alpha = (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1]) / (mfreq[0][1]);
+
+    double Crossing_point_quanta_spin_down = pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
+            + 2 * coupling_strength_to_mode0[0] / (mfreq[0][1]) , 2 ) / 4 ;
+
+    double Crossing_point_quanta_spin_up =
+            pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
+                  - 2 * coupling_strength_to_mode0[1] / (mfreq[0][1]) , 2 ) / 4  ;
+
     // different process do different amount of work.
-    for(m=0;m<stlnum;m++){
-        if(m==0){
-            vmode_ptr = &(vmode0);
-            dmat_ptr= &(dmat0);
-        }
-        else {
-            vmode_ptr= &(vmode1);
-            dmat_ptr= &(dmat1);
-        }
-        begin_index= total_dmat_size[m]/num_proc * my_id;
-        // compute off diagonal matrix element, using dmat0, dmat1.
-        for(i=begin_index;i<begin_index + dmatsize[m];i++){  // for my_id==0 , O(dmatsize * dmatsize/ proc_num)
-            for(j=0;j<total_dmat_size[m];j++){ // j is different from serial program. Now we record both symmetric Hamiltonian element
-                if (i==j) continue;
+    vmode_ptr = &(vmode0);
+    dmat_ptr= &(dmat0);
+    begin_index= total_dmat_size[0]/num_proc * my_id;
+    // compute off diagonal matrix element, using dmat0
+    for(i=begin_index;i<begin_index + dmatsize[0];i++){
+        for(j=0;j<total_dmat_size[0];j++){ // j is different from serial program. Now we record both symmetric Hamiltonian element
+            if (i==j) continue;
+
+            // Coupling within same electronic state
+            if((*vmode_ptr)[i][0] == (*vmode_ptr)[j][0] ){
                 ntot=0;
-                for(k=0;k<nmodes[m];k++){
-                    deln[k]= abs( (*vmode_ptr)[i][k] - (*vmode_ptr)[j][k] ); // same as deln[k] = abs(dv[m][i][k] - dv[m][j][k]);
-                    nbar[k]= sqrt(sqrt(double(max(1, (*vmode_ptr)[i][k])) * double(max(1, (*vmode_ptr)[j][k]  ))));
+                for(k=1;k<nmodes[0];k++){
+                    deln[k]= abs( (*vmode_ptr)[i][k] - (*vmode_ptr)[j][k] ); //  deln[k] = abs(dv[m][i][k] - dv[m][j][k]);
+                    nbar[k]= sqrt(sqrt(double(max(1, (*vmode_ptr)[i][k])) * double(max(1, (*vmode_ptr)[j][k]  ))  ));
                     ntot= ntot+ deln[k];
                 }
                 // this is because we don't have 1st order ladder operator in Harmonic oscillator's expression
                 if (ntot == 2) {
-                    for (k = 0; k < nmodes[m]; k++) {
+                    for (k = 1; k < nmodes[0]; k++) {
                         if (deln[k] == 2) deln[k] = 4;
                         if (deln[k] == 1) deln[k] = 2;
                     }
                 } else if (ntot == 1) {
-                    for (k = 0; k < nmodes[m]; k++) {
+                    for (k = 1; k < nmodes[0]; k++) {
                         if (deln[k] == 1) deln[k] = 3;
                     }
                 } else if (ntot == 0) {
@@ -468,50 +611,113 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
                     } else {
                         value = -V_intra;
                     }
-                    if (intra_detector_coupling) {
-                        do (random_number = 2*((double(rand())/RAND_MAX)-0.5)  ); while (random_number==0) ;
-                        value = value * (1+intra_detector_coupling_noise * random_number);
-                    }
-                    for (k = 0; k < nmodes[m]; k++) {
-                        value = value * pow(aij[m][k]* nbar[k], deln[k]);
+
+                    for (k = 1 ; k < nmodes[0]; k++) {
+                        // aij is scaling factor for mode k.
+                        value = value * pow(aij[0][k]* nbar[k], deln[k]);
                     }
                     if ( (*dmat_ptr)[i] != (*dmat_ptr)[j] ) {
                         lij = abs(value / ((*dmat_ptr)[i] - (*dmat_ptr)[j]));
                         if (lij > cutoff) {
-                            dmat[m].push_back(value);
-                            dirow[m].push_back(i);
-                            dicol[m].push_back(j);
+                            dmat[0].push_back(value);
+                            dirow[0].push_back(i);
+                            dicol[0].push_back(j);
                         }
                     } else {
-                        dmat[m].push_back(value);
-                        dirow[m].push_back(i);
-                        dicol[m].push_back(j);
+                        dmat[0].push_back(value);
+                        dirow[0].push_back(i);
+                        dicol[0].push_back(j);
                     }
                 }
             }
+
+            // Coupling between states with different electronic state
+            if( (*vmode_ptr)[i][0] != (*vmode_ptr)[j][0] ){
+                // Check other vibrational state except vibrational mode with index1 is the same
+                Other_vibrational_state_same = true ;
+                for( k = 2 ; k <nmodes[0]; k ++  ) {
+                    if ((*vmode_ptr)[i][k] != (*vmode_ptr)[j][k]) {
+                        Other_vibrational_state_same = false;
+                    }
+                }
+                if( not Other_vibrational_state_same){
+                    continue;
+                }
+
+                // include valid coupling
+                // below we compute <spin_down, mode_1_index (m_index) | spin_up, mode_1_index (n_index) >
+                // for <spin_up,  m_index , spin_down, n_index > == < spin_down, n_index | spin_up, m_index>
+                if((*vmode_ptr)[i][0] == 0 and (*vmode_ptr)[j][0] == 1){
+                    //  <spin_down | spin_up> case
+                    m_index = (*vmode_ptr)[i][1];
+                    n_index = (*vmode_ptr)[j][1];
+                }
+                else{
+                    // <spin_up | spin_down> case:
+                    m_index = (*vmode_ptr)[j][1];
+                    n_index = (*vmode_ptr)[i][1];
+                }
+                // below compute <spin_down, m_index | spin_up, n_index >
+                Minimum_Mode_1_index = min(  m_index , n_index ) ;
+                tunneling_matrix_element = 0;
+
+                for(k=0; k<= Minimum_Mode_1_index; k++){
+                    // (-1)^{m_index - k}/ [(m_index - k)! * (n_index-k)! ] * sqrt(m! * n!) / (k!)
+                    factorial_coefficient = 1 / (factorial( m_index - k ) * factorial(n_index - k) ) *
+                            pow(-1 , m_index - k) * sqrt(factorial(m_index) * factorial(n_index) )/ (factorial(k));
+
+                    tunneling_matrix_element = tunneling_matrix_element + pow(Alpha, m_index + n_index - 2 * k) *
+                            factorial_coefficient;
+                }
+                // Coupling_between_electronic_state : t in Logan's note.
+                tunneling_matrix_element = tunneling_matrix_element * exp(- pow(Alpha,2) / 2 ) * Coupling_between_electronic_state;
+
+//                if( i == initial_state_index[0] and j== initial_state_index[1]){
+//                    cout << "Found " << endl;
+//                }
+
+                // cutoff criteria. This equivalent to strong coupling is among states in two electronic state which have similar energy. (near crossing region)
+                if ( (*dmat_ptr)[i] != (*dmat_ptr)[j] ) {
+                    lij = abs(tunneling_matrix_element / ((*dmat_ptr)[i] - (*dmat_ptr)[j]));
+                    if (lij > cutoff) {
+                        dmat[0].push_back( tunneling_matrix_element );
+                        dirow[0].push_back(i);
+                        dicol[0].push_back(j);
+                    }
+                } else {
+                    dmat[0].push_back( tunneling_matrix_element );
+                    dirow[0].push_back(i);
+                    dicol[0].push_back(j);
+                }
+
+            }
+
+
+
         }
     }
+
 }
 
 void detector:: broadcast_dmatnum_doffnum(){
     int m,i;
     // compute dmatnum and doffnum and dmatnum_each_process, total_dmatnum, total_doffnum etc.
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1 ;m++){
         dmatnum[m]= dmat[m].size();
         doffnum[m]=dmatnum[m] - dmatsize[m];
     }
     // compute toatl_dmatnum, total_dmatoffnum
-    for(m=0;m<stlnum;m++){
+    for(m=0;m< 1;m++){
         MPI_Allreduce(&dmatnum[m],&total_dmat_num[m],1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
         MPI_Allreduce(&doffnum[m],&total_dmat_off_num[m],1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
     }
     // broadcast detector matrix number and detector matrix off-diagonal number in each process.
-    for(m=0;m<stlnum;m++){
+    for(m=0;m< 1;m++){
         MPI_Allgather(&dmatnum[m],1,MPI_INT,&dmatnum_each_process[m][0],1,MPI_INT,MPI_COMM_WORLD);
         MPI_Allgather(&doffnum[m], 1, MPI_INT, &doffnum_each_process[m][0], 1, MPI_INT,MPI_COMM_WORLD);
     }
     // compute offset of detector matrix for each process.
-    for(m=0;m<stlnum;m++){
+    for(m=0;m< 1;m++){
         dmat_offset_each_process[m][0]=0;
         for(i=1;i<num_proc;i++){
             dmat_offset_each_process[m][i] = dmat_offset_each_process[m][i-1] + dmatnum_each_process[m][i-1];
@@ -529,7 +735,7 @@ void detector:: broadcast_total_dmat(){
     total_dirow= new int * [stlnum];
     total_dicol= new int * [stlnum];
     int m;
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1;m++){
         total_dmat[m] = new double [total_dmat_num[m]];
         total_dirow[m] = new int [total_dmat_num[m]];
         total_dicol[m] = new int [total_dmat_num[m]];
@@ -543,23 +749,23 @@ void detector:: broadcast_total_dmat(){
 }
 
 //-------------------------------- Construct detector wave function ------------------------------
-void detector::initialize_detector_state_MPI(ofstream & log, int initial_state_choice) {
+void detector::initialize_detector_state_MPI(ofstream & log) {
     // this is the code for initializing detector state's wavefunction.
-    int m, i,j;
+    int m, i, j;
     double norm;
     double total_norm;
     int local_index = 0;
     int dmat0_offset = my_id * int(total_dmat_size[0]/num_proc);
-    int nearby_state_list_size = nearby_state_index.size();
-    for(m=0;m<nearby_state_list_size;m++){
+    int sampling_state_list_size = sampling_state_index.size();
+    for(m=0;m<sampling_state_list_size;m++){
         norm = 0;
         for(i=0;i<dmatsize[0];i++){
             xd[m].push_back(0);
             yd[m].push_back(0);
         }
-        if(nearby_state_index[m] >= dmat0_offset and nearby_state_index[m] < dmat0_offset + dmatsize[0]){
+        if(sampling_state_index[m] >= dmat0_offset and sampling_state_index[m] < dmat0_offset + dmatsize[0]){
             // state m is in this range
-            local_index = nearby_state_index[m] - dmat0_offset;
+            local_index = sampling_state_index[m] - dmat0_offset;
             xd[m][local_index] = 1;
             norm = 1;
         }
@@ -575,7 +781,7 @@ void detector::initialize_detector_state_MPI(ofstream & log, int initial_state_c
 
 }
 
-void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
+void detector::construct_initial_state_MPI(ifstream & input, ofstream & output){
     // MPI version of construct bright state
     /*
      *  Initial detector state: detector state populated at beginning of simulation
@@ -586,69 +792,73 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
     double norm;
     double random_number;
     double prob;
-    bright_state=new int * [stlnum];
+
+    double Crossing_point_quanta_spin_down = pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
+                                                   + 2 * coupling_strength_to_mode0[0] / (mfreq[0][1]) , 2 ) / 4 ;
+
+    double Crossing_point_quanta_spin_up =
+            pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
+                  - 2 * coupling_strength_to_mode0[1] / (mfreq[0][1]) , 2 ) / 4  ;
+
+ // here initial detector energy only count vibrational energy , not energy in electronic state.
     initial_detector_state= new int * [stlnum];
     initial_Detector_energy= new double [stlnum];
-    bright_state_energy= new double [stlnum];
+
     for(m=0;m<stlnum;m++){
-        bright_state[m]= new int [nmodes[m]];
+
         initial_detector_state[m]= new int [nmodes[m]];
         initial_Detector_energy[m]=0;
-        bright_state_energy[m]=0;
+
     }
+
     if(my_id==0){
-        for(m=0;m<stlnum;m++) {
-            // initialize our bright state from input.txt
-            if (!Random_bright_state) {
-                for (i = 0; i < nmodes[m]; i++) {
-                    input >> initial_detector_state[m][i];
-                }
-            }
-            else {
-                // construct bright state according to Boltzmann distribution.
-                for (i = 0; i < nmodes[m]; i++) {
-                    norm = 0;
-                    for (j = 0; j < nmax[m][i]; j++) {
-                        norm = norm + exp(-mfreq[m][i] * j / (0.7 * kelvin)); // 300 K ~ 200 cm^{-1}
-                    }
-                    do (random_number = double(rand()) / RAND_MAX); while (random_number == 0);
-                    prob = 0;
-                    for (j = 0; j < nmax[m][i]; j++) {
-                        prob = prob + exp(-mfreq[m][i] * j / (0.7 * kelvin)) / norm;
-                        if (prob > random_number) {
-                            initial_detector_state[m][i] = j;
-                            break;
-                        }
-                    }
-                }
-            }
+
+        // initialize our bright state from input.txt
+        for (i = 0; i < nmodes[0]; i++) {
+            input >> initial_detector_state[0][i];
         }
+
+
+        // shift initial state to crossing point.
+        // Initial_detector_state[0] is spin down state at crossing point
+        // Initial_detector_state[1] is spin up state and crossing point
+
+        initial_detector_state[0][0] = 0;
+        initial_detector_state[0][1] = int(Crossing_point_quanta_spin_down + 0.5);
+
+        initial_detector_state[1][0] = 1;
+        initial_detector_state[1][1] = int (Crossing_point_quanta_spin_up + 0.5);
+        for(j=2; j < nmodes[0]; j++){
+            initial_detector_state[1][j] = initial_detector_state[0][j];
+        }
+
     }
+
     for(m=0;m<stlnum;m++){ // Broad cast initial detector state.
         MPI_Bcast(&initial_detector_state[m][0],nmodes[m],MPI_INT,0,MPI_COMM_WORLD);
     }
 
     for(m=0;m<stlnum;m++){
-        // initialize our initial detector state.  set dark mode's quanta equal to bright_state.
-        bright_state[m][0]= initial_detector_state[m][0] + 1;
-        for(i=1;i<nmodes[m];i++){   // other dark mode
-            bright_state[m][i]=initial_detector_state[m][i];
-        }
-        for(i=0;i<nmodes[m];i++){
+
+        // initialize our initial detector state. This energy exclude mode 0 which represents electronic state
+        for(i=1;i<nmodes[m];i++){
             initial_Detector_energy[m]= initial_Detector_energy[m] + initial_detector_state[m][i] * mfreq[m][i];
-            bright_state_energy[m] = bright_state_energy[m] + bright_state[m][i] * mfreq[m][i];
         }
+
     }
-    initial_energy= initial_energy + initial_Detector_energy[0] + initial_Detector_energy[1]; // update initial energy
-    // as system + detector.
+    // as energy for system + detector.
+    initial_energy= initial_energy + initial_Detector_energy[0] + initial_Detector_energy[1];
 
     if(my_id==0){  // output initial detector state to output.txt
         cout <<"Initial detector state:"<<endl;
+        output << "Initial detector state:" << endl;
         for(m=0;m<stlnum;m++){
             for(i=0;i<nmodes[m];i++){
                 cout<< initial_detector_state[m][i] <<" ";
+                output << initial_detector_state[m][i] <<" ";
             }
             cout<<endl;
+            output << endl;
         }
     }
 }
@@ -656,20 +866,16 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
 void detector:: update_initial_and_bright_detector_energy(){
     // we update energy of initial and bright state of detector. since in Van Vleck transformation, the energy level is shhifted.
     int m,i;
-    for(m=0;m<stlnum;m++){
+    for(m=0;m<1 ;m++){
         initial_Detector_energy[m] = 0;
-        bright_state_energy[m] = 0;
         if(my_id == initial_state_pc_id[m]) {
             initial_Detector_energy[m] = dmat[m][initial_state_index[m]];
         }
-        if(my_id == bright_state_pc_id[m] and bright_state_index[m]<dmatsize[m]){
-            bright_state_energy[m] = dmat[m][bright_state_index[m]];
-        }
         MPI_Bcast(&initial_Detector_energy[m],1,MPI_DOUBLE,initial_state_pc_id[m],MPI_COMM_WORLD);
-        MPI_Bcast(&bright_state_energy[m],1,MPI_DOUBLE,bright_state_index[m],MPI_COMM_WORLD);
-    }
+   }
     initial_energy= system_energy + initial_Detector_energy[0] + initial_Detector_energy[1]; // update initial energy as system + detector.
 }
+
 void detector:: compute_important_state_index(){
     // compute bright state index and initial state index for two detector.
     int m,i,j;
@@ -682,55 +888,47 @@ void detector:: compute_important_state_index(){
     int position;
     bool exist;
     bool * exist_bool_for_pc = new bool [num_proc];
-    bright_state_index = new int [2];
+
     initial_state_index = new int [2];
-    bright_state_pc_id = new int [2];
     initial_state_pc_id = new int [2];
     // we initialize bright_state_index and initial_state_index.
     // We do this because sometimes we may not include bright state in our simulation, then this index need to be initialized.
-    for(m=0;m<stlnum;m++){
-        bright_state_index[m] = 0;
-        initial_state_index[m]=0;
-        bright_state_pc_id[m] = 0;
+    for(m=0;m<2;m++){
+        initial_state_index[m] = 0;
         initial_state_pc_id[m] = 0;
     }
-    for(index =0 ; index <1; index ++) {    // when you want to consider bright state, set index<=1
-        // loop for bright state and initial state
-        if(index == 0) {
-            special_state = initial_detector_state;
-            special_state_index = initial_state_index;
-            special_state_pc_id = initial_state_pc_id;
+
+
+    special_state =  initial_detector_state;
+    special_state_index = initial_state_index;
+    special_state_pc_id = initial_state_pc_id;
+
+    // loop for state in two electronic state
+    for (m = 0; m < 2; m++) {
+        special_state_vec.clear();
+        for (i = 0; i < nmodes[0]; i++) {
+            special_state_vec.push_back(special_state[m][i]);
         }
-        else{
-            special_state = bright_state;
-            special_state_index = bright_state_index;
-            special_state_pc_id = bright_state_pc_id;
+        position=find_position_for_insert_binary(dv[0],special_state_vec,exist);
+        MPI_Allgather(&exist,1,MPI_C_BOOL,&exist_bool_for_pc[0],1,MPI_C_BOOL,MPI_COMM_WORLD);
+        special_state_pc_id [m] = -1;
+        for(i=0;i<num_proc;i++){
+            if(exist_bool_for_pc[i]){
+                special_state_pc_id[m] = i;
+            }
         }
-        // loop for two detector.
-        for (m = 0; m < stlnum; m++) {
-            special_state_vec.clear();
-            for (i = 0; i < nmodes[m]; i++) {
-                special_state_vec.push_back(special_state[m][i]);
+        if(special_state_pc_id[m] == -1){
+            if(my_id==0){
+                cout<<" Can not find initial state or brigth state in all vmode. Must have bug here."<<endl;
+                MPI_Abort(MPI_COMM_WORLD,-7);
             }
-            position=find_position_for_insert_binary(dv[m],special_state_vec,exist);
-            MPI_Allgather(&exist,1,MPI_C_BOOL,&exist_bool_for_pc[0],1,MPI_C_BOOL,MPI_COMM_WORLD);
-            special_state_pc_id [m] = -1;
-            for(i=0;i<num_proc;i++){
-                if(exist_bool_for_pc[i]){
-                    special_state_pc_id[m] = i;
-                }
-            }
-            if(special_state_pc_id[m] == -1){
-                if(my_id==0){
-                    cout<<" Can not find initial state or brigth state in all vmode. Must have bug here."<<endl;
-                    MPI_Abort(MPI_COMM_WORLD,-7);
-                }
-            }
-            MPI_Bcast(&position,1, MPI_INT,special_state_pc_id[m],MPI_COMM_WORLD);
-            special_state_index [m] = position;
         }
+        MPI_Bcast(&position,1, MPI_INT,special_state_pc_id[m],MPI_COMM_WORLD);
+        special_state_index [m] = position;
     }
+
     delete [] exist_bool_for_pc;
+
 }
 
 
@@ -777,12 +975,10 @@ void detector:: output_state_density(vector<double> & dmat0,  vector<double> & d
         for (i = 0; i < total_dmat_size[0]; i++) {
             dmat_energy_level0.push_back(dmat0[i]);  // dmat0 is diagonal part in all matrix.
         }
-        for (i = 0; i < total_dmat_size[1]; i++) {
-            dmat_energy_level1.push_back(dmat1[i]);
-        }
+
         compute_detector_state_density(state_density0, dmat_energy_level0, energy_range0);
-        compute_detector_state_density(state_density1, dmat_energy_level1, energy_range1);
-        block_number = state_density0.size();
+
+         block_number = state_density0.size();
         state_density_output << "Detector 1 Range of energy block: " << endl;
         for (i = 0; i <= block_number; i++) {
             state_density_output << energy_range0[i] << " ";
@@ -793,303 +989,65 @@ void detector:: output_state_density(vector<double> & dmat0,  vector<double> & d
             state_density_output << state_density0[i] << " ";
         }
         state_density_output << endl;
-        state_density_output << " Detector 2 Range of energy block" << endl;
-        for (i = 0; i <= block_number; i++) {
-            state_density_output << energy_range1[i] << " ";
-        }
-        state_density_output << endl;
-        state_density_output << "Detector 2 density of state " << endl;
-        for (i = 0; i < block_number; i++) {
-            state_density_output << state_density1[i] << " ";
-        }
-        state_density_output << endl;
+
         // output initial state's energy
-        for (i = 0; i < 2; i++) {
-            state_density_output << initial_Detector_energy[i] << "  " << bright_state_energy[i] << " ";
+        for (i = 0; i < 1; i++) {
+            state_density_output << initial_Detector_energy[i] << "  " ;
         }
         state_density_output.close();
     }
 }
 
-void detector:: prepare_variable_for_4_point_correlation_function(vector<double> & dmat0, vector<double> & dmat1,ofstream & log){
-    // for 4 - point correlation function we will make xd , yd as N*N system.
-    // we will only include state near our initial state.
-    int i,j,k,l;
-    int max_state_quanta_diff = 0;
-    int state_distance = 0;
-
-    double state_energy_difference;
-    int initial_state_index_in_total_dmatrix;
-    int nearby_state_index_size;
-    int state_for_4_point_correlation_average_list_size ;
-    initial_state_index_in_total_dmatrix = initial_state_index[0]
-                                           + total_dmat_size[0]/num_proc * initial_state_pc_id[0] ;
-    // compute nearby_state_index and initial_state_index_in_nearby_state_index_list for computing 4-point correlation function
-    for(i=0;i<total_dmat_size[0];i++){
-
-        if (! Sphere_cutoff_in_state_space){
-            // construct a cube in state space
-            max_state_quanta_diff = 0;
-            state_energy_difference = 0;
-            for(j=0;j< nmodes[0];j++){
-                if(max_state_quanta_diff <abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -dv_all[0][i][j]) ){
-                    max_state_quanta_diff = abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -dv_all[0][i][j]);
-                }
-            }
-            state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
-
-            if(max_state_quanta_diff <= distance_cutoff_for_4_piont_corre ){
-                // we will simulate dynamics of states in this list to compute 4 point correlation function
-                nearby_state_index.push_back(i);
-            }
-            if(max_state_quanta_diff <= Distance_Range_4_point_corre_function_average
-               and state_energy_difference <= Energy_Range_4_point_corre_function_average){
-                states_for_4_point_correlation_average.push_back(i);
-            }
-
-        }
-        else{
-            // construct a sphere in state space.
-            state_distance = 0;
-            state_energy_difference = 0;
-            for(j=0;j< nmodes[0];j++){
-                state_distance = state_distance + abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -
-                                                      dv_all[0][i][j]);
-            }
-            state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
-
-            if(state_distance <= distance_cutoff_for_4_piont_corre ){
-                // we will simulate dynamics of states in this list to compute 4 point correlation function
-                nearby_state_index.push_back(i);
-            }
-            if(state_distance <= Distance_Range_4_point_corre_function_average
-               and state_energy_difference <= Energy_Range_4_point_corre_function_average){
-                states_for_4_point_correlation_average.push_back(i);
-            }
-
-        }
-
-
-    }
-    nearby_state_index_size = nearby_state_index.size();
-    state_for_4_point_correlation_average_list_size = states_for_4_point_correlation_average.size();
-    for(i=0;i<nearby_state_index_size;i++){
-        if(nearby_state_index[i] == initial_state_index_in_total_dmatrix){
-            initial_state_index_in_nearby_state_index_list = i;
-            break;
-        }
-    }
-    for(j=0;j<state_for_4_point_correlation_average_list_size;j++){
-        for(i=0;i<nearby_state_index_size;i++){
-            if(nearby_state_index[i] == states_for_4_point_correlation_average[j]){
-                states_for_average_in_nearby_state_index_list.push_back(i);
-                break;
-            }
-        }
-        if( states_for_4_point_correlation_average[j] == initial_state_index_in_total_dmatrix){
-            initial_state_index_in_states_for_4_point_correlation_list = j;
-        }
-    }
-
-    log<< "Nearby state number:   "<< nearby_state_index_size <<endl;
-    log<< "Total state number:    "<< total_dmat_size[0] <<endl;
-    log<<" 4 point correlation function is average over number of states:  "<<state_for_4_point_correlation_average_list_size << endl;
-
-    for (i = 0; i < nearby_state_index_size; i++) {
-        vector<double> v1 ;
-        v1.reserve(dmatsize[0]);
-        xd.push_back(v1);
-        yd.push_back(v1);
-    }
-    xd_all = new double * [nearby_state_index_size];
-    yd_all = new double * [nearby_state_index_size];
-    for(i=0;i<nearby_state_index_size;i++){
-        xd_all[i] = new double [total_dmat_size[0]];
-        yd_all[i] = new double [total_dmat_size[0]];
-    }
-
-    // construct neighbor_state_index
-
-    vector<int> neighbor_state_index;  // index in all dv_all[0]
-    vector<int> neighbor_state_in_nearby_state_index; // index in nearby_state_index
-    vector<int> state_mode;
-    vector<int> neighbor_state_mode ;
-    int position;
-    bool exist;
-
-
-    for(j=0;j<nearby_state_index_size;j++){
-        state_mode = dv_all[0][ nearby_state_index[j] ];  // states we simulate trajectories.
-        neighbor_state_index.clear();  // record states near to our states of choice for simulating trajectory.
-        for(k=0;k<nmodes[0];k++){
-            // one mode up
-            neighbor_state_mode = state_mode;
-            neighbor_state_mode[k] = state_mode[k] - 1;
-            position = find_position_for_insert_binary(dv_all[0],neighbor_state_mode,exist);
-            if(exist){
-                neighbor_state_index.push_back(position);
-            }
-            else{
-                neighbor_state_index.push_back(-1);
-            }
-        }
-
-        for(k=0;k<nmodes[0];k++){
-            neighbor_state_mode = state_mode;
-            neighbor_state_mode[k] = state_mode[k] + 1;
-            position = find_position_for_insert_binary(dv_all[0],neighbor_state_mode,exist);
-            if(exist){
-                neighbor_state_index.push_back(position);
-            }
-            else{
-                neighbor_state_index.push_back(-1);
-            }
-        }
-        neighbor_state_index_list.push_back(neighbor_state_index);
-
-        neighbor_state_in_nearby_state_index.clear();
-        // compute neighbor_state_in_nearby_state_index
-        for(k=0;k<2*nmodes[0];k++){
-
-            if(neighbor_state_index[k] != -1) {
-                for (l = 0; l < nearby_state_index_size; l++) {
-                    if (nearby_state_index[l] == neighbor_state_index[k]) {
-                        neighbor_state_in_nearby_state_index.push_back(l);
-                        break;
-                    }
-                }
-                if (l == nearby_state_index_size) {
-                    // not found
-                    neighbor_state_in_nearby_state_index.push_back(-1);
-                }
-            }
-
-            else {
-                neighbor_state_in_nearby_state_index.push_back(-1);
-            }
-
-        }
-        neighbor_state_in_nearby_state_index_list.push_back(neighbor_state_in_nearby_state_index);
-
-        // compute bool_state_one_mode_quanta_below_all_in_nearby_state_index
-        exist = true;
-        for(k = 0 ;k< nmodes[0];k++){
-            if (neighbor_state_in_nearby_state_index[k] == -1){
-                exist = false;
-            }
-        }
-
-        if(exist == true ){
-            bool_state_one_mode_quanta_below_all_in_nearby_state_index.push_back(true);
-        }
-        else{
-            bool_state_one_mode_quanta_below_all_in_nearby_state_index.push_back(false) ;
-        }
-
-        // compute bool_neighbor_state_all_in_nearby_state_index
-        exist = true;
-        for(k=0;k<nmodes[0];k++){
-            if( neighbor_state_in_nearby_state_index[k] == -1 and state_mode[k]!=0 ){
-                exist = false;
-            }
-        }
-        for(k=nmodes[0];k<2*nmodes[0];k++){
-            if (neighbor_state_in_nearby_state_index[k] == -1){
-                exist = false;
-            }
-        }
-        if(exist == false){
-            bool_neighbor_state_all_in_nearby_state_index.push_back(false);
-        }
-        else{
-            bool_neighbor_state_all_in_nearby_state_index.push_back(true);
-        }
-
-    }
-    // construct_nearby_state_index_for_all_states
-    for(j=0;j<total_dmat_size[0];j++){
-        state_mode = dv_all[0][j];
-        neighbor_state_index.clear();
-        for(k=0;k<nmodes[0];k++){
-            neighbor_state_mode = state_mode;
-            neighbor_state_mode[k] = state_mode[k] - 1 ;
-            position = find_position_for_insert_binary(dv_all[0],neighbor_state_mode,exist);
-            if(exist){
-                neighbor_state_index.push_back(position);
-            }
-            else{
-                neighbor_state_index.push_back(-1);
-            }
-        }
-        for(k=0;k<nmodes[0];k++){
-            neighbor_state_mode = state_mode;
-            neighbor_state_mode[k] = state_mode[k] + 1 ;
-            position = find_position_for_insert_binary(dv_all[0],neighbor_state_mode,exist);
-            if(exist){
-                neighbor_state_index.push_back(position);
-            }
-            else{
-                neighbor_state_index.push_back(-1);
-            }
-        }
-        neighbor_state_index_for_all_state_list.push_back(neighbor_state_index);
-    }
-
-}
 
 void detector:: compute_local_density_of_state(ofstream & output,vector<double> & dmat0){
     // using eq.(2) in https://doi.org/10.1063/1.476070 to compute density of states: sum Lij
     int i,l;
+    int m;
     double energy_difference;
     int begin_index = total_dmat_size[0]/num_proc * my_id ;
-    double density_of_states = 0;
-    int number_of_state= 0 ;
-    if(my_id == initial_state_pc_id[0]){
-        for(i=dmatsize[0];i<dmatnum[0];i++){
-            if(dirow[0][i] == begin_index + initial_state_index[0]){
-                number_of_state = number_of_state + 1;
-                energy_difference = abs(dmat[0][initial_state_index[0]] - dmat0[dicol[0][i]]);
-                density_of_states = density_of_states + 1 / (1+ pow(  energy_difference/dmat[0][i] , 2 ) );
+    double density_of_state_in_same_electronic_state;
+    double density_of_state_couple_to_another_electronic_state;
+    int number_of_state_same_electronic_state ;
+    int number_of_state_in_another_electronic_state;
+
+    for(m=0;m<2; m++) {
+        density_of_state_in_same_electronic_state = 0;
+        density_of_state_couple_to_another_electronic_state = 0;
+        number_of_state_same_electronic_state = 0;
+        number_of_state_in_another_electronic_state = 0;
+        if(my_id == initial_state_pc_id[m]){
+            for(i=dmatsize[0];i<dmatnum[0];i++){
+                if(dirow[0][i] == begin_index + initial_state_index[m]){
+                    energy_difference = abs(dmat[0][initial_state_index[m]] - dmat0[dicol[0][i]]);
+
+                    if(dv_all[0][dicol[0][i]][0] == dv_all[0][ dirow[0][i] ][0]){
+                        // They are in same electronic state
+                        density_of_state_in_same_electronic_state =
+                                density_of_state_in_same_electronic_state + 1 / (1+ pow(  energy_difference/dmat[0][i] , 2 ) );
+                        number_of_state_same_electronic_state = number_of_state_same_electronic_state + 1;
+                    }
+                    else{
+                        density_of_state_couple_to_another_electronic_state =
+                                density_of_state_couple_to_another_electronic_state + 1 / (1+ pow(  energy_difference/dmat[0][i] , 2 ) );
+
+                        number_of_state_in_another_electronic_state = number_of_state_in_another_electronic_state + 1;
+                    }
+
+                }
             }
         }
-    }
-    MPI_Bcast(&density_of_states,1,MPI_DOUBLE,initial_state_pc_id[0],MPI_COMM_WORLD);
-    MPI_Bcast(&number_of_state,1,MPI_INT,initial_state_pc_id[0],MPI_COMM_WORLD);
-    if(my_id == 0){
-        output<< "Density of states for detector 0 at initial state:   " << density_of_states << endl;
-        output<< "number of states connected to it is   " << number_of_state << endl;
-    }
 
-
-    double  max_coupling_strength_in_all_process;
-    double max_coupling_strength = 0;
-    int num_terms=0;
-    int num_terms_in_all_process=0;
-    double  coupling_strength_sum ;
-    double  coupling_strength_sum_all_process ;
-    double  coupling_strength_average_all_process;
-    double ratio_to_select_for_average = double(1)/5; // select value larger than 1/10 of maximum coupling strength
-
-    for(i=dmatsize[0];i<dmatnum[0];i++){
-        if(abs(dmat[0][i]) > max_coupling_strength){
-            max_coupling_strength = abs(dmat[0][i]);
+        MPI_Bcast(&density_of_state_in_same_electronic_state, 1 ,MPI_DOUBLE, initial_state_pc_id[m], MPI_COMM_WORLD);
+        MPI_Bcast(&density_of_state_couple_to_another_electronic_state, 1, MPI_DOUBLE, initial_state_pc_id[m] , MPI_COMM_WORLD);
+        MPI_Bcast(&number_of_state_same_electronic_state, 1 , MPI_INT, initial_state_pc_id[m], MPI_COMM_WORLD );
+        if(my_id == 0){
+            output <<  "state :   " << m  << " Density of state in same electronic state:   " << density_of_state_in_same_electronic_state << endl;
+            output << "state :  " << m << "  Density of state in another electronic state :   " << density_of_state_couple_to_another_electronic_state << endl;
         }
     }
-    MPI_Allreduce(&max_coupling_strength,&max_coupling_strength_in_all_process,1,MPI_DOUBLE,MPI_MAX,MPI_COMM_WORLD);
-    coupling_strength_sum = 0;
-    for(i=dmatsize[0];i<dmatnum[0];i++){
-        if(abs(dmat[0][i]) > max_coupling_strength_in_all_process * ratio_to_select_for_average ){
-            coupling_strength_sum = coupling_strength_sum + abs(dmat[0][i]);
-            num_terms ++ ;
-        }
-    }
-    MPI_Allreduce(&coupling_strength_sum,&coupling_strength_sum_all_process,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-    MPI_Allreduce(&num_terms,&num_terms_in_all_process,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
-    coupling_strength_average_all_process = coupling_strength_sum_all_process / (num_terms_in_all_process);
-    if(my_id == 0){
-        output <<"Largest coupling strength is "<<max_coupling_strength_in_all_process << endl;
-        output <<"ratio for counting as states is "<< ratio_to_select_for_average << endl;
-        output<< "number of terms for coupling strength average is: " << num_terms_in_all_process << endl;
-        output << "Avereage coupling strength V is:   "<<coupling_strength_average_all_process << endl;
-    }
+
+    // compute local density of state for other state in sampling_state_index
+
+
+
 }

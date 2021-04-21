@@ -30,7 +30,7 @@ void detector::prepare_computation_for_Lanczos(){
     // Index for remoteVecIndex, tosendVecIndex are computed here.
     int m,i;
     int vsize;
-    int nearby_state_list_size = nearby_state_index.size();
+    int nearby_state_list_size = sampling_state_index.size();
 // Index for vector to send and receive.
 // remoteVecCount: total number to receive. remoteVecPtr: displacement in remoteVecIndex for each process. remoteVecIndex: index in other process to receive.
 // tosendVecCount: total number to send to other process. tosendVecPtr: displacement in tosendVecIndex in each process.  tosendVecIndex: Index of element in itself to send. (it's global ,need to be converted to local index)
