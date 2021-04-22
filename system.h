@@ -174,7 +174,7 @@ private:
 	int matnum, offnum, matsize; // matnum is total matrix element number, it should be smaller than matdim.
 	                                // in our program, usually we set matdim=matnum and use these variable interchangably.
 								 //offnum: off diagonal matrix element number. matsize: matrix size for full matrix (number of diagonal element)
-    int total_matnum, total_offnum, total_matsize;
+    long  total_matnum, total_offnum, total_matsize;
     int * matsize_each_process, *mat_offnum_each_process, *matnum_each_process;
     int * matsize_offset_each_process, * matnum_offset_each_process;
     vector <double> x;

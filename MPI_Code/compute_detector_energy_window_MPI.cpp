@@ -156,6 +156,14 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
         // this energy shift is due to different coupling strength in different electronic state.
         double excited_electronic_state_initial_energy_shift = pow(coupling_strength_to_mode0[0],2) / d.mfreq[0][1] - pow(coupling_strength_to_mode0[1] , 2) / d.mfreq[0][1] ;
 
+        double crossing_region_energy = d.mfreq[0][1]/2 *
+                pow( d.mfreq[0][0] /(sqrt(2) *(coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1]) ) +
+                sqrt(2) * coupling_strength_to_mode0[0] / d.mfreq[0][1] , 2);
+
+        cout << "Crossing region energy " <<  crossing_region_energy << endl;
+        output << "Crossing region energy " <<  crossing_region_energy << endl;
+        log << "Crossing region energy " <<  crossing_region_energy << endl;
+
         ndetector0[0] = -1; // this is for:  when we go into code: ndetector0[i]= ndetector0[i]+1, our first state is |000000>
         while (1) {
             label2:;  // label2 is for detector1 to jump out of while(1) loop (this is inner layer of while(1))

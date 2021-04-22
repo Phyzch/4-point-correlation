@@ -114,14 +114,14 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
         if (!Continue_Simulation) {
             for(i=0;i<tlnum;i++) {
                 for(j=0;j<nmodes[0];j++) {
-                    if (j == 0) {
-                        mfreq[i][j] = mfreq[i][j] * (1 + noise_strength * (distribution(generator)-0.5) * 2 );
-                        cout << mfreq[i][j] << " ";
-                    }
-                    else {
-                        mfreq[i][j] = mfreq[i][j] * (1 + noise_strength * (distribution(generator)-0.5) * 2 );
-                        cout << mfreq[i][j] << " ";
-                    }
+//                    if (j == 0) {
+//                        mfreq[i][j] = mfreq[i][j] * (1 + noise_strength * (distribution(generator)-0.5) * 2 );
+//                        cout << mfreq[i][j] << " ";
+//                    }
+//                    else {
+//                        mfreq[i][j] = mfreq[i][j] * (1 + noise_strength * (distribution(generator)-0.5) * 2 );
+//                        cout << mfreq[i][j] << " ";
+//                    }
                     // set precision of mfreq to 0.01. Convenient to restart simulation.
                     mfreq[i][j] = floor(mfreq[i][j] *100) /100;
                 }
@@ -155,7 +155,7 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
             }
             for(j=0;j<nmodes[i];j++){
                 // a_ij is scaling factor
-                aij[i][j] = a_intra * pow(double(mfreq[i][j]),0.5) / pow(double(mfreq[0][0] /2),0.5);
+                aij[i][j] = a_intra * pow(double(mfreq[i][j]),0.5) / pow( 500 ,0.5);
                 // aij corresponding to scaling factor for f= f_{bright}/2 cm^{-1}.
                 if (! Detector_Continue_Simulation) {
                     output << mfreq[i][j] << " " << nmax[i][j] << " " << modtype[i][j] << " " << premodcoup[i][j]
@@ -572,6 +572,13 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
             pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
                   - 2 * coupling_strength_to_mode0[1] / (mfreq[0][1]) , 2 ) / 4  ;
 
+    if(my_id == 0){
+        cout << "ALpha :   " << Alpha << endl;
+        log << "ALpha:  " << Alpha << endl;
+    }
+
+    double cutoff_for_coupling_between_electronic_state = 0.001 ;
+
     // different process do different amount of work.
     vmode_ptr = &(vmode0);
     dmat_ptr= &(dmat0);
@@ -672,14 +679,16 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
                 // Coupling_between_electronic_state : t in Logan's note.
                 tunneling_matrix_element = tunneling_matrix_element * exp(- pow(Alpha,2) / 2 ) * Coupling_between_electronic_state;
 
-//                if( i == initial_state_index[0] and j== initial_state_index[1]){
-//                    cout << "Found " << endl;
-//                }
+                if( i == initial_state_index[0] and j== initial_state_index[1]){
+                    cout << "Found " << endl;
+                }
 
                 // cutoff criteria. This equivalent to strong coupling is among states in two electronic state which have similar energy. (near crossing region)
+
+
                 if ( (*dmat_ptr)[i] != (*dmat_ptr)[j] ) {
                     lij = abs(tunneling_matrix_element / ((*dmat_ptr)[i] - (*dmat_ptr)[j]));
-                    if (lij > cutoff) {
+                    if (lij > cutoff_for_coupling_between_electronic_state) {
                         dmat[0].push_back( tunneling_matrix_element );
                         dirow[0].push_back(i);
                         dicol[0].push_back(j);

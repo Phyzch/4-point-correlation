@@ -86,7 +86,7 @@ full_system::full_system(string path1, string cvpt_path1) {
             log<<" This mode is now not supported."<<endl;
             exit(-1);
         }
-        dimension_check(); // check if all matrix's dimension is right.
+        // dimension_check(); // check if all matrix's dimension is right.
 	}
 }
 

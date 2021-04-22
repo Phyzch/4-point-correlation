@@ -24,7 +24,7 @@ bool no_coupling = false;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/spin_boson_LW_model/03211/";
+                       "/spin_boson_LW_model/try/";
    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
     string cvpt_path;
     int i;
