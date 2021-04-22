@@ -15,7 +15,7 @@ bool Sphere_cutoff_in_state_space = true;
 bool save_state = false;
 bool Evolve_dynamics = true;  // bool variable to decide if we run Detector_Evolve
 bool no_coupling = false;
-
+bool load_sampling_state = true;
 
 // About matflag in input.txt: If matflag==2, +We output all x,y (after the pre_coupling), matrix element, detector matrix element etc.
 // if matflag==1: We don't output anything but still we will save our final simulation results in save.txt

@@ -58,6 +58,7 @@ extern bool compute_overlap_with_eigenstate; // If this is True, we will use MFD
 
 extern double * coupling_strength_to_mode0;
 extern double Coupling_between_electronic_state;
+extern bool load_sampling_state;
 
 // define function here
 float ran2(long& idum);

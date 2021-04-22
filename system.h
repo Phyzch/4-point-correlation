@@ -164,6 +164,8 @@ public:
 
     void construct_sampling_state_index(vector<double> & dmat0);
 
+    void load_sampling_state_index(ofstream & log);
+
     void shift_detector_Hamiltonian(ofstream & log);
 };
 

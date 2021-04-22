@@ -246,8 +246,15 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
 
     }
 
-    // construct sampling_state_index which contain states we want to compute IPR
-    construct_sampling_state_index(dmat0);
+    if( not load_sampling_state ){
+        // construct sampling_state_index which contain states we want to compute IPR
+        construct_sampling_state_index(dmat0);
+    }
+    else{
+        // load sampling_state_index from file: sampling_state_info
+        load_sampling_state_index(log);
+    }
+
 
     // compute density of state
     compute_local_density_of_state(output,dmat0);
@@ -367,19 +374,126 @@ void detector:: construct_sampling_state_index(vector<double> & dmat0){
 
     sampling_state_num = sampling_state_index.size();
 
-    for (i = 0; i < sampling_state_num; i++) {
-        vector<double> v1 ;
-        v1.reserve(dmatsize[0]);
-        xd.push_back(v1);
-        yd.push_back(v1);
-    }
-    xd_all = new double * [ sampling_state_num ];
-    yd_all = new double * [ sampling_state_num ];
-    for(i=0;i< sampling_state_num ;i++){
-        xd_all[i] = new double [total_dmat_size[0]];
-        yd_all[i] = new double [total_dmat_size[0]];
+    // output vmode for state we selected as sampling state
+    if(my_id == 0){
+        ofstream Sampling_state_mode_info(path + "sampling_state_info.txt");
+        Sampling_state_mode_info << sampling_state_num <<"  " << nmodes[0] << endl ;
+        for(i=0;i<sampling_state_num;i++){
+            for(j=0;j<nmodes[0];j++){
+                Sampling_state_mode_info << dv_all[0][sampling_state_index[i]][j] <<"  ";
+            }
+            Sampling_state_mode_info << endl;
+        }
+
+        Sampling_state_mode_info.close();
     }
 
+}
+
+void detector::load_sampling_state_index(ofstream & log) {
+    int state_number = dv_all[0].size();
+    if(my_id == 0){
+        cout << "Read sampling state from sampling_state_info.txt" << endl;
+    }
+    int i, j ;
+    int sampling_state_number;
+    int number_of_mode;
+    bool exist;
+    int location;
+    vector <int> mode_quanta;
+    int quanta;
+    string ss ;
+    if(my_id == 0){
+
+        ifstream load;
+        load.open(path + "sampling_state_info.txt");
+        if(load.is_open()){
+            load >> sampling_state_number >> number_of_mode;
+            std::getline(load,ss);
+            if(number_of_mode != nmodes[0]){
+                cout << "number of mode read from file not equal to nmodes[0]. Check sampling_state_info.txt. " << endl;
+                log << "number of mode read from file not equal to nmodes[0]. Check sampling_state_info.txt. " << endl;
+                MPI_Abort(MPI_COMM_WORLD, -23);
+            }
+
+            for(i=0;i<sampling_state_number;i++){
+                mode_quanta.clear();
+                for(j=0;j<number_of_mode; j++){
+                     load >> quanta;
+                     mode_quanta.push_back(quanta);
+                }
+                std::getline(load,ss);
+                location = find_position_for_insert_binary(dv_all[0],mode_quanta,exist);
+                if( not exist){
+                    cout << "State with quanta: " ;
+                    for(j=0;j<number_of_mode;j++){
+                        cout << mode_quanta[j] << " ";
+                    }
+                    cout << " Can not found in system. Check it. " << endl;
+                    MPI_Abort(MPI_COMM_WORLD,-23);
+                }
+                else{
+                    sampling_state_index.push_back(location);
+                }
+
+            }
+
+        }
+        else{
+            cout << "Can not open sampling_state_info.txt. Check if this file exist in folder . " << endl;
+            log << "Can not open sampling_state_info.txt. Check if this file exist in folder . " << endl;
+            MPI_Abort(MPI_COMM_WORLD, -23);
+        }
+
+    }
+
+    // Broadcast this to other process
+    MPI_Bcast(&sampling_state_number, 1, MPI_INT,0, MPI_COMM_WORLD);
+    int * sampling_state_array = new int [sampling_state_number];
+    if(my_id == 0){
+        for(i=0; i< sampling_state_number;i++){
+            sampling_state_array[i] = sampling_state_index[i];
+        }
+    }
+
+    MPI_Bcast(&sampling_state_array[0], sampling_state_number, MPI_INT, 0, MPI_COMM_WORLD);
+    if(my_id != 0){
+        for(i=0;i<sampling_state_number;i++){
+            sampling_state_index.push_back(sampling_state_array[i]);
+        }
+    }
+
+
+    // find initial state index
+    int initial_state_index_in_all_process;
+    bool initial_state_exist;
+    for(i=0;i<2;i++){
+        initial_state_in_sampling_state_index_list.push_back(0);
+    }
+    sampling_state_number = sampling_state_index.size();
+    for(i=0;i<2;i++){
+        // now initial_state_index record initial state in each electronic state
+        initial_state_index_in_all_process = initial_state_index[i] + initial_state_pc_id[i] * int( state_number / num_proc );
+
+        initial_state_exist = false;
+        for(j=0;j<sampling_state_number;j++){
+            if(initial_state_index_in_all_process == sampling_state_index[j]){
+                initial_state_exist = true;
+                initial_state_in_sampling_state_index_list[i] = j;
+                break;
+            }
+        }
+
+        if( not initial_state_exist ){
+            if(my_id == 0){
+                cout << "Initial state is not in sampling_state_info.txt. Check what's wrong.  " << endl;
+                MPI_Abort(MPI_COMM_WORLD, -23);
+            }
+        }
+
+    }
+
+    delete [] sampling_state_array;
 }
 
 
@@ -766,6 +880,20 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
     int local_index = 0;
     int dmat0_offset = my_id * int(total_dmat_size[0]/num_proc);
     int sampling_state_list_size = sampling_state_index.size();
+
+    for (i = 0; i < sampling_state_list_size; i++) {
+        vector<double> v1 ;
+        v1.reserve(dmatsize[0]);
+        xd.push_back(v1);
+        yd.push_back(v1);
+    }
+    xd_all = new double * [ sampling_state_list_size ];
+    yd_all = new double * [ sampling_state_list_size ];
+    for(i=0;i< sampling_state_list_size ;i++){
+        xd_all[i] = new double [total_dmat_size[0]];
+        yd_all[i] = new double [total_dmat_size[0]];
+    }
+
     for(m=0;m<sampling_state_list_size;m++){
         norm = 0;
         for(i=0;i<dmatsize[0];i++){
@@ -1060,3 +1188,4 @@ void detector:: compute_local_density_of_state(ofstream & output,vector<double> 
 
 
 }
+
