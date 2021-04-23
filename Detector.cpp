@@ -24,12 +24,12 @@ detector::~detector(){
     delete [] premodcoup;
 
     delete [] proptime;
-    delete [] bright_state;
+//    delete [] bright_state;
     delete [] initial_detector_state;
     delete [] initial_Detector_energy;
-    delete [] bright_state_energy;
+//    delete [] bright_state_energy;
 
-    for(i=0;i<stlnum;i++){
+    for(i=0;i<1;i++){
         delete [] dmatsize_each_process[i];
         delete [] dmatsize_offset_each_process[i];
         delete [] doffnum_each_process[i];
