@@ -257,6 +257,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     double * inverse_IPR_all = new double [sampling_state_index_size];
     double * IPR_all = new double [sampling_state_index_size];
 
+    double * normalization_in_one_process = new double [sampling_state_index_size];
+    double * normalization_in_all_process = new double [sampling_state_index_size];
+
     for(i=0;i<s.tlnum;i++){
         start_time[i]=0;
     }
@@ -326,14 +329,21 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             if(k% output_step == 0){
                 for(i=0;i< sampling_state_index_size;i++){
                     inverse_IPR_in_one_process[i] = 0;
+                    normalization_in_one_process[i] = 0;
                     for(j=0;j<d.dmatsize[0];j++){
                         inverse_IPR_in_one_process[i] = inverse_IPR_in_one_process[i] + pow(pow(d.xd[i][j],2) + pow(d.yd[i][j],2),2);
+                        normalization_in_one_process[i] = normalization_in_one_process[i] +
+                                pow(d.xd[i][j],2) + pow(d.yd[i][j],2);
                     }
                 }
 
                 MPI_Reduce(&inverse_IPR_in_one_process[0],&inverse_IPR_all[0],sampling_state_index_size,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-
+                MPI_Reduce(&normalization_in_one_process[0], &normalization_in_all_process[0], sampling_state_index_size, MPI_DOUBLE, MPI_SUM, 0 , MPI_COMM_WORLD);
                 if(my_id == 0){
+                    for(i=0;i<sampling_state_index_size;i++){
+                        inverse_IPR_all[i] = inverse_IPR_all[i] / normalization_in_all_process[i];
+                    }
+
                     for(i=0;i<sampling_state_index_size;i++){
                         IPR_all[i] = 1/ inverse_IPR_all[i];
                     }
@@ -396,4 +406,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     delete [] IPR_all;
     delete [] inverse_IPR_all;
     delete [] inverse_IPR_in_one_process;
+
+    delete [] normalization_in_one_process;
+    delete [] normalization_in_all_process;
 };
