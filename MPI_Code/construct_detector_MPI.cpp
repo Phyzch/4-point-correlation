@@ -1138,7 +1138,7 @@ void detector:: output_state_density(vector<double> & dmat0,  vector<double> & d
 
 void detector:: compute_local_density_of_state(ofstream & output,vector<double> & dmat0){
     // using eq.(2) in https://doi.org/10.1063/1.476070 to compute density of states: sum Lij
-    int i,l;
+    int i,l,j;
     int m;
     double energy_difference;
     int begin_index = total_dmat_size[0]/num_proc * my_id ;
@@ -1183,8 +1183,80 @@ void detector:: compute_local_density_of_state(ofstream & output,vector<double> 
         }
     }
 
-    // compute local density of state for other state in sampling_state_index
 
+
+    // compute local density of state for other state in sampling_state_index
+    double * local_density_of_state_same_electronic_state_one_proc = new double [dmatsize[0]];
+    double * local_density_of_state_in_another_electronic_state_one_proc = new double [dmatsize[0]];
+    double * local_density_of_state_same_electronic_state_all_proc ;
+    double * local_density_of_state_in_another_electronic_state_all_proc;
+    int state_num ;
+
+    for(i=0;i<dmatsize[0];i++){
+        local_density_of_state_same_electronic_state_one_proc[i] = 0;
+        local_density_of_state_in_another_electronic_state_one_proc[i] = 0;
+    }
+    int state_index;
+    for(i=dmatsize[0];i<dmatnum[0];i++){
+        state_index = dirow[0][i] - begin_index ;
+        // energy difference between two states
+        energy_difference = abs( dmat0[dirow[0][i]] - dmat0[dicol[0][i]] );
+        if(dv_all[0][dicol[0][i]][0] == dv_all[0][dirow[0][i]][0]){
+           // coupling in same electronic state
+           local_density_of_state_same_electronic_state_one_proc[state_index] =
+                   local_density_of_state_same_electronic_state_one_proc[state_index] +
+                           1 / (1+ pow(  energy_difference/dmat[0][i] , 2 ) );
+        }
+        else{
+            local_density_of_state_in_another_electronic_state_one_proc[state_index] =
+                    local_density_of_state_in_another_electronic_state_one_proc[state_index] +
+                            1 / (1+ pow(  energy_difference/dmat[0][i] , 2 ) );
+        }
+
+    }
+
+    if(my_id == 0){
+        local_density_of_state_same_electronic_state_all_proc = new double [total_dmat_size[0]];
+        local_density_of_state_in_another_electronic_state_all_proc = new double [ total_dmat_size[0]];
+    }
+    MPI_Gatherv(&local_density_of_state_same_electronic_state_one_proc[0],dmatsize[0], MPI_DOUBLE,
+                &local_density_of_state_same_electronic_state_all_proc[0],dmatsize_each_process[0],
+                dmatsize_offset_each_process[0], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    MPI_Gatherv(&local_density_of_state_in_another_electronic_state_one_proc[0], dmatsize[0],MPI_DOUBLE,
+                &local_density_of_state_in_another_electronic_state_all_proc[0], dmatsize_each_process[0], dmatsize_offset_each_process[0],
+                MPI_DOUBLE,0, MPI_COMM_WORLD);
+
+    if(my_id == 0){
+        ofstream local_density_of_state_output(path + "local_density_of_state.txt");
+        state_num = sampling_state_index.size();
+        local_density_of_state_output << state_num << endl;
+        for(i=0;i<state_num;i++){
+            local_density_of_state_output << local_density_of_state_same_electronic_state_all_proc[sampling_state_index[i] ]  << " ";
+        }
+        local_density_of_state_output << endl;
+
+        for(i=0;i<state_num;i++){
+            local_density_of_state_output << local_density_of_state_in_another_electronic_state_all_proc[sampling_state_index[i]] << " ";
+        }
+        local_density_of_state_output << endl;
+
+        for(i=0;i<state_num;i++){
+            for(j=0;j<nmodes[0];j++){
+                local_density_of_state_output << dv_all[0][sampling_state_index[i]][j] <<" ";
+            }
+            local_density_of_state_output << endl;
+        }
+
+        local_density_of_state_output.close();
+    }
+
+    delete [] local_density_of_state_same_electronic_state_one_proc;
+    delete [] local_density_of_state_in_another_electronic_state_one_proc;
+    if(my_id == 0){
+        delete [] local_density_of_state_in_another_electronic_state_all_proc;
+        delete [] local_density_of_state_same_electronic_state_all_proc;
+    }
 
 
 }
