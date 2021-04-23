@@ -24,55 +24,78 @@ bool load_sampling_state = true;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/spin_boson_LW_model/try/";
+                       "spin_boson_LW_model/try/";
    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
     string cvpt_path;
-    int i;
+    int i,j;
     int Filenumber=1;
     string path;
+    string path1;
 
     // MPI Command
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD,&num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
 
-    string c_list[3] = {
-            "0.1",
-            "0.2",
-            "0.3"
+
+    string scaling_factor[5] = {
+            "0.1" ,
+            "0.11",
+            "0.12" ,
+            "0.13",
+            "0.14"
     };
-    string V_list[3] = {
-            "V=100",
-            "V=200",
-            "V=300"
+    string tunneling_list [4] = {
+            "0",
+            "100",
+            "300",
+            "500"
     };
-    for(i=0;i<Filenumber;i++){
-        if(Filenumber!=1) {
-            path = parentpath + to_string(i + 1) + "/";   // path for sub-folder.
-            cvpt_path =cvpt_parent_path + V_list[i]+"/";
-//            cvpt_path = cvpt_parent_path;
-        }
-        else{
-            path=parentpath;
-            cvpt_path =cvpt_parent_path;
-        }
 
-        // check directory exists or not and create subfolder.
-        // only master process will create folder and file.  only master process wilL do I/O.
+    int scaling_number = sizeof(scaling_factor)/sizeof(scaling_factor[0]);
+    int tunneling_number = sizeof(tunneling_list)/sizeof(tunneling_list[0]);
 
-//        if(my_id==0) {
-//            if(Filenumber!=1) {
-//                check_and_create_file(parentpath, path);
-//            }
-//            else ;
-//        }
-
-        { // the parenthese here let destructor called after we use this instance.
-            // pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
+    for (i=0;i<tunneling_number;i++){
+        path1 = parentpath + tunneling_list[i] + "/";
+        for (j=0;j<scaling_number;j++){
+            path = path1 + scaling_factor[j] + "/";
+            double x = 0;
+            { // the parenthese here let destructor called after we use this instance.
+             //pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
             full_system photon_entangled_system(path,cvpt_path);  // set parameter and construct Hamiltonian.
             photon_entangled_system.Quantum_evolution(); // creat initial state (or read from file). Then complete simulation.
         }
+
+        }
     }
+
+
+//    for(i=0;i<Filenumber;i++){
+//        if(Filenumber!=1) {
+//            path = parentpath + to_string(i + 1) + "/";   // path for sub-folder.
+////            cvpt_path = cvpt_parent_path;
+//        }
+//        else{
+//            path=parentpath;
+//            cvpt_path =cvpt_parent_path;
+//        }
+//
+//        // check directory exists or not and create subfolder.
+//        // only master process will create folder and file.  only master process wilL do I/O.
+//
+////        if(my_id==0) {
+////            if(Filenumber!=1) {
+////                check_and_create_file(parentpath, path);
+////            }
+////            else ;
+////        }
+//
+//        { // the parenthese here let destructor called after we use this instance.
+//            // pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
+//            full_system photon_entangled_system(path,cvpt_path);  // set parameter and construct Hamiltonian.
+//            photon_entangled_system.Quantum_evolution(); // creat initial state (or read from file). Then complete simulation.
+//        }
+//    }
     MPI_Finalize();
 }
 
