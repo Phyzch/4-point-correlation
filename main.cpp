@@ -48,8 +48,8 @@ int main(int argc,char * argv []) {
     string tunneling_list [4] = {
             "0",
             "100",
-            "300",
-            "500"
+            "200",
+            "300"
     };
 
     int scaling_number = sizeof(scaling_factor)/sizeof(scaling_factor[0]);
@@ -59,7 +59,6 @@ int main(int argc,char * argv []) {
         path1 = parentpath + tunneling_list[i] + "/";
         for (j=0;j<scaling_number;j++){
             path = path1 + scaling_factor[j] + "/";
-            double x = 0;
             { // the parenthese here let destructor called after we use this instance.
              //pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
             full_system photon_entangled_system(path,cvpt_path);  // set parameter and construct Hamiltonian.

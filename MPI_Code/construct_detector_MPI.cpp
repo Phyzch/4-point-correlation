@@ -691,7 +691,7 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
         log << "ALpha:  " << Alpha << endl;
     }
 
-    double cutoff_for_coupling_between_electronic_state = 0.001 ;
+    double cutoff_for_coupling_between_electronic_state = 0.05 ;
 
     // different process do different amount of work.
     vmode_ptr = &(vmode0);
@@ -1146,6 +1146,11 @@ void detector:: compute_local_density_of_state(ofstream & output,vector<double> 
     double density_of_state_couple_to_another_electronic_state;
     int number_of_state_same_electronic_state ;
     int number_of_state_in_another_electronic_state;
+    vector<double> energy_list_same_electronic_state ;
+    vector<double> energy_list_another_electronic_state ;
+    double max_energy1 , min_energy1;
+    double max_energy2, min_energy2;
+    double rho_same_electronic_state, rho_another_electronic_state; // local density of state
 
     for(m=0;m<2; m++) {
         density_of_state_in_same_electronic_state = 0;
@@ -1162,24 +1167,51 @@ void detector:: compute_local_density_of_state(ofstream & output,vector<double> 
                         density_of_state_in_same_electronic_state =
                                 density_of_state_in_same_electronic_state + 1 / (1+ pow(  energy_difference/dmat[0][i] , 2 ) );
                         number_of_state_same_electronic_state = number_of_state_same_electronic_state + 1;
+                        energy_list_same_electronic_state.push_back(dmat0[dicol[0][i]]);
                     }
                     else{
                         density_of_state_couple_to_another_electronic_state =
                                 density_of_state_couple_to_another_electronic_state + 1 / (1+ pow(  energy_difference/dmat[0][i] , 2 ) );
 
                         number_of_state_in_another_electronic_state = number_of_state_in_another_electronic_state + 1;
+                        energy_list_another_electronic_state.push_back(dmat0[dicol[0][i]]);
                     }
 
                 }
             }
+            if(number_of_state_same_electronic_state != 0){
+                max_energy1 = *max_element(energy_list_same_electronic_state.begin() , energy_list_same_electronic_state.end());
+                min_energy1 = *min_element(energy_list_same_electronic_state.begin(), energy_list_same_electronic_state.end() );
+                rho_same_electronic_state = number_of_state_same_electronic_state / (max_energy1 - min_energy1);
+            }
+            else{
+                rho_same_electronic_state = 0;
+            }
+            if(number_of_state_in_another_electronic_state != 0){
+                max_energy2 = *max_element(energy_list_another_electronic_state.begin(), energy_list_another_electronic_state.end());
+                min_energy2 = *min_element(energy_list_another_electronic_state.begin(), energy_list_another_electronic_state.end());
+                rho_another_electronic_state = number_of_state_in_another_electronic_state / (max_energy2 - min_energy2);
+            }
+            else{
+                rho_another_electronic_state = 0;
+            }
+
         }
 
         MPI_Bcast(&density_of_state_in_same_electronic_state, 1 ,MPI_DOUBLE, initial_state_pc_id[m], MPI_COMM_WORLD);
         MPI_Bcast(&density_of_state_couple_to_another_electronic_state, 1, MPI_DOUBLE, initial_state_pc_id[m] , MPI_COMM_WORLD);
         MPI_Bcast(&number_of_state_same_electronic_state, 1 , MPI_INT, initial_state_pc_id[m], MPI_COMM_WORLD );
+        MPI_Bcast(&number_of_state_in_another_electronic_state, 1, MPI_INT, initial_state_pc_id[m] , MPI_COMM_WORLD);
+        MPI_Bcast(&rho_same_electronic_state, 1, MPI_DOUBLE, initial_state_pc_id[m], MPI_COMM_WORLD);
+        MPI_Bcast(&rho_another_electronic_state, 1, MPI_DOUBLE, initial_state_pc_id[m], MPI_COMM_WORLD);
         if(my_id == 0){
+            output << " number of state connected to initial state " << density_of_state_in_same_electronic_state << endl;
+            output << "number of state connected to another electronic state  " << density_of_state_couple_to_another_electronic_state << endl;
             output <<  "state :   " << m  << " Density of state in same electronic state:   " << density_of_state_in_same_electronic_state << endl;
             output << "state :  " << m << "  Density of state in another electronic state :   " << density_of_state_couple_to_another_electronic_state << endl;
+
+            output << "rho_local in same electronic state for state: " << m << " " << rho_same_electronic_state << endl;
+            output << "rho_local in another electronic state for state:  "<< m <<" " << rho_another_electronic_state << endl;
         }
     }
 
@@ -1258,6 +1290,157 @@ void detector:: compute_local_density_of_state(ofstream & output,vector<double> 
         delete [] local_density_of_state_same_electronic_state_all_proc;
     }
 
+    // compute average coupling strength <|V|> and rho_local for all states in system and output state of choice.
+    // This is used to compute criteria T for our system.
 
+    double * rho_local_same_electronic_state = new double [dmatsize[0]];
+    double * rho_local_another_electronic_state = new double [dmatsize[0]];
+
+    double * average_coupling_strength_same_electronic_state = new double [dmatsize[0]];
+    double * average_coupling_strength_another_electronic_state = new double  [dmatsize[0]];
+
+    double * all_proc_rho_local_same_electronic_state ;
+    double * all_proc_rho_local_another_electronic_state ;
+    double * all_proc_average_coupling_strength_same_electronic_state;
+    double * all_proc_average_coupling_strength_another_electronic_state;
+
+    vector<int> number_of_state_same_electronic_state_list;
+    vector<int> number_of_state_another_electronic_state_list;
+
+    vector<vector<double>> coupled_state_energy_same_electronic_state;
+    vector<vector<double>> coupled_state_energy_another_electronic_state;
+    for(i=0;i<dmatsize[0];i++){
+        rho_local_another_electronic_state[i] = 0;
+        rho_local_same_electronic_state[i] = 0;
+        average_coupling_strength_same_electronic_state[i] = 0;
+        average_coupling_strength_another_electronic_state[i] = 0;
+
+        number_of_state_same_electronic_state_list.push_back(0);
+        number_of_state_another_electronic_state_list.push_back(0);
+
+        vector<double> v;
+        coupled_state_energy_same_electronic_state.push_back(v);
+        coupled_state_energy_another_electronic_state.push_back(v);
+    }
+
+    for(i=dmatsize[0];i<dmatnum[0];i++){
+        state_index = dirow[0][i] - begin_index;
+
+        if(dv_all[0][dicol[0][i]][0] == dv_all[0][dirow[0][i]][0]){
+            // same electronic state
+            average_coupling_strength_same_electronic_state[state_index] =
+                    average_coupling_strength_same_electronic_state[state_index] +
+                    abs(dmat[0][i]);
+
+            number_of_state_same_electronic_state_list[state_index] =
+                    number_of_state_same_electronic_state_list[state_index] + 1;
+            // energy of state coupled
+            coupled_state_energy_same_electronic_state[state_index].push_back(dmat0[dicol[0][i]]);
+
+        }
+        else{
+            average_coupling_strength_another_electronic_state[state_index] =
+                    average_coupling_strength_another_electronic_state[state_index] +
+                    abs(dmat[0][i]);
+
+            number_of_state_another_electronic_state_list[state_index] =
+                    number_of_state_another_electronic_state_list[state_index] + 1;
+
+            // energy of state coupled:
+            coupled_state_energy_another_electronic_state[state_index].push_back(dmat0[dicol[0][i]]);
+        }
+
+
+    }
+
+    for(i=0;i<dmatsize[0];i++){
+        if(number_of_state_same_electronic_state_list[i] > 1){
+            average_coupling_strength_same_electronic_state[i] = average_coupling_strength_same_electronic_state[i]/
+                                                                 number_of_state_same_electronic_state_list[i];
+            max_energy1 = *max_element(coupled_state_energy_same_electronic_state[i].begin(), coupled_state_energy_same_electronic_state[i].end());
+            min_energy1 = *min_element(coupled_state_energy_same_electronic_state[i].begin(), coupled_state_energy_same_electronic_state[i].end());
+            rho_local_same_electronic_state[i] = number_of_state_same_electronic_state_list[i] / (max_energy1 - min_energy1);
+        }
+        else{
+            average_coupling_strength_same_electronic_state[i] = 0;
+            rho_local_same_electronic_state[i] = 0;
+        }
+        if(number_of_state_another_electronic_state_list[i] > 1){
+            average_coupling_strength_another_electronic_state[i] = average_coupling_strength_another_electronic_state[i]/
+                                                                    number_of_state_another_electronic_state_list[i];
+
+            max_energy2 = *max_element(coupled_state_energy_another_electronic_state[i].begin(), coupled_state_energy_another_electronic_state[i].end());
+            min_energy2 = *min_element(coupled_state_energy_another_electronic_state[i].begin(), coupled_state_energy_another_electronic_state[i].end());
+            rho_local_another_electronic_state[i] = number_of_state_another_electronic_state_list[i] / (max_energy2 - min_energy2);
+        }
+        else{
+            average_coupling_strength_another_electronic_state[i] = 0;
+            rho_local_another_electronic_state[i] = 0;
+        }
+
+    }
+
+    if(my_id == 0){
+        all_proc_rho_local_same_electronic_state = new double [total_dmat_size[0]];
+        all_proc_rho_local_another_electronic_state = new double [total_dmat_size[0]];
+        all_proc_average_coupling_strength_same_electronic_state = new double [total_dmat_size[0]];
+        all_proc_average_coupling_strength_another_electronic_state = new double [total_dmat_size[0]];
+    }
+
+    MPI_Gatherv(&rho_local_same_electronic_state[0], dmatsize[0], MPI_DOUBLE,
+                &all_proc_rho_local_same_electronic_state[0], dmatsize_each_process[0], dmatsize_offset_each_process[0],
+                MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    MPI_Gatherv(&rho_local_another_electronic_state[0], dmatsize[0], MPI_DOUBLE,
+                &all_proc_rho_local_another_electronic_state[0], dmatsize_each_process[0], dmatsize_offset_each_process[0],
+                MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    MPI_Gatherv(&average_coupling_strength_same_electronic_state[0], dmatsize[0], MPI_DOUBLE,
+                &all_proc_average_coupling_strength_same_electronic_state[0], dmatsize_each_process[0], dmatsize_offset_each_process[0],
+                MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    MPI_Gatherv(&average_coupling_strength_another_electronic_state[0], dmatsize[0], MPI_DOUBLE,
+                &all_proc_average_coupling_strength_another_electronic_state[0], dmatsize_each_process[0], dmatsize_offset_each_process[0],
+                MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    if(my_id == 0){
+        ofstream T_information (path + "transition_criteria_info.txt");
+        state_num = sampling_state_index.size();
+        T_information << state_num << endl;
+        for(i=0;i<state_num;i++){
+            T_information << all_proc_rho_local_same_electronic_state[sampling_state_index[i]] << " ";
+        }
+        T_information << endl;
+        for(i=0;i<state_num;i++){
+            T_information << all_proc_rho_local_another_electronic_state[sampling_state_index[i]] <<" ";
+        }
+        T_information << endl;
+        for(i=0;i<state_num;i++){
+            T_information << all_proc_average_coupling_strength_same_electronic_state[sampling_state_index[i]] <<" ";
+        }
+        T_information << endl;
+        for(i=0;i<state_num;i++){
+            T_information << all_proc_average_coupling_strength_another_electronic_state[sampling_state_index[i]] <<" ";
+        }
+        T_information << endl;
+        for(i=0;i<state_num;i++){
+            for(j=0;j<nmodes[0];j++){
+                T_information << dv_all[0][sampling_state_index[i]][j] <<" ";
+            }
+            T_information << endl;
+        }
+        T_information.close();
+    }
+
+    delete [] rho_local_same_electronic_state;
+    delete [] rho_local_another_electronic_state;
+    delete [] average_coupling_strength_same_electronic_state;
+    delete [] average_coupling_strength_another_electronic_state;
+    if(my_id == 0){
+       delete [] all_proc_rho_local_same_electronic_state;
+       delete [] all_proc_rho_local_another_electronic_state;
+       delete [] all_proc_average_coupling_strength_another_electronic_state;
+       delete [] all_proc_average_coupling_strength_same_electronic_state;
+    }
 }
 
