@@ -440,6 +440,9 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
     bool exist;
     int position;
     double random_number;
+
+    double Largest_interaction = 0 ;
+    double Largest_interaction_in_all_proc = 0;
     // different process do different amount of work.
     for(m=0;m<1;m++){
         if(m==0){
@@ -492,16 +495,24 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
 
                     for (k = 0; k < nmodes[m]; k++) {
                         // aij  = f^{1/2} / 270
-                        value = value * pow(aij[m][k]* nbar[k], deln[k]);
+                        value = value * pow(aij[m][k] * nbar[k], deln[k]);
                     }
+
                     if ( (*dmat_ptr)[i] != (*dmat_ptr)[j] ) {
                         lij = abs(value / ((*dmat_ptr)[i] - (*dmat_ptr)[j]));
                         if (lij > cutoff) {
+                            if(abs(value) > Largest_interaction){
+                                Largest_interaction = value;
+                            }
                             dmat[m].push_back(value);
                             dirow[m].push_back(i);
                             dicol[m].push_back(j);
                         }
                     } else {
+                        if(abs(value) > Largest_interaction){
+                            Largest_interaction = value;
+                        }
+
                         dmat[m].push_back(value);
                         dirow[m].push_back(i);
                         dicol[m].push_back(j);
@@ -510,6 +521,13 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
             }
         }
     }
+
+    MPI_Reduce(&Largest_interaction, &Largest_interaction_in_all_proc, 1, MPI_DOUBLE, MPI_MAX,0, MPI_COMM_WORLD);
+    if(my_id == 0){
+        log << "Max coupling strength in molecules:    " << Largest_interaction_in_all_proc << endl;
+        cout << "Max coupling strength in molecules:    " << Largest_interaction_in_all_proc << endl;
+    }
+
 }
 
 void detector:: broadcast_dmatnum_doffnum(){
