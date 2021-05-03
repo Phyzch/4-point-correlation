@@ -38,63 +38,63 @@ int main(int argc,char * argv []) {
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
 
 
-    string scaling_factor[5] = {
-            "0.1" ,
-            "0.11",
-            "0.12" ,
-            "0.13",
-            "0.14"
-    };
-    string tunneling_list [4] = {
-            "0",
-            "100",
-            "200",
-            "300"
-    };
-
-    int scaling_number = sizeof(scaling_factor)/sizeof(scaling_factor[0]);
-    int tunneling_number = sizeof(tunneling_list)/sizeof(tunneling_list[0]);
-
-    for (i=0;i<tunneling_number;i++){
-        path1 = parentpath + tunneling_list[i] + "/";
-        for (j=0;j<scaling_number;j++){
-            path = path1 + scaling_factor[j] + "/";
-            { // the parenthese here let destructor called after we use this instance.
-             //pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
-            full_system photon_entangled_system(path,cvpt_path);  // set parameter and construct Hamiltonian.
-            photon_entangled_system.Quantum_evolution(); // creat initial state (or read from file). Then complete simulation.
-        }
-
-        }
-    }
-
-
-//    for(i=0;i<Filenumber;i++){
-//        if(Filenumber!=1) {
-//            path = parentpath + to_string(i + 1) + "/";   // path for sub-folder.
-////            cvpt_path = cvpt_parent_path;
-//        }
-//        else{
-//            path=parentpath;
-//            cvpt_path =cvpt_parent_path;
-//        }
+//    string scaling_factor[5] = {
+//            "0.1" ,
+//            "0.11",
+//            "0.12" ,
+//            "0.13",
+//            "0.14"
+//    };
+//    string tunneling_list [4] = {
+//            "0",
+//            "100",
+//            "200",
+//            "300"
+//    };
 //
-//        // check directory exists or not and create subfolder.
-//        // only master process will create folder and file.  only master process wilL do I/O.
+//    int scaling_number = sizeof(scaling_factor)/sizeof(scaling_factor[0]);
+//    int tunneling_number = sizeof(tunneling_list)/sizeof(tunneling_list[0]);
 //
-////        if(my_id==0) {
-////            if(Filenumber!=1) {
-////                check_and_create_file(parentpath, path);
-////            }
-////            else ;
-////        }
-//
-//        { // the parenthese here let destructor called after we use this instance.
-//            // pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
+//    for (i=0;i<tunneling_number;i++){
+//        path1 = parentpath + tunneling_list[i] + "/";
+//        for (j=0;j<scaling_number;j++){
+//            path = path1 + scaling_factor[j] + "/";
+//            { // the parenthese here let destructor called after we use this instance.
+//             //pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
 //            full_system photon_entangled_system(path,cvpt_path);  // set parameter and construct Hamiltonian.
 //            photon_entangled_system.Quantum_evolution(); // creat initial state (or read from file). Then complete simulation.
 //        }
+//
+//        }
 //    }
+
+
+    for(i=0;i<Filenumber;i++){
+        if(Filenumber!=1) {
+            path = parentpath + to_string(i + 1) + "/";   // path for sub-folder.
+//            cvpt_path = cvpt_parent_path;
+        }
+        else{
+            path=parentpath;
+            cvpt_path =cvpt_parent_path;
+        }
+
+        // check directory exists or not and create subfolder.
+        // only master process will create folder and file.  only master process wilL do I/O.
+
+//        if(my_id==0) {
+//            if(Filenumber!=1) {
+//                check_and_create_file(parentpath, path);
+//            }
+//            else ;
+//        }
+
+        { // the parenthese here let destructor called after we use this instance.
+            // pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
+            full_system photon_entangled_system(path,cvpt_path);  // set parameter and construct Hamiltonian.
+            photon_entangled_system.Quantum_evolution(); // creat initial state (or read from file). Then complete simulation.
+        }
+    }
     MPI_Finalize();
 }
 

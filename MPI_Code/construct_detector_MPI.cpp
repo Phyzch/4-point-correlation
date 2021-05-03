@@ -691,7 +691,7 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
         log << "ALpha:  " << Alpha << endl;
     }
 
-    double cutoff_for_coupling_between_electronic_state = 0.05 ;
+    double cutoff_for_coupling_between_electronic_state = 0.001 ;
 
     // different process do different amount of work.
     vmode_ptr = &(vmode0);
@@ -1179,7 +1179,7 @@ void detector:: compute_local_density_of_state(ofstream & output,vector<double> 
 
                 }
             }
-            if(number_of_state_same_electronic_state != 0){
+            if(number_of_state_same_electronic_state > 1){
                 max_energy1 = *max_element(energy_list_same_electronic_state.begin() , energy_list_same_electronic_state.end());
                 min_energy1 = *min_element(energy_list_same_electronic_state.begin(), energy_list_same_electronic_state.end() );
                 rho_same_electronic_state = number_of_state_same_electronic_state / (max_energy1 - min_energy1);
@@ -1187,7 +1187,7 @@ void detector:: compute_local_density_of_state(ofstream & output,vector<double> 
             else{
                 rho_same_electronic_state = 0;
             }
-            if(number_of_state_in_another_electronic_state != 0){
+            if(number_of_state_in_another_electronic_state > 1){
                 max_energy2 = *max_element(energy_list_another_electronic_state.begin(), energy_list_another_electronic_state.end());
                 min_energy2 = *min_element(energy_list_another_electronic_state.begin(), energy_list_another_electronic_state.end());
                 rho_another_electronic_state = number_of_state_in_another_electronic_state / (max_energy2 - min_energy2);
