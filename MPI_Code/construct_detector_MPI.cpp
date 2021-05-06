@@ -1008,7 +1008,7 @@ void detector::construct_initial_state_MPI(ifstream & input, ofstream & output){
 
         initial_detector_state[1][0] = 1;
         initial_detector_state[1][1] = round (Crossing_point_quanta_spin_up_mode0 );
-        initial_detector_state[0][2] = round(Crossing_point_quanta_spin_up_mode1);
+        initial_detector_state[1][2] = round(Crossing_point_quanta_spin_up_mode1);
 
         for(j=3; j < nmodes[0]; j++){
             initial_detector_state[1][j] = initial_detector_state[0][j];

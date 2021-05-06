@@ -34,6 +34,7 @@ double system_energy;  // energy of photon
 bool Random_bright_state;
 
 double * coupling_strength_to_mode0 ;
+double * coupling_strength_to_mode1;
 double Coupling_between_electronic_state;
 
 // initialization of parameters and do some pre-coupling set up
