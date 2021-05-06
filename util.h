@@ -57,6 +57,7 @@ extern bool no_coupling;  // if this is Ture, we do not have off-diagonal coupli
 extern bool compute_overlap_with_eigenstate; // If this is True, we will use MFD to compute overlap of initial state with eigenvalue
 
 extern double * coupling_strength_to_mode0;
+extern double * coupling_strength_to_mode1;
 extern double Coupling_between_electronic_state;
 extern bool load_sampling_state;
 

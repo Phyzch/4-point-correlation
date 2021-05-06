@@ -7,9 +7,12 @@
 
 void full_system:: read_input_with_MPI(){
     coupling_strength_to_mode0 = new double [2];
+    coupling_strength_to_mode1 = new double [2];
     if(my_id==0) {
-        double coupling_strength_to_mode_spin_up ;
-        double coupling_strength_to_mode_spin_down;
+        double coupling_strength_to_mode0_spin_up ;
+        double coupling_strength_to_mode0_spin_down;
+        double coupling_strength_to_mode1_spin_up;
+        double coupling_strength_to_mode1_spin_down ;
         input.open(path + "input.txt"); // information recorded in input.txt
         if (!input.is_open()) {
             cout << "THE INFILE FAILS TO OPEN!" << endl;
@@ -23,12 +26,18 @@ void full_system:: read_input_with_MPI(){
               >>detector_lower_bright_state_energy_window_shrink ;
 
         // coupling strength of electronic state to mode 0 coordinate.
-        input >> coupling_strength_to_mode_spin_up >> coupling_strength_to_mode_spin_down;
+        input >> coupling_strength_to_mode0_spin_up >> coupling_strength_to_mode0_spin_down;
+        coupling_strength_to_mode0[0] = coupling_strength_to_mode0_spin_down;
+      coupling_strength_to_mode0[1] = coupling_strength_to_mode0_spin_up ;
 
-        coupling_strength_to_mode0[0] = coupling_strength_to_mode_spin_up;
-      coupling_strength_to_mode0[1] = coupling_strength_to_mode_spin_down ;
+        // coupling strength of electronic state to mode 1 coordinate
+        input >> coupling_strength_to_mode1_spin_up >> coupling_strength_to_mode1_spin_down ;
+        coupling_strength_to_mode1[0] = coupling_strength_to_mode1_spin_down;
+        coupling_strength_to_mode1[1] = coupling_strength_to_mode1_spin_up;
 
-      input >> Coupling_between_electronic_state ;
+      input >> Coupling_between_electronic_state;
+
+
 
 // read time used for simulation.  delt: time step. tstart: time start to turn on coupling. tmax: maximum time for simulation.   tprint: time step to print result.
       input >> delt >> tstart >> tmax >> tprint;
@@ -87,7 +96,9 @@ void full_system:: read_input_with_MPI(){
     MPI_Bcast(&d.V_intra,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&d.detector_energy_window_size,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&detector_lower_bright_state_energy_window_shrink,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+
     MPI_Bcast(&coupling_strength_to_mode0[0], 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&coupling_strength_to_mode1[0], 2, MPI_DOUBLE , 0, MPI_COMM_WORLD);
     MPI_Bcast(&Coupling_between_electronic_state, 1, MPI_DOUBLE, 0 , MPI_COMM_WORLD);
 
     // Bcast delt tstart tmax tprint to other process.

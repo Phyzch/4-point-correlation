@@ -154,7 +154,13 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
         double ground_electronic_state_initial_energy_shift = 0 ;
         // excited_electronic_state_initial_energy_shift : energy shift for excited state.
         // this energy shift is due to different coupling strength in different electronic state.
-        double excited_electronic_state_initial_energy_shift = pow(coupling_strength_to_mode0[0],2) / d.mfreq[0][1] - pow(coupling_strength_to_mode0[1] , 2) / d.mfreq[0][1] ;
+        double excited_electronic_state_initial_energy_shift = 0;
+        excited_electronic_state_initial_energy_shift =  excited_electronic_state_initial_energy_shift +
+                pow(coupling_strength_to_mode0[0],2) / d.mfreq[0][1]
+                - pow(coupling_strength_to_mode0[1] , 2) / d.mfreq[0][1] ;
+        excited_electronic_state_initial_energy_shift = excited_electronic_state_initial_energy_shift +
+                pow(coupling_strength_to_mode1[0],2) / d.mfreq[0][2]
+            - pow(coupling_strength_to_mode1[1] , 2) / d.mfreq[0][2] ;
 
         double crossing_region_energy = d.mfreq[0][1]/2 *
                 pow( d.mfreq[0][0] /(sqrt(2) *(coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1]) ) +

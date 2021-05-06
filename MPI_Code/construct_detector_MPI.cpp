@@ -671,27 +671,40 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
     double random_number;
 
     bool Other_vibrational_state_same;
-    int Minimum_Mode_1_index;
+    int Minimum_Mode_0_index;
+    int Minimum_Mode1_index;
     double tunneling_matrix_element;
+    double overlap_mode0;
+    double overlap_mode1;
     double factorial_coefficient;
     int m_index , n_index;
+    int m_index_mode1, n_index_mode1;
 
     // alpha = (\lambda_{up} + \lambda_{down} ) / \hbar \omega_{0}.  \omega_{0} is frequency of vibrational state couple to electronic state, here is mfreq[0][1]
-    double Alpha = (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1]) / (mfreq[0][1]);
+    double Alpha_mode0 = (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1]) / (mfreq[0][1]);
+    double Alpha_mode1 = (coupling_strength_to_mode1[0] + coupling_strength_to_mode1[1]) /(mfreq[0][2]);
 
-    double Crossing_point_quanta_spin_down = pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
+    double Crossing_point_quanta_spin_down_mode0 = pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
             + 2 * coupling_strength_to_mode0[0] / (mfreq[0][1]) , 2 ) / 4 ;
 
-    double Crossing_point_quanta_spin_up =
+    double Crossing_point_quanta_spin_up_mode0 =
             pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
                   - 2 * coupling_strength_to_mode0[1] / (mfreq[0][1]) , 2 ) / 4  ;
 
+    double Crossing_point_quanta_spin_down_mode1 = pow(  (mfreq[0][0])/ (coupling_strength_to_mode1[0] + coupling_strength_to_mode1[1])
+                                                         + 2 * coupling_strength_to_mode1[0] / (mfreq[0][2]) , 2 ) / 4 ;
+
+    double Crossing_point_quanta_spin_up_mode1 =
+            pow(  (mfreq[0][0])/ (coupling_strength_to_mode1[0] + coupling_strength_to_mode1[1])
+                  - 2 * coupling_strength_to_mode1[1] / (mfreq[0][2]) , 2 ) / 4  ;
+
+
     if(my_id == 0){
-        cout << "ALpha :   " << Alpha << endl;
-        log << "ALpha:  " << Alpha << endl;
+        cout << "ALpha mode 0 :   " << Alpha_mode0 << endl;
+        log << "ALpha mode 0 :  " << Alpha_mode0 << endl;
     }
 
-    double cutoff_for_coupling_between_electronic_state = 0.001 ;
+    double cutoff_for_Coupling_between_electronic_state = 0.001 ;
 
     // different process do different amount of work.
     vmode_ptr = &(vmode0);
@@ -756,7 +769,7 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
             if( (*vmode_ptr)[i][0] != (*vmode_ptr)[j][0] ){
                 // Check other vibrational state except vibrational mode with index1 is the same
                 Other_vibrational_state_same = true ;
-                for( k = 2 ; k <nmodes[0]; k ++  ) {
+                for( k = 3 ; k <nmodes[0]; k ++  ) {
                     if ((*vmode_ptr)[i][k] != (*vmode_ptr)[j][k]) {
                         Other_vibrational_state_same = false;
                     }
@@ -772,37 +785,58 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
                     //  <spin_down | spin_up> case
                     m_index = (*vmode_ptr)[i][1];
                     n_index = (*vmode_ptr)[j][1];
+
+                    m_index_mode1 = (* vmode_ptr)[i][2];
+                    n_index_mode1 = (* vmode_ptr)[j][2];
                 }
                 else{
                     // <spin_up | spin_down> case:
                     m_index = (*vmode_ptr)[j][1];
                     n_index = (*vmode_ptr)[i][1];
+
+                    m_index_mode1 = (* vmode_ptr)[j][2];
+                    n_index_mode1 = (* vmode_ptr)[i][2];
                 }
                 // below compute <spin_down, m_index | spin_up, n_index >
-                Minimum_Mode_1_index = min(  m_index , n_index ) ;
-                tunneling_matrix_element = 0;
+                tunneling_matrix_element = 1;
 
-                for(k=0; k<= Minimum_Mode_1_index; k++){
+                Minimum_Mode_0_index = min(  m_index , n_index ) ;
+                overlap_mode0 = 0;
+                for(k=0; k<= Minimum_Mode_0_index; k++){
                     // (-1)^{m_index - k}/ [(m_index - k)! * (n_index-k)! ] * sqrt(m! * n!) / (k!)
                     factorial_coefficient = 1 / (factorial( m_index - k ) * factorial(n_index - k) ) *
                             pow(-1 , m_index - k) * sqrt(factorial(m_index) * factorial(n_index) )/ (factorial(k));
 
-                    tunneling_matrix_element = tunneling_matrix_element + pow(Alpha, m_index + n_index - 2 * k) *
+                    overlap_mode0 = overlap_mode0 + pow(Alpha_mode0, m_index + n_index - 2 * k) *
                             factorial_coefficient;
                 }
-                // Coupling_between_electronic_state : t in Logan's note.
-                tunneling_matrix_element = tunneling_matrix_element * exp(- pow(Alpha,2) / 2 ) * Coupling_between_electronic_state;
+                overlap_mode0 = overlap_mode0 * exp(- pow(Alpha_mode0,2) / 2 );
 
-                if( i == initial_state_index[0] and j== initial_state_index[1]){
-                    cout << "Found " << endl;
+                // coupling for mode 1
+                Minimum_Mode1_index = min(m_index_mode1, n_index_mode1);
+                overlap_mode1 = 0;
+                for (k=0; k<Minimum_Mode1_index;k++){
+                    factorial_coefficient = 1 /(  factorial(m_index_mode1 - k) * factorial(n_index_mode1 - k)) *
+                            pow(-1, m_index_mode1 -k) * sqrt(factorial(m_index_mode1) * factorial(n_index_mode1)) / factorial(k);
+                    overlap_mode1 = overlap_mode1 + pow(Alpha_mode1 , m_index_mode1 + n_index_mode1 - 2 * k) *
+                            factorial_coefficient;
                 }
+                overlap_mode1 = overlap_mode1 * exp(- pow(Alpha_mode1 , 2) / 2);
+
+
+                // Coupling_between_electronic_state : t in Logan's note.
+                tunneling_matrix_element = tunneling_matrix_element * overlap_mode0 * overlap_mode1 * Coupling_between_electronic_state;
+
+//                if( i == initial_state_index[0] and j== initial_state_index[1]){
+//                    cout << "Found " << endl;
+//                }
 
                 // cutoff criteria. This equivalent to strong coupling is among states in two electronic state which have similar energy. (near crossing region)
 
 
                 if ( (*dmat_ptr)[i] != (*dmat_ptr)[j] ) {
                     lij = abs(tunneling_matrix_element / ((*dmat_ptr)[i] - (*dmat_ptr)[j]));
-                    if (lij > cutoff_for_coupling_between_electronic_state) {
+                    if (lij > cutoff_for_Coupling_between_electronic_state) {
                         dmat[0].push_back( tunneling_matrix_element );
                         dirow[0].push_back(i);
                         dicol[0].push_back(j);
@@ -930,12 +964,20 @@ void detector::construct_initial_state_MPI(ifstream & input, ofstream & output){
     double random_number;
     double prob;
 
-    double Crossing_point_quanta_spin_down = pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
+    double Crossing_point_quanta_spin_down_mode0 = pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
                                                    + 2 * coupling_strength_to_mode0[0] / (mfreq[0][1]) , 2 ) / 4 ;
 
-    double Crossing_point_quanta_spin_up =
+    double Crossing_point_quanta_spin_up_mode0 =
             pow(  (mfreq[0][0])/ (coupling_strength_to_mode0[0] + coupling_strength_to_mode0[1])
                   - 2 * coupling_strength_to_mode0[1] / (mfreq[0][1]) , 2 ) / 4  ;
+
+    double Crossing_point_quanta_spin_down_mode1 = pow(  (mfreq[0][0])/ (coupling_strength_to_mode1[0] + coupling_strength_to_mode1[1])
+                                                         + 2 * coupling_strength_to_mode1[0] / (mfreq[0][2]) , 2 ) / 4 ;
+
+    double Crossing_point_quanta_spin_up_mode1 =
+            pow(  (mfreq[0][0])/ (coupling_strength_to_mode1[0] + coupling_strength_to_mode1[1])
+                  - 2 * coupling_strength_to_mode1[1] / (mfreq[0][2]) , 2 ) / 4  ;
+
 
  // here initial detector energy only count vibrational energy , not energy in electronic state.
     initial_detector_state= new int * [stlnum];
@@ -961,11 +1003,14 @@ void detector::construct_initial_state_MPI(ifstream & input, ofstream & output){
         // Initial_detector_state[1] is spin up state and crossing point
 
         initial_detector_state[0][0] = 0;
-        initial_detector_state[0][1] = int(Crossing_point_quanta_spin_down + 0.5);
+        initial_detector_state[0][1] = round(Crossing_point_quanta_spin_down_mode0);
+        initial_detector_state[0][2] = round(Crossing_point_quanta_spin_down_mode1);
 
         initial_detector_state[1][0] = 1;
-        initial_detector_state[1][1] = int (Crossing_point_quanta_spin_up + 0.5);
-        for(j=2; j < nmodes[0]; j++){
+        initial_detector_state[1][1] = round (Crossing_point_quanta_spin_up_mode0 );
+        initial_detector_state[0][2] = round(Crossing_point_quanta_spin_up_mode1);
+
+        for(j=3; j < nmodes[0]; j++){
             initial_detector_state[1][j] = initial_detector_state[0][j];
         }
 
