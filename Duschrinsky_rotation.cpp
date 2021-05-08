@@ -156,8 +156,8 @@ void detector:: compute_shifted_Duschrinsky_rotation_overlap( ){
     double Coeff = 1 / ( pow(cos(rotation_angle) , 2) + r_plus * pow(sin(rotation_angle), 2) );
     double A = Coeff * (alpha_down * cos(rotation_angle) - alpha_up * r_minus * r_plus * pow(sin(rotation_angle), 2 ) ) ;
     double B = Coeff * (- alpha_down * r_plus * sin(rotation_angle) - alpha_up * r_minus * sin(rotation_angle) * cos(rotation_angle)) ;
-    double C = alpha_up * cos(rotation_angle) - Coeff * (alpha_down * r_plus * sin(rotation_angle) + alpha_up * r_minus * sin(rotation_angle) * cos(rotation_angle) );
-    double D = alpha_up * r_plus * sin(rotation_angle) - Coeff * (- alpha_down * cos(rotation_angle) + alpha_up * r_minus * r_plus * pow(sin(rotation_angle) , 2)  ) ;
+    double C = alpha_up * cos(rotation_angle) -r_minus * sin(rotation_angle) * Coeff * (alpha_down * r_plus * sin(rotation_angle) + alpha_up * r_minus * sin(rotation_angle) * cos(rotation_angle) );
+    double D = alpha_up * r_plus * sin(rotation_angle) - r_minus * sin(rotation_angle) * Coeff * (- alpha_down * cos(rotation_angle) + alpha_up * r_minus * r_plus * pow(sin(rotation_angle) , 2)  ) ;
 
     double A_prime = A - alpha_up;
     double B_prime = B;
@@ -167,6 +167,9 @@ void detector:: compute_shifted_Duschrinsky_rotation_overlap( ){
     int l, p ,l_prime, p_prime;
 
     double E  = -cos(rotation_angle) * (A * C + B * D) + r_plus * sin(rotation_angle) * (B * C - A * D);
+
+    double Overlap_coeff = exp ( (- ( pow(alpha_down,2) + pow(alpha_up,2) ) +
+                                  alpha_down * alpha_up * cos(rotation_angle) - E  )  / 2 );
 
     int Maximum_nmax = max( nmax[0][1], nmax[0][2] );
     // This is overlap for shifted Harmonic oscillator <n',m' | n, m>
@@ -189,6 +192,7 @@ void detector:: compute_shifted_Duschrinsky_rotation_overlap( ){
     double Coeff1_y;
     double Coeff2_x ;
     double Coeff2_y;
+    double Coeff_prod;
 
     double n_prime_factorial;
     double n_factorial ;
@@ -232,21 +236,24 @@ void detector:: compute_shifted_Duschrinsky_rotation_overlap( ){
 
                                     if( Duschrinsky_rotation_Overlap[l_prime][p_prime][l][p] != 0 ){
                                         Coeff1_x = pow(A_prime, n_prime - l_prime) *
-                                                sqrt( n_prime_factorial / (l_prime_factorial * n_prime_minus_l_prime_factorial ) );
+                                                sqrt( n_prime_factorial / l_prime_factorial   ) * 1/  n_prime_minus_l_prime_factorial ;
                                         Coeff1_y = pow(B_prime, m_prime - p_prime) *
-                                                sqrt( m_prime_factorial / (p_prime_factorial * m_prime_minus_p_prime_factorial ) ) ;
+                                                sqrt( m_prime_factorial / p_prime_factorial  ) * 1 /  m_prime_minus_p_prime_factorial ;
 
                                         Coeff2_x = pow( C_prime, n - l ) *
-                                                sqrt(n_factorial / ( l_factorial * n_minus_l_factorial )) ;
+                                                sqrt(n_factorial /  l_factorial  )  / n_minus_l_factorial;
 
                                         Coeff2_y = pow(D_prime , m - p) *
-                                                sqrt(m_factorial / (m_minus_p_factorial * p_factorial)  );
+                                                sqrt(m_factorial /  p_factorial  ) / m_minus_p_factorial;
 
-                                        shifted_Duschrinsky_rotation_Overlap[n_prime][m_prime][n][m] =
-                                                shifted_Duschrinsky_rotation_Overlap[n_prime][m_prime][n][m] +
-                                                Coeff1_x * Coeff1_y * Coeff2_x * Coeff2_y *
-                                                Duschrinsky_rotation_Overlap[l_prime][p_prime][l][p];
+                                        Coeff_prod = Coeff1_x * Coeff1_y * Coeff2_x * Coeff2_y ;
+                                        if(Coeff_prod != 0){
+                                            shifted_Duschrinsky_rotation_Overlap[n_prime][m_prime][n][m] =
+                                                    shifted_Duschrinsky_rotation_Overlap[n_prime][m_prime][n][m] +
+                                                    Coeff_prod *
+                                                    Duschrinsky_rotation_Overlap[l_prime][p_prime][l][p];
 
+                                        }
                                     }
 
                                 }
@@ -262,10 +269,6 @@ void detector:: compute_shifted_Duschrinsky_rotation_overlap( ){
         }
     }
 
-    double Overlap_coeff = exp ( (- ( pow(alpha_down,2) + pow(alpha_up,2) ) +
-            alpha_down * alpha_up * cos(rotation_angle) - E  )  / 2 );
-
-    double Maximum_overlap = 0 ;
 
     for(n_prime = 0; n_prime <= Maximum_nmax ; n_prime ++){
         for(m_prime = 0 ;  m_prime <= Maximum_nmax; m_prime ++ ){
@@ -274,16 +277,11 @@ void detector:: compute_shifted_Duschrinsky_rotation_overlap( ){
                         shifted_Duschrinsky_rotation_Overlap [n_prime][m_prime][n][m] =
                                 shifted_Duschrinsky_rotation_Overlap[n_prime][m_prime][n][m] * Overlap_coeff;
 
-                        if(Maximum_overlap < shifted_Duschrinsky_rotation_Overlap[n_prime][m_prime][n][m]){
-                            Maximum_overlap = shifted_Duschrinsky_rotation_Overlap[n_prime][m_prime][n][m];
-                        }
-
                     }
             }
         }
     }
 
 
- i = 0;
 
 }
