@@ -25,6 +25,7 @@
 #include<sys/resource.h>
 //using namespace concurrency;
 #define pi2 3.141592653589793*2
+#define pi 3.141592653589793
 using namespace std;
 extern bool intra_detector_coupling;
 extern double intra_detector_coupling_noise;
@@ -57,7 +58,6 @@ extern bool no_coupling;  // if this is Ture, we do not have off-diagonal coupli
 extern bool compute_overlap_with_eigenstate; // If this is True, we will use MFD to compute overlap of initial state with eigenvalue
 
 extern double * coupling_strength_to_mode0;
-extern double * coupling_strength_to_mode1;
 extern double Coupling_between_electronic_state;
 extern bool load_sampling_state;
 
@@ -69,6 +69,8 @@ void convert_dv(const vector<vector<int>> & vec_2d, vector <int>  & vec_1d , vec
 int construct_send_buffer_index(int * remoteVecCount, int * remoteVecPtr, int * remoteVecIndex, int * tosendVecCount_element, int * tosendVecPtr_element, int * & tosendVecIndex_ptr);
 
 int compar(const void * a, const void * b);
+
+double factorial(int n );
 
 #endif //QUANTUM_MEASUREMENT_UTIL_H
 

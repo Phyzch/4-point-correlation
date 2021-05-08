@@ -168,9 +168,12 @@ public:
 
     void shift_detector_Hamiltonian(ofstream & log);
 
+    double rotation_angle;
+    vector<vector<vector<vector<double>>>> Duschrinsky_rotation_Overlap;
+    vector<vector<vector<vector<double>>>> shifted_Duschrinsky_rotation_Overlap;
 
-    vector<vector<vector<vector<double>>>> Duschrsinky_rotation_Overlap;
-    void compute_Duschrinsky_rotation_overlap(double rotation_angle);
+    void compute_Duschrinsky_rotation_overlap();
+    void compute_shifted_Duschrinsky_rotation_overlap( );
 };
 
 class full_system {

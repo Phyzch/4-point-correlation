@@ -34,7 +34,6 @@ double system_energy;  // energy of photon
 bool Random_bright_state;
 
 double * coupling_strength_to_mode0 ;
-double * coupling_strength_to_mode1;
 double Coupling_between_electronic_state;
 
 // initialization of parameters and do some pre-coupling set up
@@ -95,7 +94,7 @@ full_system::full_system(string path1, string cvpt_path1) {
 void full_system::Quantum_evolution() {
     // -----------------------------------------------------------------------------------
 	// Now we construct our wavefunction /phi for our detector and full_system. (For system it is already constructed in s.read())
-    int i,j;
+
 	clock_t start_time, end_time, duration;
 
     if(Evolve_dynamics){

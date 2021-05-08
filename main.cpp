@@ -15,7 +15,7 @@ bool Sphere_cutoff_in_state_space = true;
 bool save_state = false;
 bool Evolve_dynamics = true;  // bool variable to decide if we run Detector_Evolve
 bool no_coupling = false;
-bool load_sampling_state = false;
+bool load_sampling_state = true;
 
 // About matflag in input.txt: If matflag==2, +We output all x,y (after the pre_coupling), matrix element, detector matrix element etc.
 // if matflag==1: We don't output anything but still we will save our final simulation results in save.txt
@@ -24,7 +24,7 @@ bool load_sampling_state = false;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "spin_boson_LW_model/2_coordinate/Tunneling/100 0.18/";
+                       "spin_boson_LW_model/Duschrinsky_rotation/try/";
    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
     string cvpt_path;
     int i,j;
