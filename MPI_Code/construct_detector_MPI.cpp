@@ -703,6 +703,8 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
 
     double cutoff_for_Coupling_between_electronic_state = 0.001 ;
     double Max_tunneling_element = 0;
+    int total_tunneling_coupling_num = 0;
+    vector<double> tunneling_coupling_list;
 
     // different process do different amount of work.
     vmode_ptr = &(vmode0);
@@ -813,11 +815,15 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
                         dmat[0].push_back( tunneling_matrix_element );
                         dirow[0].push_back(i);
                         dicol[0].push_back(j);
+                        total_tunneling_coupling_num = total_tunneling_coupling_num + 1;
+                        tunneling_coupling_list.push_back(tunneling_matrix_element);
                     }
                 } else {
                     dmat[0].push_back( tunneling_matrix_element );
                     dirow[0].push_back(i);
                     dicol[0].push_back(j);
+                    total_tunneling_coupling_num = total_tunneling_coupling_num + 1;
+                    tunneling_coupling_list.push_back(tunneling_matrix_element);
                 }
 
             }
@@ -827,7 +833,17 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
         }
     }
 
+    log << "total_tunneling_coupling number:  " << total_tunneling_coupling_num << endl;
+    cout << "total tunneling coupling number:  " << total_tunneling_coupling_num << endl;
+    double average_tunneling_coupling_strength = 0;
+    for (i=0;i<total_tunneling_coupling_num;i++){
+        average_tunneling_coupling_strength = average_tunneling_coupling_strength +
+                tunneling_coupling_list[i] ;
+    }
+    average_tunneling_coupling_strength = average_tunneling_coupling_strength / total_tunneling_coupling_num;
 
+    log << "average tunneling coupling strength : " << average_tunneling_coupling_strength << endl;
+    cout <<"average tunneling coupling strength:  " << average_tunneling_coupling_strength << endl;
 }
 
 void detector:: broadcast_dmatnum_doffnum(){
