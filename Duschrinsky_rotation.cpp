@@ -4,8 +4,107 @@
 #include "util.h"
 #include "system.h"
 
+void detector::compute_ground_state_overlap(){
+    int i, j;
+    double omega_y = mfreq[0][2];
+    double omega_x = mfreq[0][1];
+
+    double r_plus = double(1)/2 * (sqrt(omega_y / omega_x)  + sqrt(omega_x / omega_y) );
+    double r_minus = double(1)/2 * (sqrt(omega_y / omega_x) - sqrt(omega_x / omega_y) );
+
+    double A = cos(rotation_angle);
+    double B = r_plus * sin(rotation_angle);
+    double C = - r_minus * sin(rotation_angle);
+
+    int Maximum_nmax = max( nmax[0][1], nmax[0][2] );
+    double norm = 0;
+    double overlap_cutoff = 1e-2;
+
+    for(i=0; i< Maximum_nmax;i++){
+        vector<double> v1;
+        for(j=0; j< Maximum_nmax; j++){
+            v1.push_back(0);
+        }
+        ground_state_overlap.push_back(v1);
+    }
+
+    ground_state_overlap[0][0] = 1;
+#   // finish [0][^] , [^][0] and [1,^] [^,1] terms
+    for(i=2;i<Maximum_nmax - 2 ; i = i + 2){
+        if(ground_state_overlap[i-2][0]!=0){
+            ground_state_overlap[i][0] = sqrt(double(i-1)/ i ) * B * C / ( pow(A,2) + pow(B,2) ) * ground_state_overlap[i-2][0];
+            ground_state_overlap[i-1][1] = - sqrt(i-1) * A * C * (pow(A,2) + pow(B,2) ) * ground_state_overlap[i-2][0];
+
+            if( abs(ground_state_overlap[i][0]) < overlap_cutoff){
+                ground_state_overlap[i][0] = 0;
+            }
+            if( abs(ground_state_overlap[i-1][1]) < overlap_cutoff){
+                ground_state_overlap[i-1][1] = 0;
+            }
+
+        }
+
+    }
+    for(i=2; i<Maximum_nmax - 2; i= i+2){
+        if(ground_state_overlap[0][i-2]!=0){
+            ground_state_overlap[0][i] = - sqrt( double(i-1)/i ) * B * C / (pow(A,2) + pow(B,2) ) * ground_state_overlap[0][i-2];
+            ground_state_overlap[1][i-1] = -sqrt(i-1) * A * C / (pow(A,2) + pow(B,2)) * ground_state_overlap[0][i-2];
+
+            if( abs(ground_state_overlap[0][i]) < overlap_cutoff){
+                ground_state_overlap[0][i] = 0;
+            }
+            if( abs(ground_state_overlap[1][i-1]) < overlap_cutoff){
+                ground_state_overlap[1][i-1] = 0;
+            }
+        }
+
+    }
+
+    for(i=1; i< Maximum_nmax - 1; i++){
+        for(j=i;j+2 < Maximum_nmax; j=j+2){
+            ground_state_overlap[i+1][j+1] = - (C * sqrt(j+1) * ground_state_overlap[i][j] + B * sqrt(j+2) * ground_state_overlap[i][j+2]) / (A * sqrt(i+1));
+            if( abs(ground_state_overlap[i+1][j+1]) < overlap_cutoff){
+                ground_state_overlap[i+1][j+1] = 0;
+            }
+
+        }
+        for(j=i;j+2 < Maximum_nmax; j = j+2){
+            ground_state_overlap[j+1][i+1] = (B * sqrt(j+2) * ground_state_overlap[j+2][i] - C * sqrt(j+2) * ground_state_overlap[j][i]) / (A * sqrt(i+1)) ;
+            if( abs(ground_state_overlap[j+1][i+1]) < overlap_cutoff){
+                ground_state_overlap[j+1][i+1] = 0;
+            }
+
+        }
+    }
+
+    // normalize overlap.
+    for(i=0;i<Maximum_nmax;i++){
+        for(j=0;j<Maximum_nmax; j++){
+            norm = norm + pow(ground_state_overlap[i][j] , 2);
+        }
+    }
+    norm = sqrt(norm);
+    for(i=0;i<Maximum_nmax;i++){
+        for(j=0;j<Maximum_nmax; j++){
+            ground_state_overlap[i][j] = ground_state_overlap[i][j] / norm ;
+        }
+    }
+
+    for(i=0;i<Maximum_nmax;i++){
+        for(j=0;j<Maximum_nmax;j++){
+            if(ground_state_overlap[i][j] != 0){
+                nonzero_ground_state_overlap_coeff.push_back(ground_state_overlap[i][j]);
+                vector<int> v {i , j};
+                nonzero_ground_state_overlap_index.push_back(v);
+            }
+        }
+    }
+
+}
+
 void detector::compute_Duschrinsky_rotation_overlap(){
     // mode 1 and mode 2 is vibrational coordinate we perform Duschrinsky rotation
+    int i, j;
     int n_prime, m_prime, n , m;
 
     int Nonzero_element_upper_cutoff ; // |n' , m'> they have their limit for their maximum nonzero quanta
@@ -22,27 +121,41 @@ void detector::compute_Duschrinsky_rotation_overlap(){
     // n' is for coordinate x', m' is for coordinate y'. n is for coordinate x, m is coordinate y.
     int Maximum_nmax = max( nmax[0][1], nmax[0][2] );
 
+    int max_index = 0;
+    int Len = nonzero_ground_state_overlap_index.size();
+    for(i=0;i<Len; i ++ ){
+        for(j=0;j<2;j++){
+            if (max_index < nonzero_ground_state_overlap_index[i][j]){
+                max_index = nonzero_ground_state_overlap_index[i][j];
+            }
+        }
+    }
 
     Duschrinsky_rotation_Overlap.resize(Maximum_nmax + 1);
     for(n_prime=0;n_prime <= Maximum_nmax;n_prime++){
         Duschrinsky_rotation_Overlap[ n_prime ].resize(Maximum_nmax + 1);
         for(m_prime=0; m_prime <= Maximum_nmax; m_prime++ ){
-            Duschrinsky_rotation_Overlap[ n_prime ][ m_prime ].resize(2 * Maximum_nmax + 1  );
-            for(n=0;n <= 2 * Maximum_nmax;n++){
-                Duschrinsky_rotation_Overlap[ n_prime ][ m_prime ][ n ].resize(2 * Maximum_nmax + 1);
-                for(m =0; m <= 2 * Maximum_nmax; m++ ){
+            Duschrinsky_rotation_Overlap[ n_prime ][ m_prime ].resize(2 * Maximum_nmax + 1 + max_index  );
+            for(n=0;n <= 2 * Maximum_nmax + max_index ;n++){
+                Duschrinsky_rotation_Overlap[ n_prime ][ m_prime ][ n ].resize(2 * Maximum_nmax + 1 + max_index );
+                for(m =0; m <= 2 * Maximum_nmax + max_index ; m++ ){
                     Duschrinsky_rotation_Overlap[ n_prime ][ m_prime ][ n ][ m ] = 0 ;
                 }
             }
         }
     }
 
-    // same ground state
-    Duschrinsky_rotation_Overlap[0][0][0][0] = 1;
+
+    // ground state for two oscillator is not the same. Need to fix bug here. Although [0,0] is major contribution
+    for(i=0;i<Len;i++){
+        index_x = nonzero_ground_state_overlap_index[i][0];
+        index_y = nonzero_ground_state_overlap_index[i][1];
+        Duschrinsky_rotation_Overlap[0][0][index_x][index_y] = nonzero_ground_state_overlap_coeff[i];
+    }
     // compute [0 , m', n, m]
     for(m_prime=1; m_prime<= Maximum_nmax; m_prime++){
         // compute Duschrinsky_rotation_Overlap[0][m']:
-        Nonzero_element_upper_cutoff =  m_prime - 1;
+        Nonzero_element_upper_cutoff =  m_prime - 1 + max_index ;
         // n, m is index for Duschrinsky_rotation_Overlap[0][m'-1]
         // b_{y}'^{+} operator
         for( n = 0; n <= Nonzero_element_upper_cutoff ; n ++){
@@ -90,7 +203,7 @@ void detector::compute_Duschrinsky_rotation_overlap(){
     // compute [n', m', n, m]  n' = 1, 2, 3, etc. m'= 0, 1, 2, 3, etc.
     for(n_prime = 1; n_prime <= Maximum_nmax; n_prime ++ ){
         for(m_prime = 0; m_prime <= Maximum_nmax; m_prime ++ ){
-            Nonzero_element_upper_cutoff = n_prime + m_prime -1;
+            Nonzero_element_upper_cutoff = n_prime + m_prime -1 + max_index;
             // n, m is index for Duschrinsky_rotation_Overlap[n' -1][m']
             // b_{x}^{+}' operator
             for(n = 0 ; n <= Nonzero_element_upper_cutoff; n++ ){

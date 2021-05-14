@@ -203,6 +203,8 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
     // 1:  traditional way of constructing detector off-diagonal part of matrix
     if(not read_Hamltonian_from_file){
         if(not no_coupling){
+            compute_ground_state_overlap();
+
             compute_Duschrinsky_rotation_overlap();
 
             compute_shifted_Duschrinsky_rotation_overlap();
