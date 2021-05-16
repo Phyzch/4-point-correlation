@@ -116,6 +116,7 @@ void detector:: compute_M_matrix(int state_m, int state_l, complex<double> ** M_
                 M_matrix[k][i] = sqrt( dv_all[0][nearby_state_index[state_l]][i] ) * C1 - sqrt(dv_all[0][nearby_state_index[state_m]][i] + 1) * C2;
             }
             else{
+
                 // c_{i} == a_{i}^{+} , raising operator.  i>=nmodes[0]
                 m_one_mode_quanta_below = neighbor_state_in_nearby_state_index_list[state_m][i-nmodes[0]];
                 if(neighbor_state_in_nearby_state_index_list[initial_state_index_in_nearby_state_index_list][i] != -1){
@@ -181,6 +182,7 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
         compute_M_matrix(m,initial_state_index_in_nearby_state_index_list,M_matrix,
                          xd_for_xp_sparsify, yd_for_xp_sparsify, index_for_xp_sparsify);
 
+
         if(my_id == 0){
             // sparsify M_matrix and speed up simulation.
             vector<vector<complex<double>>> M_matrix_sparsify ;
@@ -215,6 +217,11 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
                 }
 
             }
+
+//            if( real(Lyapunov_spectrum_for_xp[0][0]) != 0){
+//                cout <<"check this" << endl;
+//            }
+
         }
 
     }

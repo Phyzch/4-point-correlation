@@ -302,6 +302,8 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
     int begin_index, end_index;
     local_index = i - (matrix_size/num_proc)*my_id ;
 
+    int deln = 0;
+
     if(i==j){
         // diagonal term
         for(k=mcount[bin_index -1] ; k<mcount[bin_index]; k++){  // k is index for coupling operator
@@ -315,7 +317,9 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
             for(l=0;l<ndegre;l++){
                 // here Normal_Form[k][l+ndegre] is order of lowering operator for operator in list with index k
                 Prod = Prod * factorial(dv[i][l], dv[j][l], Normal_Form[k][l+ndegre]);
+                deln = deln + abs(dv[i][l] - dv[j][l]);
             }
+            Prod = Prod * pow(hbar_scaling , double(deln) / 2);
             Vmat = Vmat + Prod * Coeff[k];
             label1:;
         }
@@ -341,11 +345,17 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
             Prod=1;
             for(l=0;l<ndegre;l++){
                 Prod = Prod * factorial( dv[i][l], dv[j][l], Normal_Form[k][l+ndegre] );
+                deln = deln + abs(dv[i][l] - dv[j][l]);
             }
+
+            //scale due to hbar
+            Prod = Prod * pow(hbar_scaling , double(deln) / 2);
             Vmat = Vmat + Prod * Coeff[k];
             label2:;
         }
     }
+
+
 
     if(i!=j) {
         // off-diagonal term

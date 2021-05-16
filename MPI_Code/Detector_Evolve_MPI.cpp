@@ -863,50 +863,50 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             output_step_for_all_state = int(output_all_state_time_unit / delt);
 
             // ----- output state real and imaginary part for all state in simulation ----------------------
-            if(k%output_step_for_all_state==0){
-                MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
-                            &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],
-                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
-                MPI_Gatherv(&d.yd[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize[0], MPI_DOUBLE,
-                            &d.yd_all[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize_each_process[0],
-                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
-                if(my_id == 0){
-                    Detector_precoup_all_state_output << t << endl;
-                    for(i=0;i<d.total_dmat_size[0];i++){
-                        Detector_precoup_all_state_output << d.xd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
-                    }
-                    Detector_precoup_all_state_output << endl;
-                    for(i=0;i<d.total_dmat_size[0];i++){
-                        Detector_precoup_all_state_output << d.yd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
-                    }
-                    Detector_precoup_all_state_output << endl;
-                }
-            }
+//            if(k%output_step_for_all_state==0){
+//                MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
+//                            &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],
+//                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+//                MPI_Gatherv(&d.yd[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize[0], MPI_DOUBLE,
+//                            &d.yd_all[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize_each_process[0],
+//                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+//                if(my_id == 0){
+//                    Detector_precoup_all_state_output << t << endl;
+//                    for(i=0;i<d.total_dmat_size[0];i++){
+//                        Detector_precoup_all_state_output << d.xd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
+//                    }
+//                    Detector_precoup_all_state_output << endl;
+//                    for(i=0;i<d.total_dmat_size[0];i++){
+//                        Detector_precoup_all_state_output << d.yd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
+//                    }
+//                    Detector_precoup_all_state_output << endl;
+//                }
+//            }
             // --------- output IPR for all state --------------------------------------
-            if(k%output_step_for_all_state == 0){
-                for(i=0;i<nearby_state_index_size;i++){
-                    inverse_IPR_in_one_process[i] = 0;
-                    for(j=0;j<d.dmatsize[0];j++){
-                        inverse_IPR_in_one_process[i] = inverse_IPR_in_one_process[i] + pow(pow(d.xd[i][j],2) + pow(d.yd[i][j],2),2);
-                    }
-                }
-
-                MPI_Reduce(&inverse_IPR_in_one_process[0],&inverse_IPR_all[0],nearby_state_index_size,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-
-                if(my_id == 0){
-                    for(i=0;i<nearby_state_index_size;i++){
-                        IPR_all[i] = 1/ inverse_IPR_all[i];
-                    }
-
-                    // output result
-                    IPR_for_all_state_output << t << endl;
-                    for(i=0;i<nearby_state_index_size;i++){
-                        IPR_for_all_state_output << IPR_all[i] <<" ";
-                    }
-                    IPR_for_all_state_output << endl;
-                }
-
-            }
+//            if(k%output_step_for_all_state == 0){
+//                for(i=0;i<nearby_state_index_size;i++){
+//                    inverse_IPR_in_one_process[i] = 0;
+//                    for(j=0;j<d.dmatsize[0];j++){
+//                        inverse_IPR_in_one_process[i] = inverse_IPR_in_one_process[i] + pow(pow(d.xd[i][j],2) + pow(d.yd[i][j],2),2);
+//                    }
+//                }
+//
+//                MPI_Reduce(&inverse_IPR_in_one_process[0],&inverse_IPR_all[0],nearby_state_index_size,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+//
+//                if(my_id == 0){
+//                    for(i=0;i<nearby_state_index_size;i++){
+//                        IPR_all[i] = 1/ inverse_IPR_all[i];
+//                    }
+//
+//                    // output result
+//                    IPR_for_all_state_output << t << endl;
+//                    for(i=0;i<nearby_state_index_size;i++){
+//                        IPR_for_all_state_output << IPR_all[i] <<" ";
+//                    }
+//                    IPR_for_all_state_output << endl;
+//                }
+//
+//            }
 
 
             if(k % output_step ==0) {
@@ -933,18 +933,18 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 //                }
 
                 // -------- output another form of OTOC ------------------------------
-                compute_another_form_of_OTOC(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
-                                             n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,
-                                             n_offdiag_one_mode_quanta_below,n_offdiag_one_mode_quanta_below_real,n_offdiag_one_mode_quanta_below_imag,
-                                             n_offdiag_total_one_mode_quanta_below,n_offdiag_total_one_mode_quanta_below_real,n_offdiag_total_one_mode_quanta_below_imag,
-                                             initial_state_index_in_total_dmatrix, another_OTOC);
-                if(my_id == 0){
-                    another_form_of_OTOC_output << "Time:  " << t <<endl;
-                    for(i=0;i<d.nmodes[0];i++){
-                        another_form_of_OTOC_output << another_OTOC[i] << "  ";
-                    }
-                    another_form_of_OTOC_output << endl;
-                }
+//                compute_another_form_of_OTOC(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
+//                                             n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,
+//                                             n_offdiag_one_mode_quanta_below,n_offdiag_one_mode_quanta_below_real,n_offdiag_one_mode_quanta_below_imag,
+//                                             n_offdiag_total_one_mode_quanta_below,n_offdiag_total_one_mode_quanta_below_real,n_offdiag_total_one_mode_quanta_below_imag,
+//                                             initial_state_index_in_total_dmatrix, another_OTOC);
+//                if(my_id == 0){
+//                    another_form_of_OTOC_output << "Time:  " << t <<endl;
+//                    for(i=0;i<d.nmodes[0];i++){
+//                        another_form_of_OTOC_output << another_OTOC[i] << "  ";
+//                    }
+//                    another_form_of_OTOC_output << endl;
+//                }
 
 //                 ----------- output Lyapunovian spectrum for xp ---------------------------------------
                 d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Lyapunov_spectrum_for_xp_from_single_state,
@@ -971,87 +971,87 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
 
                 // ---------- output 4-point correlation function average over states and variance -------------------
-                compute_4_point_corre_for_multiple_states(state_for_average_size,nearby_state_index_size,n_offdiag_element,
-                                                          n_offdiag_for_states_ensemble,n_offdiag_for_states_ensemble_real,
-                                                          n_offdiag_for_states_ensemble_imag,n_offdiag_total_for_states_ensemble,
-                                                          n_offdiag_total_for_states_ensemble_real,n_offdiag_total_for_states_ensemble_imag,
-                                                          four_point_correlation_function_average_over_states, four_point_correlation_function_variance_over_states,
-                                                          four_point_correlation_function_for_each_states);
-
-                if(my_id == 0){
-                    four_point_correlation_average_output << "Time:   " << t << endl;
-                    for(i=0;i<d.nmodes[0];i++){
-                        four_point_correlation_average_output<< four_point_correlation_function_average_over_states[i] << " ";
-                    }
-                    four_point_correlation_average_output<<endl;
-
-                    // for variance.
-                    four_point_correlation_variance_output <<"Time:    " << t << endl;
-                    for(i=0;i<d.nmodes[0];i++){
-                        four_point_correlation_variance_output << four_point_correlation_function_variance_over_states[i]<< " ";
-                    }
-                    four_point_correlation_variance_output<<endl;
-
-                    // output all states
-                    four_point_correlation_every_state_output << "Time:   " <<t << endl;
-                    for(a=0;a<state_for_average_size;a++){
-                        for(i=0;i<d.nmodes[0];i++){
-                            four_point_correlation_every_state_output << four_point_correlation_function_for_each_states[i][a] <<" ";
-                        }
-                        four_point_correlation_every_state_output << endl;
-                    }
-                }
+//                compute_4_point_corre_for_multiple_states(state_for_average_size,nearby_state_index_size,n_offdiag_element,
+//                                                          n_offdiag_for_states_ensemble,n_offdiag_for_states_ensemble_real,
+//                                                          n_offdiag_for_states_ensemble_imag,n_offdiag_total_for_states_ensemble,
+//                                                          n_offdiag_total_for_states_ensemble_real,n_offdiag_total_for_states_ensemble_imag,
+//                                                          four_point_correlation_function_average_over_states, four_point_correlation_function_variance_over_states,
+//                                                          four_point_correlation_function_for_each_states);
+//
+//                if(my_id == 0){
+//                    four_point_correlation_average_output << "Time:   " << t << endl;
+//                    for(i=0;i<d.nmodes[0];i++){
+//                        four_point_correlation_average_output<< four_point_correlation_function_average_over_states[i] << " ";
+//                    }
+//                    four_point_correlation_average_output<<endl;
+//
+//                    // for variance.
+//                    four_point_correlation_variance_output <<"Time:    " << t << endl;
+//                    for(i=0;i<d.nmodes[0];i++){
+//                        four_point_correlation_variance_output << four_point_correlation_function_variance_over_states[i]<< " ";
+//                    }
+//                    four_point_correlation_variance_output<<endl;
+//
+//                    // output all states
+//                    four_point_correlation_every_state_output << "Time:   " <<t << endl;
+//                    for(a=0;a<state_for_average_size;a++){
+//                        for(i=0;i<d.nmodes[0];i++){
+//                            four_point_correlation_every_state_output << four_point_correlation_function_for_each_states[i][a] <<" ";
+//                        }
+//                        four_point_correlation_every_state_output << endl;
+//                    }
+//                }
 
                 // --------- output Stability_Matrix  -----------------------------------
-                compute_Stability_Matrix(Stability_Matrix,nearby_state_index_size,n_offdiag_element,n_offdiag_element_real,n_offdiag_element_imag,
-                                         n_offdiag_element_all_pc,n_offdiag_element_real_all_pc,n_offdiag_element_imag_all_pc,initial_state_index_in_total_dmatrix);
-
-                if(my_id == 0){
-                    Stability_matrix_output << t << endl;
-                    for(i=0;i<d.nmodes[0];i++){
-                        for(j=0;j<d.nmodes[0];j++){
-                            Stability_matrix_output << Stability_Matrix[i][j] <<" ";
-                        }
-                    }
-                    Stability_matrix_output << endl;
-                }
-                // ------------- output state <a(t)|a>  ----------------------------------------
-                if (my_id == d.initial_state_pc_id[0]){
-                    special_state_x = d.xd[d.initial_state_index_in_nearby_state_index_list][d.initial_state_index[0]];
-                    special_state_y = d.yd[d.initial_state_index_in_nearby_state_index_list][d.initial_state_index[0]];
-                }
-                MPI_Bcast(&special_state_x,1,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_COMM_WORLD);
-                MPI_Bcast(&special_state_y,1,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_COMM_WORLD);
-                survival_prob = pow(special_state_x,2) + pow(special_state_y,2);
-                if(my_id == 0){
-                    Detector_precoup_output << "Time:   " << t << endl;
-                    Detector_precoup_output << survival_prob << endl;
-                }
+//                compute_Stability_Matrix(Stability_Matrix,nearby_state_index_size,n_offdiag_element,n_offdiag_element_real,n_offdiag_element_imag,
+//                                         n_offdiag_element_all_pc,n_offdiag_element_real_all_pc,n_offdiag_element_imag_all_pc,initial_state_index_in_total_dmatrix);
+//
+//                if(my_id == 0){
+//                    Stability_matrix_output << t << endl;
+//                    for(i=0;i<d.nmodes[0];i++){
+//                        for(j=0;j<d.nmodes[0];j++){
+//                            Stability_matrix_output << Stability_Matrix[i][j] <<" ";
+//                        }
+//                    }
+//                    Stability_matrix_output << endl;
+//                }
+//                // ------------- output state <a(t)|a>  ----------------------------------------
+//                if (my_id == d.initial_state_pc_id[0]){
+//                    special_state_x = d.xd[d.initial_state_index_in_nearby_state_index_list][d.initial_state_index[0]];
+//                    special_state_y = d.yd[d.initial_state_index_in_nearby_state_index_list][d.initial_state_index[0]];
+//                }
+//                MPI_Bcast(&special_state_x,1,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_COMM_WORLD);
+//                MPI_Bcast(&special_state_y,1,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_COMM_WORLD);
+//                survival_prob = pow(special_state_x,2) + pow(special_state_y,2);
+//                if(my_id == 0){
+//                    Detector_precoup_output << "Time:   " << t << endl;
+//                    Detector_precoup_output << survival_prob << endl;
+//                }
 
                 // --------- output other state's overlap with initial state |a> ----------------------
-                if(my_id == d.initial_state_pc_id[0]){
-                    for(i=0;i<nearby_state_index_size;i++){
-                        other_state_overlap_with_initial_state[i] = pow(d.xd[i][d.initial_state_index[0]] ,2)
-                                                                    + pow(d.yd[i][d.initial_state_index[0]],2) ;
-                    }
-                }
-                if(d.initial_state_pc_id[0] != 0){
-                    // pass data to process with id 0 if data is not initially there
-                    if(my_id == d.initial_state_pc_id[0]){
-                        MPI_Send(&other_state_overlap_with_initial_state[0],nearby_state_index_size,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
-                    }
-                    if(my_id == 0){
-                        MPI_Recv(&other_state_overlap_with_initial_state[0],nearby_state_index_size,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_ANY_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-                    }
-                }
-
-                if(my_id == 0){
-                    overlap_with_initial_state_output << t << endl;
-                    for(i=0;i<nearby_state_index_size;i++){
-                        overlap_with_initial_state_output << other_state_overlap_with_initial_state[i] <<" ";
-                    }
-                    overlap_with_initial_state_output << endl;
-                }
+//                if(my_id == d.initial_state_pc_id[0]){
+//                    for(i=0;i<nearby_state_index_size;i++){
+//                        other_state_overlap_with_initial_state[i] = pow(d.xd[i][d.initial_state_index[0]] ,2)
+//                                                                    + pow(d.yd[i][d.initial_state_index[0]],2) ;
+//                    }
+//                }
+//                if(d.initial_state_pc_id[0] != 0){
+//                    // pass data to process with id 0 if data is not initially there
+//                    if(my_id == d.initial_state_pc_id[0]){
+//                        MPI_Send(&other_state_overlap_with_initial_state[0],nearby_state_index_size,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+//                    }
+//                    if(my_id == 0){
+//                        MPI_Recv(&other_state_overlap_with_initial_state[0],nearby_state_index_size,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_ANY_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+//                    }
+//                }
+//
+//                if(my_id == 0){
+//                    overlap_with_initial_state_output << t << endl;
+//                    for(i=0;i<nearby_state_index_size;i++){
+//                        overlap_with_initial_state_output << other_state_overlap_with_initial_state[i] <<" ";
+//                    }
+//                    overlap_with_initial_state_output << endl;
+//                }
 
                 // ----  output IPR (inverse participation ratio) ----------------------------
                 MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
@@ -1073,25 +1073,25 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
 
                 // ----------- output mode quanta -----------------------------------
-                for (j = 0; j < d.nmodes[0]; j++) {
-                    mode_quanta[j] = 0;
-                }
-                for (i = 0; i < d.dmatsize[0]; i++) {
-                    for (j = 0; j < d.nmodes[0]; j++) {
-                        mode_quanta[j] =
-                                mode_quanta[j] + (pow(d.xd[d.initial_state_index_in_nearby_state_index_list][i], 2) +
-                                pow(d.yd[d.initial_state_index_in_nearby_state_index_list][i], 2)) * d.dv[0][i][j];
-                    }
-                }
-                MPI_Reduce(&mode_quanta[0], &total_mode_quanta[0], d.nmodes[0], MPI_DOUBLE, MPI_SUM, 0,
-                           MPI_COMM_WORLD);
-                if (my_id == 0) {
-                    Detector_precoup_mode_quanta << "Time:   " << t << endl;
-                    for (j = 0; j < d.nmodes[0]; j++) {
-                        Detector_precoup_mode_quanta << total_mode_quanta[j] << " ";
-                    }
-                    Detector_precoup_mode_quanta << endl;
-                }
+//                for (j = 0; j < d.nmodes[0]; j++) {
+//                    mode_quanta[j] = 0;
+//                }
+//                for (i = 0; i < d.dmatsize[0]; i++) {
+//                    for (j = 0; j < d.nmodes[0]; j++) {
+//                        mode_quanta[j] =
+//                                mode_quanta[j] + (pow(d.xd[d.initial_state_index_in_nearby_state_index_list][i], 2) +
+//                                pow(d.yd[d.initial_state_index_in_nearby_state_index_list][i], 2)) * d.dv[0][i][j];
+//                    }
+//                }
+//                MPI_Reduce(&mode_quanta[0], &total_mode_quanta[0], d.nmodes[0], MPI_DOUBLE, MPI_SUM, 0,
+//                           MPI_COMM_WORLD);
+//                if (my_id == 0) {
+//                    Detector_precoup_mode_quanta << "Time:   " << t << endl;
+//                    for (j = 0; j < d.nmodes[0]; j++) {
+//                        Detector_precoup_mode_quanta << total_mode_quanta[j] << " ";
+//                    }
+//                    Detector_precoup_mode_quanta << endl;
+//                }
 
             }
             t= t+ delt;

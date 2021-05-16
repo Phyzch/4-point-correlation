@@ -32,6 +32,7 @@ double energy_window_size;  // size of energy window, we will only include whole
 double initial_energy;  // energy of system + detector.
 double system_energy;  // energy of photon
 bool Random_bright_state;
+double hbar_scaling;
 
 // initialization of parameters and do some pre-coupling set up
 full_system::full_system(string path1, string cvpt_path1) {

@@ -162,6 +162,15 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
                 }
             }
         }
+
+        // hbar scaling for frequency
+        double scaling = hbar_scaling ;
+        for(i=0;i<tlnum;i++){
+            for(j=0;j<nmodes[i];j++){
+                mfreq[i][j] = mfreq[i][j] * scaling;
+            }
+        }
+
     }
 
     MPI_Bcast(&nmodes[0],tlnum,MPI_INT,0,MPI_COMM_WORLD);
@@ -453,10 +462,12 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
                         if (deln[k] == 2) deln[k] = 4;
                         if (deln[k] == 1) deln[k] = 2;
                     }
+                    ntot = 4;
                 } else if (ntot == 1) {
                     for (k = 0; k < nmodes[m]; k++) {
                         if (deln[k] == 1) deln[k] = 3;
                     }
+                    ntot = 3;
                 } else if (ntot == 0) {
                     log << "Error! The off-diagonal element must differ in q.n." << endl;
                     MPI_Abort(MPI_COMM_WORLD,-8);
@@ -470,16 +481,14 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
                         value = -V_intra;
                     }
 
-                    // noise term
-                    if (intra_detector_coupling) {
-                        do (random_number = 2*((double(rand())/RAND_MAX)-0.5)  ); while (random_number==0) ;
-                        value = value * (1+intra_detector_coupling_noise * random_number);
-                    }
-
                     for (k = 0; k < nmodes[m]; k++) {
                         // aij  = f^{1/2} / 270
                         value = value * pow(aij[m][k]* nbar[k], deln[k]);
                     }
+
+                    // scale due to hbar
+                    value = value * pow(hbar_scaling , double(ntot) / 2 );
+
                     if ( (*dmat_ptr)[i] != (*dmat_ptr)[j] ) {
                         lij = abs(value / ((*dmat_ptr)[i] - (*dmat_ptr)[j]));
                         if (lij > cutoff) {
@@ -628,6 +637,14 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
                 }
             }
         }
+
+        for(m=0;m<stlnum;m++){
+            for(i=0;i<nmodes[m];i++){
+                initial_detector_state[m][i] = initial_detector_state[m][i] / double(hbar_scaling);
+            }
+        }
+
+
     }
     for(m=0;m<stlnum;m++){ // Broad cast initial detector state.
         MPI_Bcast(&initial_detector_state[m][0],nmodes[m],MPI_INT,0,MPI_COMM_WORLD);
@@ -649,11 +666,14 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
 
     if(my_id==0){  // output initial detector state to output.txt
         cout <<"Initial detector state:"<<endl;
+        output <<"Initial detector state:"<<endl;
         for(m=0;m<stlnum;m++){
             for(i=0;i<nmodes[m];i++){
                 cout<< initial_detector_state[m][i] <<" ";
+                output << initial_detector_state[m][i] <<" ";
             }
             cout<<endl;
+            output << endl;
         }
     }
 }
@@ -727,7 +747,7 @@ void detector:: compute_important_state_index(){
             }
             if(special_state_pc_id[m] == -1){
                 if(my_id==0){
-                    cout<<" Can not find initial state or brigth state in all vmode. Must have bug here."<<endl;
+                    cout<<" Can not find initial state or bright state in all vmode. Must have bug here."<<endl;
                     MPI_Abort(MPI_COMM_WORLD,-7);
                 }
             }

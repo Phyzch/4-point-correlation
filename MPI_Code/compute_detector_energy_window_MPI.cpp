@@ -158,6 +158,7 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
         double low_initial_state_energy = min(d.initial_Detector_energy[0],d.initial_Detector_energy[1]);
 
         ndetector0[0] = -1; // this is for:  when we go into code: ndetector0[i]= ndetector0[i]+1, our first state is |000000>
+
         while (1) {
             label2:;  // label2 is for detector1 to jump out of while(1) loop (this is inner layer of while(1))
             detector0_energy = 0;
