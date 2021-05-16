@@ -226,6 +226,14 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
         }
     }
 
+    // scale whole Hamiltonian with hbar: as ihbar d/dt
+    int Size;
+    for(m=0;m<stlnum;m++){
+        Size = dmat[m].size();
+        for(i=0;i<Size;i++){
+            dmat[m][i] = dmat[m][i] / hbar_scaling;
+        }
+    }
 
     //--------------------------------------------------------------------------------------------------
     update_initial_and_bright_detector_energy();
@@ -640,7 +648,7 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
 
         for(m=0;m<stlnum;m++){
             for(i=0;i<nmodes[m];i++){
-                initial_detector_state[m][i] = initial_detector_state[m][i] / double(hbar_scaling);
+                initial_detector_state[m][i] = lround(initial_detector_state[m][i] / double(hbar_scaling) ) ;
             }
         }
 
