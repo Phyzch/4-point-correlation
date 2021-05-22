@@ -153,7 +153,8 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
                 output << nmodes[i] << " " << proptime[i] << endl;
             }
             for(j=0;j<nmodes[i];j++){
-                aij[i][j] = a_intra * pow(double(mfreq[i][j]),0.5) / pow(double(mfreq[0][0] /2),0.5);
+                // aij[i][j] = f^{0.5} / 270
+                aij[i][j] = pow(double(mfreq[i][j]),0.5) / 270 ;
                 // aij corresponding to scaling factor for f= f_{bright}/2 cm^{-1}.
                 if (! Detector_Continue_Simulation) {
                     output << mfreq[i][j] << " " << nmax[i][j] << " " << modtype[i][j] << " " << premodcoup[i][j]

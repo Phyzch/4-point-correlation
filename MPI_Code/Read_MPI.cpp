@@ -21,6 +21,9 @@ void full_system:: read_input_with_MPI(){
               >> Energy_Range_4_point_corre_function_average >> Distance_Range_4_point_corre_function_average
               >> Emin >> Emax;  // read input from file.
 
+        // In this model we fix V_intra to 3050
+        d.V_intra = 3050 ;
+
         // read time used for simulation.  delt: time step. tstart: time start to turn on coupling. tmax: maximum time for simulation.   tprint: time step to print result.
         input >> delt >> tstart >> tmax >> tprint;
         // check if input is valid

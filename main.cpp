@@ -10,7 +10,7 @@ int my_id;
 int num_proc;
 bool Turn_on_Vanvleck = false ;  // Note when turn on vanvleck, the V_intra and a_intra is decided by vanvlk file there.
 bool turn_on_random_self_anharmonicity = false ;
-bool read_Hamltonian_from_file = true ;
+bool read_Hamltonian_from_file = false ;
 bool Sphere_cutoff_in_state_space = true;
 bool save_state = false;
 bool Evolve_dynamics = false;  // bool variable to decide if we run Detector_Evolve
@@ -27,7 +27,7 @@ bool compute_Eigenstate_OTOC_bool = true ;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/Eigenstate OTOC/V=300/";
+                       "/Eigenstate OTOC/cyclopentanone_8_mode/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=300/";
  //   string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";

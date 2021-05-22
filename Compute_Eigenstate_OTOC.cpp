@@ -476,7 +476,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
     }
 
     // sparsify result:
-    // l_M_m_nonzero (size : [ 2 * nmodes[0], 2*nmodes[0] , eigenstate_num, list]
+    // l_M_m_nonzero (size : [ 2 * nmodes[0], 2 * nmodes[0] , eigenstate_num, list]
     vector< vector< vector< vector<phi_operator_phi_tuple_complex> > > > l_M_m_nonzero;
     for(i=0;i<2*nmodes[0];i++){
         vector< vector< vector<phi_operator_phi_tuple_complex> > >  l_M_m_nonzero_1;
