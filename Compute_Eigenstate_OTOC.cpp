@@ -595,7 +595,7 @@ void detector::compute_Eigenstate_OTOC(){
 
     Eigenstate_OTOC = new double ** [2 * nmodes[0]];
     for(i=0;i<2 * nmodes[0];i++){
-        Eigenstate_OTOC[i] = new double * [ 2*nmodes[0]];
+        Eigenstate_OTOC[i] = new double * [ 2 * nmodes[0]];
         for(j=0;j<2*nmodes[0];j++){
             Eigenstate_OTOC[i][j] = new double [eigenstate_num];
         }
