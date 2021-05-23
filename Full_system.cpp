@@ -94,7 +94,7 @@ full_system::full_system(string path1, string cvpt_path1) {
 void full_system::Quantum_evolution() {
     // -----------------------------------------------------------------------------------
 	// Now we construct our wavefunction /phi for our detector and full_system. (For system it is already constructed in s.read())
-    int i,j;
+    int i,j , k;
 	clock_t start_time, end_time, duration;
 
 
@@ -195,6 +195,7 @@ void full_system::Quantum_evolution() {
 
             // only eigenstate whose OTOC may converge to 1 at initial time is computed. This implies eigenstate selected to compute OTOC should be in small energy window.
             d.compute_selected_eigenstate_index();
+
 
             // compute OTOC for eigenstate solved and output to file.
             d.compute_Eigenstate_OTOC();
