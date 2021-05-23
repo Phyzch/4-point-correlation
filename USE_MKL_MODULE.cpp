@@ -9,6 +9,8 @@ using namespace std;
 /* Lower/upper bound of search interval [Emin,Emax] */
 double Emin = 0; // default value
 double Emax = 100; // default value
+double Emin2 = 0;
+double Emax2 = 100;
 
 struct Matrix_COO_element{
     int row;

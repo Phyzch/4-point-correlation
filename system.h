@@ -225,10 +225,14 @@ public:
     int eigenstate_num; // denote as M
     double * Eigenvalue_list; // [M]
     double ** Eigenstate_list; // [M, total_dmatsize[0]]
+    vector<int> selected_eigenstate_index; // only eigenstate within small energy window whose OTOC converge will be computed.
+    int selected_eigenstate_num ;
+
     double * Eigenstate_energy_std_list ;
     double Eigenstate_OTOC_sift_criteria;  // criteria used to discard small value in OTOC computation.
     void Broadcast_eigenstate_and_eigenvalue();
     void compute_eigenstate_energy_std();
+    void compute_selected_eigenstate_index();
 
     vector<vector<int>> neighbor_state_index_list_for_all_state ; // store nearby state index. size: [total_dmat_size[0], dof * 2]
     void construct_neighbor_state_index_list_for_all_state();  // construct nearby state index

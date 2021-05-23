@@ -5,6 +5,16 @@
 #include "system.h"
 using namespace std;
 
+void detector::compute_selected_eigenstate_index(){
+    int i;
+    for(i=0;i<eigenstate_num;i++){
+        if(Eigenvalue_list[i] > Emin2 and Eigenvalue_list[i] < Emax2){
+            selected_eigenstate_index.push_back(i);
+        }
+    }
+    selected_eigenstate_num = selected_eigenstate_index.size();
+}
+
 
 void detector::construct_neighbor_state_index_list_for_all_state(){
     int i, j;
@@ -362,12 +372,12 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
                                                   int * recv_count, int * displs ){
     int l, m,  p; // index for state
     int i, j, k; // index for dof
-    int local_eigenstate_num = eigenstate_num / num_proc;
+    int local_eigenstate_num = selected_eigenstate_num / num_proc;
     if(my_id == num_proc -1){
-        local_eigenstate_num = eigenstate_num -  int(eigenstate_num / num_proc) * (num_proc - 1);
+        local_eigenstate_num = selected_eigenstate_num -  int(selected_eigenstate_num / num_proc) * (num_proc - 1);
     }
 
-    int local_eigenstate_begin_index = my_id * int (eigenstate_num / num_proc);
+    int local_eigenstate_begin_index = my_id * int (selected_eigenstate_num / num_proc);
 
     int state_l_index ;
     int state_m_index;
@@ -398,7 +408,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
                     temporary_list[l] = 0;
                 }
 
-                state_m_index = local_eigenstate_begin_index + m;
+                state_m_index = selected_eigenstate_index[ local_eigenstate_begin_index + m ];
 
                 // first compute part : <l | a_{i}(t) a_{j} | m>
                 ptr1 = & phi_ladder_operator_phi_tuple_list[j][state_m_index];  // List for a_{j}|m>
@@ -455,7 +465,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
         }
     }
 
-    int * l_M_m_list_size = new int [eigenstate_num];
+    int * l_M_m_list_size = new int [selected_eigenstate_num];
     int * l_M_m_list_size_local = new int [local_eigenstate_num];
 
     double * l_M_m_bcast_real ;
@@ -467,24 +477,25 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
     for(i=0;i<2 * nmodes[0] ; i++){
         for(j=0;j<2 * nmodes[0]; j++){
 
+            // send number of state in l_M_m_local_index_l and l_M_m_overlap_value
             for (m=0; m< local_eigenstate_num; m++ ){
                 l_M_m_list_size_local[m] = l_M_m_local_index_l[i][j][m].size();
             }
             MPI_Allgatherv(&l_M_m_list_size_local[0] , local_eigenstate_num, MPI_INT,
                            & l_M_m_list_size[0], &recv_count[0], &displs[0], MPI_INT, MPI_COMM_WORLD );
 
-            for( m = 0 ; m < eigenstate_num ; m++ ){
+            for( m = 0 ; m < selected_eigenstate_num ; m++ ){
                 l_M_m_overlap_value[i][j][m] = new complex<double> [ l_M_m_list_size[m] ];
                 l_M_m_index_l[i][j][m] = new int [ l_M_m_list_size[m] ];
             }
 
-            for(m=0; m< eigenstate_num ; m++ ){
-                send_pc_id = m / int(eigenstate_num / num_proc) ;
+            for(m=0; m< selected_eigenstate_num ; m++ ){
+                send_pc_id = m / int(selected_eigenstate_num / num_proc) ;
                 if(send_pc_id  == num_proc ){
                     send_pc_id = num_proc - 1 ;
                 }
 
-                local_eigenstate_index = m - send_pc_id * int(eigenstate_num / num_proc) ;
+                local_eigenstate_index = m - send_pc_id * int(selected_eigenstate_num / num_proc) ;
                 l_M_m_bcast_real = new double [ l_M_m_list_size[m] ];
                 l_M_m_bcast_imag = new double [ l_M_m_list_size[m] ];
 
@@ -530,9 +541,10 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
                            & l_M_m_list_size[0], &recv_count[0], &displs[0], MPI_INT, MPI_COMM_WORLD );
 
 
-            for(m=0;m<eigenstate_num;m++) {
+            for(m=0;m<selected_eigenstate_num;m++) {
                 vector<phi_operator_phi_tuple_complex> l_M_m_nonzero_3;
                 for(l=0;l< l_M_m_list_size[m] ;l++){
+                    // record eigenstate index and eigenstate overlap for <l|[a_{i}, a_{j}] |m>
                     phi_operator_phi_tuple_complex Tuple1( l_M_m_index_l[i][j][m][l], l_M_m_overlap_value[i][j][m][l] );
                     l_M_m_nonzero_3.push_back(Tuple1);
                 }
@@ -558,7 +570,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
             for(j=0; j<2 * nmodes[0] ; j++){
                 local_l_M_m_sum = 0;
 
-                state_m_index = local_eigenstate_begin_index + m;
+                state_m_index = local_eigenstate_begin_index + m  ;
 
                 for(k=0;k<2 * nmodes[0] ; k++){
                     ptr3 = & l_M_m_nonzero[k][i][state_m_index];   // l_M_m[k][i][:][state_m]
@@ -601,7 +613,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
         Eigenstate_OTOC_output << time << endl;
 
         // output format:  each state, output real and imaginary part. So in total 2 *  eigenstate_num lines
-        for(m=0;m<eigenstate_num;m++){
+        for(m=0;m<selected_eigenstate_num;m++){
             for(i=0;i< 2*nmodes[0] ; i++){
                 for(j=0;j<2*nmodes[0];j++){
                     Eigenstate_OTOC_output << Eigenstate_OTOC[i][j][m] <<" ";
@@ -615,7 +627,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
     // clear the vector in l_M_m_local_***
     for(i = 0; i < 2 * nmodes[0] ; i++){
         for(j = 0 ; j < 2 * nmodes[0] ; j++) {
-            for( m = 0 ; m < eigenstate_num ; m++ ){
+            for( m = 0 ; m < local_eigenstate_num ; m++ ){
                 l_M_m_local_overlap_value[i][j][m].clear();
                 l_M_m_local_index_l[i][j][m].clear();
             }
@@ -624,7 +636,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
     // free space for l_M_m_index_l and l_M_m_overlap_value
     for(i = 0; i < 2 * nmodes[0] ; i++){
         for(j = 0 ; j < 2 * nmodes[0] ; j++) {
-            for( m = 0 ; m < eigenstate_num ; m++ ){
+            for( m = 0 ; m < selected_eigenstate_num ; m++ ){
                 delete [] l_M_m_overlap_value[i][j][m];
                 delete [] l_M_m_index_l [i][j][m];
             }
@@ -648,9 +660,9 @@ void detector::compute_Eigenstate_OTOC(){
     }
     int Time_series_len = Time_series.size();
 
-    int local_eigenstate_num = eigenstate_num / num_proc;
+    int local_eigenstate_num = selected_eigenstate_num / num_proc;
     if(my_id == num_proc -1){
-        local_eigenstate_num = eigenstate_num -  int(eigenstate_num / num_proc) * (num_proc - 1);
+        local_eigenstate_num = selected_eigenstate_num -  int(selected_eigenstate_num / num_proc) * (num_proc - 1);
     }
 
 
@@ -659,9 +671,9 @@ void detector::compute_Eigenstate_OTOC(){
 
     Eigenstate_OTOC = new double ** [2 * nmodes[0]];
     for(i=0;i<2 * nmodes[0];i++){
-        Eigenstate_OTOC[i] = new double * [ 2*nmodes[0]];
+        Eigenstate_OTOC[i] = new double * [ 2 * nmodes[0]];
         for(j=0;j<2*nmodes[0];j++){
-            Eigenstate_OTOC[i][j] = new double [eigenstate_num];
+            Eigenstate_OTOC[i][j] = new double [selected_eigenstate_num];
         }
     }
 
@@ -686,8 +698,8 @@ void detector::compute_Eigenstate_OTOC(){
         l_M_m_overlap_value[i] = new complex<double> ** [2 * nmodes[0]];
         l_M_m_index_l[i] = new int ** [2 * nmodes[0] ];
         for(j=0;j<2*nmodes[0];j++){
-            l_M_m_overlap_value[i][j] = new complex<double> * [eigenstate_num];
-            l_M_m_index_l[i][j] = new int * [ eigenstate_num ];
+            l_M_m_overlap_value[i][j] = new complex<double> * [selected_eigenstate_num];
+            l_M_m_index_l[i][j] = new int * [ selected_eigenstate_num ];
         }
     }
 
@@ -697,17 +709,17 @@ void detector::compute_Eigenstate_OTOC(){
         l_M_m_local_overlap_value[i] = new vector<complex<double>> * [2 * nmodes[0]];
         l_M_m_local_index_l[i] = new vector<int> * [ 2 * nmodes[0] ];
         for(j=0;j<2*nmodes[0];j++){
-            l_M_m_local_overlap_value[i][j] = new vector<complex<double>>  [eigenstate_num];
-            l_M_m_local_index_l[i][j] = new vector<int>  [ eigenstate_num ] ;
+            l_M_m_local_overlap_value[i][j] = new vector<complex<double>>  [local_eigenstate_num];
+            l_M_m_local_index_l[i][j] = new vector<int>  [ local_eigenstate_num ] ;
         }
     }
 
     int * recv_count = new int [num_proc];
     int * displs = new int [num_proc];
     for(i=0;i<num_proc-1;i++){
-        recv_count [i] = int(eigenstate_num / num_proc) ;
+        recv_count [i] = int(selected_eigenstate_num / num_proc) ;
     }
-    recv_count[num_proc - 1] = eigenstate_num -  int(eigenstate_num / num_proc) * (num_proc - 1);
+    recv_count[num_proc - 1] = selected_eigenstate_num -  int(selected_eigenstate_num / num_proc) * (num_proc - 1);
     displs[0] = 0;
     for(i=1;i<num_proc;i++){
         displs[i] = displs[i - 1] + recv_count[ i - 1 ];
@@ -720,10 +732,10 @@ void detector::compute_Eigenstate_OTOC(){
         Eigenstate_OTOC_output << nmodes[0] << endl;
 
         // output information about eigenstate (eigenvalue)
-        Eigenstate_OTOC_output << eigenstate_num << endl;
+        Eigenstate_OTOC_output << selected_eigenstate_num << endl;
 
-        for(i=0;i<eigenstate_num;i++){
-            Eigenstate_OTOC_output << Eigenvalue_list[i] <<"  ";
+        for(i=0;i<selected_eigenstate_num;i++){
+            Eigenstate_OTOC_output << Eigenvalue_list[ selected_eigenstate_index[i] ] <<"  ";
         }
         Eigenstate_OTOC_output<<endl;
 
@@ -735,7 +747,7 @@ void detector::compute_Eigenstate_OTOC(){
     // compute Eigenstate OTOC and output
     for(i=0;i<Time_series_len;i++){
         t = Time_series[i];
-        compute_Eigenstate_OTOC_submodule(Eigenstate_OTOC_output,t,Eigenstate_OTOC, local_Eigenstate_OTOC, l_M_m_overlap_value, l_M_m_index_l, l_M_m_local_overlap_value , l_M_m_local_index_l , recv_count,displs);
+        compute_Eigenstate_OTOC_submodule(Eigenstate_OTOC_output,t,Eigenstate_OTOC, local_Eigenstate_OTOC, l_M_m_overlap_value, l_M_m_index_l, l_M_m_local_overlap_value  ,  l_M_m_local_index_l , recv_count,displs);
     }
 
     // free space:

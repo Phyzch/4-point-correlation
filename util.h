@@ -61,6 +61,7 @@ extern bool no_coupling;  // if this is Ture, we do not have off-diagonal coupli
 extern bool compute_overlap_with_eigenstate; // If this is True, we will use MFD to compute overlap of initial state with eigenvalue
 extern bool compute_eigenvector_use_MKL_module;
 extern double Emin, Emax; // range to solve eigenvalue and eigenvector using Intel MKL.  We will read it from input file.
+extern double Emin2, Emax2;
 extern bool compute_Eigenstate_OTOC_bool;
 
 // define function here
