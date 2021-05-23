@@ -238,7 +238,10 @@ public:
     void compute_phi_ladder_operator_phi();
 
     void  compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, double time, double *** Eigenstate_OTOC , double *** local_Eigenstate_OTOC,
-                                            complex<double> **** l_M_m , complex<double> **** l_M_m_local , int * recv_count, int * displs  );
+                                            complex<double> **** l_M_m_overlap_value , int **** l_M_m_index_l,
+                                            vector<complex<double>> *** l_M_m_local_overlap_value , vector<int> *** l_M_m_local_index_l  ,
+                                            int * recv_count, int * displs  );
+
     void compute_Eigenstate_OTOC();
 
     // time is in unit of ps. energy is in unit of cm^{-1} as in spectroscopy.
