@@ -491,7 +491,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
 
             for(m=0; m< selected_eigenstate_num ; m++ ){
                 send_pc_id = m / int(selected_eigenstate_num / num_proc) ;
-                if(send_pc_id  == num_proc ){
+                if(send_pc_id  >= num_proc ){
                     send_pc_id = num_proc - 1 ;
                 }
 
