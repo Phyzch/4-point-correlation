@@ -174,35 +174,43 @@ void detector:: compute_phi_ladder_operator_phi( ){
 
 
                 Energy_sift_criteria =  5 * (Eigenstate_energy_std_list[eigenstate_l_index] + Eigenstate_energy_std_list[eigenstate_m_index]);
+                if(Energy_sift_criteria < 10000){
+                    Energy_sift_criteria = 10000;
+                }
+                if(energy_difference > Energy_sift_criteria ){
+                    local_phi_ladder_operator_phi[i][m][l] = 0;
+                }
+                else {
+                    // we need to compute <\phi_m | a_{i} | phi_l> or <\phi_m | a_{i}^{+} | \phi_l>
+                    local_ladder_operator_value = 0;
+                    for (j = 0; j < total_dmat_size[0]; j++) {
+                        basis_set_state_index = j;
+                        // for i < nmodes[0] , that's state_mode[i] -1. which corresponds to lowering operator.
+                        // for i > nmodes[0], that's state_mode[i] + 1, corresponds to raising operator
+                        nearby_basis_set_state_index = neighbor_state_index_for_all_state_list[j][i];
+                        if (nearby_basis_set_state_index == -1) {
+                            continue;
+                        } else {
+                            if (i < nmodes[0]) {
+                                // lowering operator
+                                local_ladder_operator_value = local_ladder_operator_value +
+                                                              Eigenstate_list[eigenstate_l_index][basis_set_state_index] *
+                                                              Eigenstate_list[eigenstate_m_index][nearby_basis_set_state_index] *
+                                                              sqrt(dv_all[0][basis_set_state_index][i]);
+                            } else {
+                                // raising operator
+                                local_ladder_operator_value = local_ladder_operator_value +
+                                                              Eigenstate_list[eigenstate_l_index][basis_set_state_index] *
+                                                              Eigenstate_list[eigenstate_m_index][nearby_basis_set_state_index] *
+                                                              sqrt(dv_all[0][basis_set_state_index][i - nmodes[0]] + 1);
+                            }
 
-                // we need to compute <\phi_m | a_{i} | phi_l> or <\phi_m | a_{i}^{+} | \phi_l>
-                local_ladder_operator_value = 0;
-                for(j=0;j<total_dmat_size[0]; j++){
-                    basis_set_state_index = j;
-                    // for i < nmodes[0] , that's state_mode[i] -1. which corresponds to lowering operator.
-                    // for i > nmodes[0], that's state_mode[i] + 1, corresponds to raising operator
-                    nearby_basis_set_state_index = neighbor_state_index_for_all_state_list[j][i];
-                    if(nearby_basis_set_state_index == -1){
-                        continue;
-                    }
-                    else{
-                        if(i<nmodes[0]){
-                            // lowering operator
-                            local_ladder_operator_value = local_ladder_operator_value + Eigenstate_list[eigenstate_l_index][basis_set_state_index] *
-                                                                                        Eigenstate_list[eigenstate_m_index][ nearby_basis_set_state_index ] * sqrt(dv_all[0][basis_set_state_index][i]);
-                        }
-                        else{
-                            // raising operator
-                            local_ladder_operator_value = local_ladder_operator_value + Eigenstate_list[eigenstate_l_index][basis_set_state_index] *
-                                                                                        Eigenstate_list[eigenstate_m_index][ nearby_basis_set_state_index ] * sqrt(dv_all[0][basis_set_state_index][i - nmodes[0] ] + 1);
                         }
 
                     }
+                    local_phi_ladder_operator_phi[i][m][l] = local_ladder_operator_value;
 
                 }
-                local_phi_ladder_operator_phi[i][m][l]  = local_ladder_operator_value;
-
-
 
 
             }

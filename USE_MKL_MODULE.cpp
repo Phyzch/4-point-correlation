@@ -227,6 +227,9 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
     }
 
     L = L * 2;
+    if(L > dmatsize){
+        L = dmatsize - 100 ;
+    }
 
     MKL_INT      M0 = 0;            /* Initial guess for subspace dimension to be used */
     MKL_INT      M = 0;             /* Total number of eigenvalues found in the interval */
@@ -329,28 +332,28 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
         }
     }
     printf("Finish constructing Matrix_X \n");
-    for(i=0;i<M;i++){
-        for(j=0;j<M;j++){
-            Y[i][j] = 0;
-            for (k = 0; k<dmatsize;k++){
-                Y[i][j] = Y[i][j] + Matrix_X[i][k] * Matrix_X[j][k];
-            }
-        }
-    }
-
-    for(i=0;i<M;i++){
-        Y[i][i] = Y[i][i] - 1;
-    }
-    printf("Finsih computing Y \n");
-    double small_value = 0;
-    for(i=0;i<M;i++){
-        for(j=0;j<M;j++){
-            if (abs(Y[i][j]) > small_value){
-                small_value = abs(Y[i][j]);
-            }
-        }
-    }
-    printf("Maximum value in X*X - I is %f \n" , small_value);
+//    for(i=0;i<M;i++){
+//        for(j=0;j<M;j++){
+//            Y[i][j] = 0;
+//            for (k = 0; k<dmatsize;k++){
+//                Y[i][j] = Y[i][j] + Matrix_X[i][k] * Matrix_X[j][k];
+//            }
+//        }
+//    }
+//
+//    for(i=0;i<M;i++){
+//        Y[i][i] = Y[i][i] - 1;
+//    }
+//    printf("Finsih computing Y \n");
+//    double small_value = 0;
+//    for(i=0;i<M;i++){
+//        for(j=0;j<M;j++){
+//            if (abs(Y[i][j]) > small_value){
+//                small_value = abs(Y[i][j]);
+//            }
+//        }
+//    }
+//    printf("Maximum value in X*X - I is %f \n" , small_value);
 
     // ---- for debug ------
 //    for(i=0;i<dmatsize+1;i++){
