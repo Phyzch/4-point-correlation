@@ -19,7 +19,7 @@ void full_system:: read_input_with_MPI(){
               >> noise_strength >> Rmax >> d.V_intra >> d.detector_energy_window_size
               >>detector_lower_bright_state_energy_window_shrink >> distance_cutoff_for_4_piont_corre
               >> Energy_Range_4_point_corre_function_average >> Distance_Range_4_point_corre_function_average
-              >> Emin >> Emax;  // read input from file.
+              >> Emin >> Emax >> Emin2 >> Emax2;  // read input from file.
 
         // read time used for simulation.  delt: time step. tstart: time start to turn on coupling. tmax: maximum time for simulation.   tprint: time step to print result.
         input >> delt >> tstart >> tmax >> tprint;
@@ -83,6 +83,9 @@ void full_system:: read_input_with_MPI(){
     MPI_Bcast(&Distance_Range_4_point_corre_function_average,1,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(&Emin, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&Emax, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&Emin2, 1 , MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&Emax2, 1, MPI_DOUBLE, 0 , MPI_COMM_WORLD);
+    
     // Bcast delt tstart tmax tprint to other process.
     MPI_Bcast(&delt, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&tstart, 1, MPI_DOUBLE, 0 , MPI_COMM_WORLD);

@@ -193,6 +193,9 @@ void full_system::Quantum_evolution() {
             // comput <phi_m | a_{i} | phi_l> and <phi_m | a^{+}_{i} | phi_l>. result in 3d array: phi_ladder_operator_phi
             d.compute_phi_ladder_operator_phi();
 
+            // only eigenstate whose OTOC may converge to 1 at initial time is computed. This implies eigenstate selected to compute OTOC should be in small energy window.
+            d.compute_selected_eigenstate_index();
+
             // compute OTOC for eigenstate solved and output to file.
             d.compute_Eigenstate_OTOC();
 
