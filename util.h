@@ -75,6 +75,14 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
                                                              const int * dmat_size_each_process,
                                                              const int * dmat_offset_each_process, ofstream & Eigenvector_output,
                                                              double * &E , double ** &Matrix_X);
+int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_given_energy_and_num(  int * dirow_list,  int * dicol_list,  double * dmat_list , vector<double> &  dmat_diagonal_list ,  int dmatsize  ,int dmatnum,
+                                                                                  ofstream & Eigenvector_output,
+                                                                                  double * &E , double ** &Matrix_X,
+                                                                                  double energy_of_choice, int eigenstate_number);
+
+void convert_COO_to_CSR(const int * dirow_list, const int * dicol_list, const double * dmat_list , int dmatsize, int dmatnum,
+                        vector<int> & dirow_CSR_form_fortran, vector<int> & dicol_CSR_form_fortran, vector<double> & sorted_dmat );
+
 int compar(const void * a, const void * b);
 
 
@@ -97,6 +105,7 @@ struct phi_operator_phi_tuple_complex{
         phi_operator_phi_value = phi_operator_phi_value1;
     }
 };
+
 
 
 

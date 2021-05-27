@@ -173,16 +173,26 @@ void full_system::Quantum_evolution() {
 
         if(my_id == 0){
             ofstream Eigenvector_solver(path + "MKL_eigenvalue_Eigenvector.txt");
+
+            vector<double> dmat0_copy = dmat0;
+            sort(dmat0_copy.begin() , dmat0_copy.end());
+
+            double energy_of_choice = 5500;
+            int eigenstate_num_to_solve = 10;
+//            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_given_energy_and_num(d.total_dirow[0], d.total_dicol[0], d.total_dmat[0],dmat0_copy,d.total_dmat_size[0],
+//                                                                                                           d.total_dmat_num[0],Eigenvector_solver, d.Eigenvalue_list, d.Eigenstate_list, energy_of_choice, eigenstate_num_to_solve );
+
             d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
                                                                                       d.dmatsize_each_process[0] , d.dmat_offset_each_process[0],Eigenvector_solver,d.Eigenvalue_list,d.Eigenstate_list);
             cout <<"Finish solving eigenvector and eigenvalue " << endl;
             Eigenvector_solver.close();
         }
 
-        // Broadcast eigenstate and eigenvalue found to all other process.
-        d.Broadcast_eigenstate_and_eigenvalue();
-
         if (compute_Eigenstate_OTOC_bool){
+
+            // Broadcast eigenstate and eigenvalue found to all other process.
+            d.Broadcast_eigenstate_and_eigenvalue();
+
             // Use eigenstate and eigenvalue to compute OTOC.
             // first for every state construct neighbor state index.
             d.construct_neighbor_state_index_list_for_all_state();

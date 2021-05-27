@@ -146,6 +146,9 @@ void convert_COO_to_CSR(const int * dirow_list, const int * dicol_list, const do
 
 }
 
+
+
+
 int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize  ,int dmatnum,
                                                              const int * dmat_size_each_process, const int * dmat_offset_each_process,
                                                              ofstream & Eigenvector_output,
@@ -217,6 +220,8 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
     cout <<" Max energy for system:   "<< dmat_list_max << endl;
     cout <<"dmatsize :   " << dmatsize << "   dmatnum:   " << dmatnum << endl;
 
+    // Below we estimate number of all eigenstates within energy range.
+    // However, for large matrix, we only want sample small number of eigenvalues in matrix according to Boltzmann dist.
     for(i=0;i<num_proc;i++){
         for(j=0;j<dmat_size_each_process[i];j++){
             index1 = dmat_offset_each_process[i] + j;
@@ -226,7 +231,7 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
         }
     }
 
-    L = L * 2;
+
     if(L > dmatsize){
         L = dmatsize - 100 ;
     }
@@ -355,23 +360,6 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
 //    }
 //    printf("Maximum value in X*X - I is %f \n" , small_value);
 
-    // ---- for debug ------
-//    for(i=0;i<dmatsize+1;i++){
-//        Eigenvector_output << rows[i] <<"  ";
-//    }
-//    Eigenvector_output << endl;
-//
-//    for(i=0;i<dmatnum;i++){
-//        Eigenvector_output << cols[i] <<"  ";
-//    }
-//    Eigenvector_output << endl;
-//
-//    for(i=0;i<dmatnum;i++){
-//        Eigenvector_output << val[i] <<"  ";
-//    }
-//    Eigenvector_output << endl;
-
-    // ---- for debug --------
 
     for(i=0;i<num_proc;i++){
         for(j=0;j<dmat_size_each_process[i];j++){
