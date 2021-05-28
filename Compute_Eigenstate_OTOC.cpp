@@ -79,25 +79,6 @@ void detector::construct_neighbor_state_index_list_for_all_state(){
     // ------------------ For debug ---------------------
 }
 
-void detector::Broadcast_eigenstate_and_eigenvalue(){
-    int i;
-    // broadcast total number of eigenstate found to other process
-    MPI_Bcast(&eigenstate_num,1,MPI_INT,0,MPI_COMM_WORLD);
-
-    // other process allocate space for eigenvalue and eigenvector
-    if(my_id!=0){
-        Eigenvalue_list = new double[eigenstate_num];
-        Eigenstate_list = new double * [eigenstate_num];
-        for(i=0;i<eigenstate_num ; i++){
-            Eigenstate_list[i] = new double [total_dmat_size[0]];
-        }
-    }
-    // Broadcast eigenvalue and eigenvector to other process
-    MPI_Bcast(&Eigenvalue_list[0], eigenstate_num,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    for(i=0;i<eigenstate_num;i++){
-        MPI_Bcast(&Eigenstate_list[i][0], total_dmat_size[0], MPI_DOUBLE, 0 , MPI_COMM_WORLD);
-    }
-}
 
 void detector::compute_eigenstate_energy_std(){
     int i , j , k;

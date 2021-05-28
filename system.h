@@ -236,7 +236,7 @@ public:
 
     double * Eigenstate_energy_std_list ;
     double Eigenstate_OTOC_sift_criteria;  // criteria used to discard small value in OTOC computation.
-    void Broadcast_eigenstate_and_eigenvalue();
+    void Broadcast_eigenstate_and_eigenvalue(vector<double> & Eigenvalue_temp, vector<vector<double>> & Eigenvector_temp);
     void compute_eigenstate_energy_std();
     void compute_selected_eigenstate_index();
 

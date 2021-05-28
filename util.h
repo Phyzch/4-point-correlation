@@ -70,6 +70,8 @@ extern bool compute_eigenvector_use_MKL_module ;
 extern bool compute_Eigenstate_OTOC_bool ;
 extern double Emin, Emax; // range to solve eigenvalue and eigenvector using Intel MKL.  We will read it from input file.
 extern double Emin2, Emax2;
+extern double Emin_for_core, Emax_for_core;
+
 
 // define function here
 float ran2(long& idum);
@@ -78,16 +80,15 @@ void convert_dv(const vector<vector<int>> & vec_2d, vector <int>  & vec_1d , vec
 // used for cnostruct buffer for communication between process for matrix multiplication.
 int construct_send_buffer_index(int * remoteVecCount, int * remoteVecPtr, int * remoteVecIndex, int * tosendVecCount_element, int * tosendVecPtr_element, int * & tosendVecIndex_ptr);
 
+void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorted_dmat_diagonal_part );
 
-int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize  ,int dmatnum,
+int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_submodule(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize  ,int dmatnum,
                                                              vector<double> & dmat_diagonal_part ,
-                                                             ofstream & Eigenvector_output,
                                                              vector<double> & E , vector<vector<double>> & Matrix_X,
                                                              double Emin_of_choice, double Emax_of_choice );
 
 int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize  ,int dmatnum,
                                                                           vector<double> & dmat_diagonal_part ,
-                                                                          ofstream & Eigenvector_output,
                                                                           vector<double> & Eigenvalue_list , vector<vector<double>> & Eigenvector_list,
                                                                           double Emin_of_choice, double Emax_of_choice);
 

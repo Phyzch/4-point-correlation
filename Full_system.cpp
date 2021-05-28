@@ -181,47 +181,36 @@ void full_system::Quantum_evolution() {
 
     if(compute_eigenvector_use_MKL_module){
 
+        vector<double> dmat0_copy = dmat0;
+        sort(dmat0_copy.begin() , dmat0_copy.end());
+
+        // compute Emin_for_core,  Emax_for_core
+        allocate_diagonalization_energy_range_for_diff_proc(dmat0_copy);
+
+        vector<double> Eigenvalue_temp ;
+        vector<vector<double>> Eigenvector_temp ;
+
+        if(my_id == 0 ){
+            cout << "Min energy for system:  " << dmat0_copy[0] << endl;
+            cout <<" Max energy for system:   "<< dmat0_copy[dmat0_copy.size() - 1 ] << endl;
+            cout <<"dmatsize :   " << d.total_dmat_size[0] << "   dmatnum:   " << d.total_dmat_num[0] << endl;
+        }
+
+        d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
+                                                                                                 dmat0 ,Eigenvalue_temp , Eigenvector_temp , Emin_for_core , Emax_for_core );
+
+        // Broadcast all eigenvalue and eigenvector to all process.
+        d.Broadcast_eigenstate_and_eigenvalue(Eigenvalue_temp, Eigenvector_temp);
+
         if(my_id == 0){
             ofstream Eigenvector_solver(path + "MKL_eigenvalue_Eigenvector.txt");
 
-            vector<double> dmat0_copy = dmat0;
-            sort(dmat0_copy.begin() , dmat0_copy.end());
-
-            cout << "Maximum energy for state: " << dmat0_copy[dmat0_copy.size() - 1] << endl;
-
-            double energy_of_choice = 5500;
-            int eigenstate_num_to_solve = 10;
-//            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_given_energy_and_num(d.total_dirow[0], d.total_dicol[0], d.total_dmat[0],dmat0_copy,d.total_dmat_size[0],
-//                                                                                                           d.total_dmat_num[0],Eigenvector_solver, d.Eigenvalue_list, d.Eigenstate_list, energy_of_choice, eigenstate_num_to_solve );
-
-
-            vector<double> Eigenvalue_temp ;
-            vector<vector<double>> Eigenvector_temp ;
-//            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
-//                                                                                      dmat0 ,Eigenvector_solver,Eigenvalue_temp , Eigenvector_temp , Emin, Emax );
-
-            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
-                                                                                                     dmat0 ,Eigenvector_solver,Eigenvalue_temp , Eigenvector_temp , Emin, Emax );
-
-            // convert Eigenvalue_temp , Eigenvector_temp to d.eigenvalue, d.eigenvector
-            d.Eigenvalue_list = new double [d.eigenstate_num];
-            d.Eigenstate_list = new double * [d.eigenstate_num];
-            for(i=0;i<d.eigenstate_num;i++){
-                d.Eigenvalue_list[i] = Eigenvalue_temp[i];
-                d.Eigenstate_list[i] = new double[ d.total_dmat_size[0] ];
-                for(j=0;j<d.total_dmat_size[0]; j++){
-                    d.Eigenstate_list[i][j] = Eigenvector_temp[i][j];
-                }
-            }
 
             cout <<"Finish solving eigenvector and eigenvalue " << endl;
             Eigenvector_solver.close();
         }
 
         if (compute_Eigenstate_OTOC_bool){
-
-            // Broadcast eigenstate and eigenvalue found to all other process.
-            d.Broadcast_eigenstate_and_eigenvalue();
 
             // Use eigenstate and eigenvalue to compute OTOC.
             // first for every state construct neighbor state index.

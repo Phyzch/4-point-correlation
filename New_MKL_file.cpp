@@ -238,9 +238,76 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_given_energy_and_num(
     return M;
 }
 
+void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorted_dmat_diagonal_part ) {
+    // we divide energy range into different part and let different process work in parallel to solve eigenvalue and eigenvector.
+    int i, j , k ;
+    int index1;
+    int total_state_num_in_range = 0 ;
+    int dmat_diagonal_num = sorted_dmat_diagonal_part.size();
+
+
+    bool initial_index_bool = false;
+    bool end_index_bool = false;
+    int initial_index; // initial index in sorted diagonal energy part within energy range
+    int end_index;  // end index in sorted diagonal energy part within energy range
+    for(index1=0; index1 < dmat_diagonal_num ; index1++){
+        if(sorted_dmat_diagonal_part[index1] > Emin and sorted_dmat_diagonal_part[index1] < Emax){
+            total_state_num_in_range = total_state_num_in_range + 1 ;
+        }
+        if(sorted_dmat_diagonal_part[index1] > Emin and !initial_index_bool ){
+            initial_index_bool = true;
+            initial_index = index1;
+        }
+        if(sorted_dmat_diagonal_part[index1] >= Emax and !end_index_bool){
+            end_index_bool = true;
+            end_index = index1;
+        }
+    }
+
+    int num_of_state_for_solving_eigenvec_per_proc = int (total_state_num_in_range / num_proc ) ;
+    vector<int> block ;
+    double block_Emin ;
+    double block_Emax;
+
+    for(i=0;i< num_proc -1  ; i++ ){
+        block.push_back( i * num_of_state_for_solving_eigenvec_per_proc );
+    }
+    block.push_back(total_state_num_in_range);
+
+    vector<double> block_energy_range ;
+    block_energy_range.push_back(Emin);
+
+    vector<double> sorted_dmat_diagonal_part_slice ;
+    for(i=initial_index ; i < end_index; i++ ){
+        sorted_dmat_diagonal_part_slice.push_back(sorted_dmat_diagonal_part[i]);
+    }
+
+    for(i=1 ; i< num_proc  ; i++ ){
+        block_energy_range.push_back (  sorted_dmat_diagonal_part_slice[ block[i] ] ) ;
+    }
+    block_energy_range.push_back(Emax);
+
+    Emin_for_core = block_energy_range[ my_id ];
+    Emax_for_core = block_energy_range[ my_id + 1 ];
+    if(my_id == 0){
+        cout << "total number of eigenstate estimated:  " << total_state_num_in_range << endl;
+        cout << "each process estimate to solve number of eigenstate:  " << num_of_state_for_solving_eigenvec_per_proc << endl;
+        cout <<" Each process solve block index below : " << endl;
+        for(i=0;i<num_proc;i++){
+            cout << block[i] << " ";
+        }
+        cout << endl;
+
+        cout <<"energy range for block " << endl;
+        for(i=0;i<num_proc + 1 ; i++){
+            cout << block_energy_range[i] << "  ";
+        }
+        cout << endl;
+    }
+}
+
 int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize  ,int dmatnum,
                                                                           vector<double> & dmat_diagonal_part ,
-                                                                          ofstream & Eigenvector_output,
                                                                           vector<double> & Eigenvalue_list , vector<vector<double>> & Eigenvector_list,
                                                                           double Emin_of_choice, double Emax_of_choice){
     int i, j , k ;
@@ -298,25 +365,25 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * 
     }
     block_energy_range.push_back(Emax_of_choice);
 
-    cout << "Block_number :  " << block_number << endl;
-    cout << "Block" << endl;
-    for(i=0;i<block_number;i++){
-        cout << block[i] << " ";
-    }
-    cout << endl;
-    cout << "Block energy: " << endl;
-    for(i=0;i<block_number;i++){
-        cout << block_energy_range[i] << " ";
-    }
-    cout << endl;
+//    cout << "Block_number :  " << block_number << endl;
+//    cout << "Block" << endl;
+//    for(i=0;i<block_number;i++){
+//        cout << block[i] << " ";
+//    }
+//    cout << endl;
+//    cout << "Block energy: " << endl;
+//    for(i=0;i<block_number;i++){
+//        cout << block_energy_range[i] << " ";
+//    }
+//    cout << endl;
 
     for (i=0; i<block_number-1 ; i++ ){
         block_Emin = block_energy_range[i];
         block_Emax = block_energy_range[i + 1];
         vector<double> Eigenvalue_temp ;
         vector<vector<double>> Eigenvector_temp ;
-        eigenstate_num_solved = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(dirow_list ,dicol_list ,dmat_list , dmatsize,  dmatnum ,
-                                                                                       dmat_diagonal_part , Eigenvector_output ,Eigenvalue_temp , Eigenvector_temp , block_Emin, block_Emax );
+        eigenstate_num_solved = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_submodule(dirow_list ,dicol_list ,dmat_list , dmatsize,  dmatnum ,
+                                                                                       dmat_diagonal_part , Eigenvalue_temp , Eigenvector_temp , block_Emin, block_Emax );
         total_eigenstate_num_solved = total_eigenstate_num_solved + eigenstate_num_solved ;
 
         for(j = 0;j < eigenstate_num_solved; j++ ){
@@ -326,39 +393,61 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * 
         }
     }
 
-    printf("total number of eigenstate solved:   %d " , total_eigenstate_num_solved );
+    printf("total number of eigenstate solved in proc %d :   %d \n" , my_id ,total_eigenstate_num_solved );
 
-    // check normalization and orthogonality of eigenvector by computing Y =  X^{transpose} * X - I
-//    cout << "check Orthogonality  " << endl;
-//    vector<vector<double>> Y ;
-//    for(i=0;i<total_eigenstate_num_solved ; i++ ){
-//        vector<double> v (total_eigenstate_num_solved, 0);
-//        Y.push_back(v);
-//    }
-//
-//    for(i = 0 ; i < total_eigenstate_num_solved ; i++ ){
-//        for(j = 0; j < total_eigenstate_num_solved ; j++){
-//            Y[i][j] = 0;
-//            for (k = 0; k < dmatsize ; k++ ){
-//                Y[i][j] = Y[i][j] + Eigenvector_list[i][k] * Eigenvector_list[j][k];
-//            }
-//        }
-//    }
-//    printf("Finsih computing Y \n");
-//    for(i=0;i<total_eigenstate_num_solved; i++ ){
-//        Y[i][i] = Y[i][i] - 1;
-//    }
-//
-//    double small_value = -100;
-//    for(i=0;i<total_eigenstate_num_solved;i++){
-//        for(j=0;j<total_eigenstate_num_solved ;j++){
-//            if (abs(Y[i][j]) > small_value){
-//                small_value = abs(Y[i][j]);
-//            }
-//        }
-//    }
-//    printf("Maximum value in X*X - I is %f \n" , small_value);
 
     return total_eigenstate_num_solved ;
 }
 
+void detector::Broadcast_eigenstate_and_eigenvalue(vector<double> & Eigenvalue_temp, vector<vector<double>> & Eigenvector_temp){
+    int i,j , k;
+    // broadcast total number of eigenstate found to other process
+    int eigenstate_num_in_all_proc;
+    int * eigenstate_num_in_each_proc = new int [num_proc];
+    int * eigenstate_num_disp = new int [num_proc];
+    MPI_Allgather(&eigenstate_num, 1, MPI_INT, &eigenstate_num_in_each_proc[0], 1, MPI_INT, MPI_COMM_WORLD );
+
+    eigenstate_num_disp[0] = 0;
+    for(i=1;i<num_proc;i++){
+        eigenstate_num_disp[i] = eigenstate_num_disp[i - 1] + eigenstate_num_in_each_proc[i-1];
+    }
+
+    MPI_Allreduce(&eigenstate_num,&eigenstate_num_in_all_proc,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+    eigenstate_num = eigenstate_num_in_all_proc;
+
+
+    // other process allocate space for eigenvalue and eigenvector
+    Eigenvalue_list = new double[eigenstate_num];
+    Eigenstate_list = new double * [eigenstate_num];
+    for(i=0;i<eigenstate_num ; i++){
+        Eigenstate_list[i] = new double [total_dmat_size[0]];
+    }
+
+    double * Eigenstate_recv_list = new double [total_dmat_size[0]];
+
+    // AllGather Eigenvalue_list
+    MPI_Allgatherv(&Eigenvalue_temp[0], eigenstate_num_in_each_proc[my_id], MPI_DOUBLE, &Eigenvalue_list[0], eigenstate_num_in_each_proc, eigenstate_num_disp, MPI_DOUBLE, MPI_COMM_WORLD);
+
+    // AllGather Eigenstate_list
+    int eigenstate_index = 0;
+    for(i=0;i<num_proc;i++){
+        for(j=0;j<eigenstate_num_in_each_proc[i];j++){
+            if(my_id == i){
+                for(k=0;k<total_dmat_size[0]; k++){
+                    Eigenstate_recv_list[k] = Eigenvector_temp[j][k];
+                }
+            }
+            MPI_Bcast(&Eigenstate_recv_list[0],total_dmat_size[0], MPI_DOUBLE, i, MPI_COMM_WORLD);
+            for(k=0;k<total_dmat_size[0];k++){
+                Eigenstate_list[eigenstate_index][k] = Eigenstate_recv_list[k] ;
+            }
+
+            eigenstate_index = eigenstate_index + 1;
+        }
+    }
+
+    delete [] eigenstate_num_in_each_proc;
+    delete [] eigenstate_num_disp;
+    delete [] Eigenstate_recv_list;
+
+}
