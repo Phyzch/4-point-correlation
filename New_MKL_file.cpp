@@ -260,7 +260,7 @@ void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorte
         }
         if(sorted_dmat_diagonal_part[index1] >= Emax and !end_index_bool){
             end_index_bool = true;
-            end_index = index1;
+            end_index = index1 - 1 ;
         }
     }
 
@@ -269,7 +269,7 @@ void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorte
     double block_Emin ;
     double block_Emax;
 
-    for(i=0;i< num_proc -1  ; i++ ){
+    for(i=0;i< num_proc   ; i++ ){
         block.push_back( i * num_of_state_for_solving_eigenvec_per_proc );
     }
     block.push_back(total_state_num_in_range);
@@ -278,7 +278,7 @@ void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorte
     block_energy_range.push_back(Emin);
 
     vector<double> sorted_dmat_diagonal_part_slice ;
-    for(i=initial_index ; i < end_index; i++ ){
+    for(i=initial_index ; i <= end_index; i++ ){
         sorted_dmat_diagonal_part_slice.push_back(sorted_dmat_diagonal_part[i]);
     }
 
@@ -293,7 +293,7 @@ void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorte
         cout << "total number of eigenstate estimated:  " << total_state_num_in_range << endl;
         cout << "each process estimate to solve number of eigenstate:  " << num_of_state_for_solving_eigenvec_per_proc << endl;
         cout <<" Each process solve block index below : " << endl;
-        for(i=0;i<num_proc;i++){
+        for(i=0;i<num_proc + 1 ;i++){
             cout << block[i] << " ";
         }
         cout << endl;

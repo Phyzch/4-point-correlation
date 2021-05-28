@@ -205,8 +205,16 @@ void full_system::Quantum_evolution() {
         if(my_id == 0){
             ofstream Eigenvector_solver(path + "MKL_eigenvalue_Eigenvector.txt");
 
-
+            cout << "total number of eigenstate solved:  " << d.eigenstate_num << endl;
             cout <<"Finish solving eigenvector and eigenvalue " << endl;
+            Eigenvector_solver << d.eigenstate_num << endl;
+            for(i=0;i<d.eigenstate_num ; i++ ){
+                Eigenvector_solver << d.Eigenvalue_list << " ";
+            }
+            Eigenvector_solver << endl;
+
+            // optional here: output eigenstate
+
             Eigenvector_solver.close();
         }
 
