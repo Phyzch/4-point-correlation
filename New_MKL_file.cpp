@@ -329,35 +329,35 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * 
     printf("total number of eigenstate solved:   %d " , total_eigenstate_num_solved );
 
     // check normalization and orthogonality of eigenvector by computing Y =  X^{transpose} * X - I
-    cout << "check Orthogonality  " << endl;
-    vector<vector<double>> Y ;
-    for(i=0;i<total_eigenstate_num_solved ; i++ ){
-        vector<double> v (total_eigenstate_num_solved, 0);
-        Y.push_back(v);
-    }
-
-    for(i = 0 ; i < total_eigenstate_num_solved ; i++ ){
-        for(j = 0; j < total_eigenstate_num_solved ; j++){
-            Y[i][j] = 0;
-            for (k = 0; k < dmatsize ; k++ ){
-                Y[i][j] = Y[i][j] + Eigenvector_list[i][k] * Eigenvector_list[j][k];
-            }
-        }
-    }
-    printf("Finsih computing Y \n");
-    for(i=0;i<total_eigenstate_num_solved; i++ ){
-        Y[i][i] = Y[i][i] - 1;
-    }
-
-    double small_value = -100;
-    for(i=0;i<total_eigenstate_num_solved;i++){
-        for(j=0;j<total_eigenstate_num_solved ;j++){
-            if (abs(Y[i][j]) > small_value){
-                small_value = abs(Y[i][j]);
-            }
-        }
-    }
-    printf("Maximum value in X*X - I is %f \n" , small_value);
+//    cout << "check Orthogonality  " << endl;
+//    vector<vector<double>> Y ;
+//    for(i=0;i<total_eigenstate_num_solved ; i++ ){
+//        vector<double> v (total_eigenstate_num_solved, 0);
+//        Y.push_back(v);
+//    }
+//
+//    for(i = 0 ; i < total_eigenstate_num_solved ; i++ ){
+//        for(j = 0; j < total_eigenstate_num_solved ; j++){
+//            Y[i][j] = 0;
+//            for (k = 0; k < dmatsize ; k++ ){
+//                Y[i][j] = Y[i][j] + Eigenvector_list[i][k] * Eigenvector_list[j][k];
+//            }
+//        }
+//    }
+//    printf("Finsih computing Y \n");
+//    for(i=0;i<total_eigenstate_num_solved; i++ ){
+//        Y[i][i] = Y[i][i] - 1;
+//    }
+//
+//    double small_value = -100;
+//    for(i=0;i<total_eigenstate_num_solved;i++){
+//        for(j=0;j<total_eigenstate_num_solved ;j++){
+//            if (abs(Y[i][j]) > small_value){
+//                small_value = abs(Y[i][j]);
+//            }
+//        }
+//    }
+//    printf("Maximum value in X*X - I is %f \n" , small_value);
 
     return total_eigenstate_num_solved ;
 }

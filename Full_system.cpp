@@ -187,6 +187,8 @@ void full_system::Quantum_evolution() {
             vector<double> dmat0_copy = dmat0;
             sort(dmat0_copy.begin() , dmat0_copy.end());
 
+            cout << "Maximum energy for state: " << dmat0_copy[dmat0_copy.size() - 1] << endl;
+
             double energy_of_choice = 5500;
             int eigenstate_num_to_solve = 10;
 //            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_given_energy_and_num(d.total_dirow[0], d.total_dicol[0], d.total_dmat[0],dmat0_copy,d.total_dmat_size[0],
@@ -195,11 +197,11 @@ void full_system::Quantum_evolution() {
 
             vector<double> Eigenvalue_temp ;
             vector<vector<double>> Eigenvector_temp ;
-            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
-                                                                                      dmat0 ,Eigenvector_solver,Eigenvalue_temp , Eigenvector_temp , Emin, Emax );
+//            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
+//                                                                                      dmat0 ,Eigenvector_solver,Eigenvalue_temp , Eigenvector_temp , Emin, Emax );
 
-//            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
-//                                                                                                     dmat0 ,Eigenvector_solver,Eigenvalue_temp , Eigenvector_temp , Emin, Emax );
+            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
+                                                                                                     dmat0 ,Eigenvector_solver,Eigenvalue_temp , Eigenvector_temp , Emin, Emax );
 
             // convert Eigenvalue_temp , Eigenvector_temp to d.eigenvalue, d.eigenvector
             d.Eigenvalue_list = new double [d.eigenstate_num];

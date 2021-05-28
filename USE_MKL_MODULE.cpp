@@ -221,7 +221,8 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
         }
     }
 
-    L = int( L * 1.5 );
+    L = int( L * 2 );
+
     if(L > dmatsize){
         L = dmatsize - 100 ;
     }
@@ -301,9 +302,9 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
         MPI_Abort(MPI_COMM_WORLD,-22);
     }
 
-    if ( info != 0 )
+    if ( info < 0 or info >= 100 )
     {
-        printf("Routine dfeast_scsrev returns code of ERROR: %i", (int)info);
+        printf("Routine dfeast_scsrev returns code of ERROR: %i  \n ", (int)info);
         Eigenvector_output.close();
         MPI_Abort(MPI_COMM_WORLD, -21);
     }
