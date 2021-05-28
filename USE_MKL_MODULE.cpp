@@ -150,9 +150,10 @@ void convert_COO_to_CSR(const int * dirow_list, const int * dicol_list, const do
 
 
 int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize  ,int dmatnum,
-                                                             const int * dmat_size_each_process, const int * dmat_offset_each_process,
+                                                             vector<double> & dmat_diagonal_part ,
                                                              ofstream & Eigenvector_output,
-                                                              double * &E , double ** &Matrix_X){
+                                                             vector<double> & E , vector<vector<double>> & Matrix_X,
+                                                              double Emin_of_choice, double Emax_of_choice ){
     // E :[M] eigenvalue found .  Matrix_X: eigenvector found [M, dmatsize]. M is returned by function.
 
     // for CSR format, row index should be row_num + 1, which last element should be row_num + 1. (be careful about that)
@@ -193,28 +194,16 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
     double dmat_list_max = 0;
 
     int index1;
-    for(i=0;i<num_proc;i++){
-        for(j=0;j<dmat_size_each_process[i];j++){
-            index1 = dmat_offset_each_process[i] + j;
-            if(dmat_list[index1] < dmat_list_min){
-                dmat_list_min = dmat_list[index1];
-            }
-            if(dmat_list[index1] > dmat_list_max){
-                dmat_list_max = dmat_list[index1];
-            }
+    int dmat_diagonal_num = dmat_diagonal_part.size();
+    for( index1 = 0 ; index1 < dmat_diagonal_num ; index1++ ){
+        if(dmat_diagonal_part[index1] < dmat_list_min){
+            dmat_list_min = dmat_diagonal_part [index1];
+        }
+        if(dmat_diagonal_part[index1] > dmat_list_max){
+            dmat_list_max = dmat_diagonal_part[index1];
         }
     }
 
-    if(Emin > dmat_list_max){
-        cout <<" Error:  Emin > largest energy  " << endl;
-        Eigenvector_output.close();
-        MPI_Abort(MPI_COMM_WORLD, -21);
-    }
-    if (Emax < dmat_list_min){
-        cout <<" Error : Emax < smallest energy " << endl;
-        Eigenvector_output.close();
-        MPI_Abort(MPI_COMM_WORLD, -21);
-    }
 
     cout << "Min energy for system:  " << dmat_list_min << endl;
     cout <<" Max energy for system:   "<< dmat_list_max << endl;
@@ -222,16 +211,13 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
 
     // Below we estimate number of all eigenstates within energy range.
     // However, for large matrix, we only want sample small number of eigenvalues in matrix according to Boltzmann dist.
-    for(i=0;i<num_proc;i++){
-        for(j=0;j<dmat_size_each_process[i];j++){
-            index1 = dmat_offset_each_process[i] + j;
-            if(dmat_list[index1] > Emin and dmat_list[index1] < Emax){
-                L = L + 1 ;
-            }
+    for(index1=0; index1 < dmat_diagonal_num ; index1++){
+        if(dmat_diagonal_part[index1] > Emin_of_choice and dmat_diagonal_part[index1] < Emax_of_choice){
+            L = L + 1 ;
         }
     }
 
-
+    L = int( L * 1.5 );
     if(L > dmatsize){
         L = dmatsize - 100 ;
     }
@@ -239,21 +225,21 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
     MKL_INT      M0 = 0;            /* Initial guess for subspace dimension to be used */
     MKL_INT      M = 0;             /* Total number of eigenvalues found in the interval */
 
-    E = new double [dmatsize];         /* Eigenvalues */
-    double * X = new double [dmatsize * dmatsize]; /* Eigenvectors */
+    double * E_array = new double [L];         /* Eigenvalues */
+    double * X = new double [L * dmatsize]; /* Eigenvectors */
 //    double       X[dmatsize * dmatsize];        /* Eigenvectors */
 
     double * res = new double [dmatsize];       /* Residual */
     MKL_INT      info;          /* Errors */
 
     /* Initialize matrix X */
-    for (i=0; i<dmatsize*dmatsize; i++)
+    for (i=0; i< L *dmatsize; i++)
     {
         X[i] = 0.0;
     }
 
-    for(i=0;i<dmatsize;i++){
-        E[i] = 0;
+    for(i=0;i<L ;i++){
+        E_array[i] = 0;
     }
 
     M0   = L;
@@ -262,8 +248,8 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
     printf("Sparse matrix size for solving eigenvector %i\n", (int)dmatsize);
     /* Search interval [Emin,Emax] */
     // Emin, Emax is read from input file
-    printf("From input file: Search interval [ %.15e, %.15e  ]  \n", Emin, Emax);
-    printf("M value estimated %d \n",M);
+    printf("Search interval [ %.5e, %.5e  ]  \n", Emin_of_choice, Emax_of_choice);
+    printf("M value estimated %d \n",M0);
 
 
     loop = 0;
@@ -290,10 +276,10 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
             fpm,     /* IN/OUT: Array is used to pass parameters to Intel MKL Extended Eigensolvers */
             &epsout, /* OUT: Relative error of on the trace */
             &loop,   /* OUT: Contains the number of refinement loop executed */
-            &Emin,   /* IN: Lower bound of search interval */
-            &Emax,   /* IN: Upper bound of search interval */
+            &Emin_of_choice,   /* IN: Lower bound of search interval */
+            &Emax_of_choice ,   /* IN: Upper bound of search interval */
             &M0,     /* IN: The initial guess for subspace dimension to be used. */
-            E,       /* OUT: The first M entries of Eigenvalues */
+            E_array,       /* OUT: The first M entries of Eigenvalues */
             X,       /* IN/OUT: The first M entries of Eigenvectors */
             &M,      /* OUT: The total number of eigenvalues found in the interval */
             res,     /* OUT: The first M components contain the relative residual vector */
@@ -303,13 +289,6 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
     printf("FEAST OUTPUT INFO %d \n",info);
 
 
-//    if ( info != 0 )
-//    {
-//        printf("Routine dfeast_scsrev returns code of ERROR: %i", (int)info);
-//        Eigenvector_output.close();
-//        MPI_Abort(MPI_COMM_WORLD, -21);
-//    }
-
     printf("Number of eigenvalues found %d \n", M);
 
     if(M<0 or M > dmatsize){
@@ -318,16 +297,20 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
         MPI_Abort(MPI_COMM_WORLD,-22);
     }
 
-    // check normalization and orthogonality of eigenvector by computing Y =  X^{transpose} * X - I
-    /* Y=(X')*X-I */
-    double ** Y = new double * [M];
-    for(i=0;i<M;i++){
-        Y[i] = new double [M];
+    if ( info != 0 )
+    {
+        printf("Routine dfeast_scsrev returns code of ERROR: %i", (int)info);
+        Eigenvector_output.close();
+        MPI_Abort(MPI_COMM_WORLD, -21);
     }
 
-    Matrix_X = new double * [M];
+    // construct Matrix X
     for(i=0;i<M;i++){
-        Matrix_X[i] = new double [dmatsize];
+        vector<double> v;
+        for(j=0;j<dmatsize; j++ ){
+            v.push_back(0);
+        }
+        Matrix_X.push_back(v);
     }
     int index = 0;
     for(i=0;i<M;i++){
@@ -337,6 +320,20 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
         }
     }
     printf("Finish constructing Matrix_X \n");
+
+    // construct eigenvalue E
+    for(i=0; i<M; i++){
+        E.push_back(E_array[i]);
+    }
+
+
+    // check normalization and orthogonality of eigenvector by computing Y =  X^{transpose} * X - I
+    /* Y=(X')*X-I */
+//    double ** Y = new double * [M];
+//    for(i=0;i<M;i++){
+//        Y[i] = new double [M];
+//    }
+
 //    for(i=0;i<M;i++){
 //        for(j=0;j<M;j++){
 //            Y[i][j] = 0;
@@ -360,24 +357,14 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
 //    }
 //    printf("Maximum value in X*X - I is %f \n" , small_value);
 
-
-    for(i=0;i<num_proc;i++){
-        for(j=0;j<dmat_size_each_process[i];j++){
-            index = dmat_offset_each_process[i] + j;
-            Eigenvector_output<< dmat_list[index] <<" ";
-        }
-    }
-    Eigenvector_output << endl;
-
-
     for(i=0;i<M;i++){
         // output eigenvalue
         Eigenvector_output << E[i] << endl;
-        for(j=0;j<dmatsize;j++){
-            //output eigenvector
-            Eigenvector_output << Matrix_X[i][j] << " ";
-        }
-        Eigenvector_output << endl;
+//        for(j=0;j<dmatsize;j++){
+//            //output eigenvector
+//            Eigenvector_output << Matrix_X[i][j] << " ";
+//        }
+//        Eigenvector_output << endl;
     }
 
     // delete dynamics array X. (if not used)
@@ -385,13 +372,13 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(  int * dirow_list,  
     delete [] rows;
     delete [] cols;
     delete [] val;
-
-
-    for(i=0;i<M;i++){
-        delete [] Y[i];
-    }
-    delete [] Y;
     delete [] res;
+    delete [] E_array ;
+
+//    for(i=0;i<M;i++){
+//        delete [] Y[i];
+//    }
+//    delete [] Y;
 
     return M;
 }

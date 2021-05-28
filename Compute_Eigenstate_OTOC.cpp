@@ -291,7 +291,7 @@ void detector:: compute_phi_ladder_operator_phi( ){
         }
     }
 
-    Eigenstate_OTOC_sift_criteria = double(1) / (100) ;
+    Eigenstate_OTOC_sift_criteria = double(1) / (20) ;
 
     // construct phi_operator_phi_tuple_list : size : [2 * nmodes[0] , eigenstate_num ] (list)
     // phi_ladder_operator_phi_tuple_list record <l | a_{i} | m> for all state m. in this list, it will have state l which have value of operator larger than criteria.
@@ -321,6 +321,35 @@ void detector:: compute_phi_ladder_operator_phi( ){
     if(my_id == 0){
         cout << "for phi_operator_phi, nonzero ratio is :  " << Non_zero_Ratio << endl;
     }
+
+    // ------------ for debug ---------------
+    if(my_id == 0){
+        int state_index_1 = selected_eigenstate_index[ int(selected_eigenstate_num / 2) ];
+        int tuple_list_size;
+        ofstream ladder_operator_overlap_output( path + "ladder_operator_overlap.txt");
+        ladder_operator_overlap_output << nmodes[0] << endl;
+        ladder_operator_overlap_output << Eigenvalue_list[state_index_1] << endl;
+        for(i=0;i< 2 * nmodes[0]; i++){
+            if(i<nmodes[0]){
+                energy_difference = - mfreq[0][i];
+            }
+            else{
+                energy_difference = + mfreq[0][i - nmodes[0] ];
+            }
+            tuple_list_size =  phi_ladder_operator_phi_tuple_list[i][state_index_1].size();
+            ladder_operator_overlap_output << tuple_list_size <<"  " <<  energy_difference << endl;
+            for(j=0; j< tuple_list_size; j++ ){
+                ladder_operator_overlap_output << Eigenvalue_list [ phi_ladder_operator_phi_tuple_list[i][state_index_1][j].eigenstate_index ] << " ";
+            }
+            ladder_operator_overlap_output << endl;
+            for(j=0;j<tuple_list_size;j++){
+                ladder_operator_overlap_output <<  phi_ladder_operator_phi_tuple_list[i][state_index_1][j].phi_operator_phi_value << " ";
+            }
+            ladder_operator_overlap_output << endl;
+        }
+        ladder_operator_overlap_output.close();
+    }
+    // ----------------------------------------
 
     // free space
     for(i=0;i<2*nmodes[0];i++){

@@ -182,8 +182,26 @@ void full_system::Quantum_evolution() {
 //            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_given_energy_and_num(d.total_dirow[0], d.total_dicol[0], d.total_dmat[0],dmat0_copy,d.total_dmat_size[0],
 //                                                                                                           d.total_dmat_num[0],Eigenvector_solver, d.Eigenvalue_list, d.Eigenstate_list, energy_of_choice, eigenstate_num_to_solve );
 
+
+            vector<double> Eigenvalue_temp ;
+            vector<vector<double>> Eigenvector_temp ;
             d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
-                                                                                      d.dmatsize_each_process[0] , d.dmat_offset_each_process[0],Eigenvector_solver,d.Eigenvalue_list,d.Eigenstate_list);
+                                                                                      dmat0 ,Eigenvector_solver,Eigenvalue_temp , Eigenvector_temp , Emin, Emax );
+
+//            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
+//                                                                                                     dmat0 ,Eigenvector_solver,Eigenvalue_temp , Eigenvector_temp , Emin, Emax );
+
+            // convert Eigenvalue_temp , Eigenvector_temp to d.eigenvalue, d.eigenvector
+            d.Eigenvalue_list = new double [d.eigenstate_num];
+            d.Eigenstate_list = new double * [d.eigenstate_num];
+            for(i=0;i<d.eigenstate_num;i++){
+                d.Eigenvalue_list[i] = Eigenvalue_temp[i];
+                d.Eigenstate_list[i] = new double[ d.total_dmat_size[0] ];
+                for(j=0;j<d.total_dmat_size[0]; j++){
+                    d.Eigenstate_list[i][j] = Eigenvector_temp[i][j];
+                }
+            }
+
             cout <<"Finish solving eigenvector and eigenvalue " << endl;
             Eigenvector_solver.close();
         }
@@ -200,15 +218,16 @@ void full_system::Quantum_evolution() {
             // compute eigenstate energy spectrum on basis set
             d.compute_eigenstate_energy_std();
 
-            // comput <phi_m | a_{i} | phi_l> and <phi_m | a^{+}_{i} | phi_l>. result in 3d array: phi_ladder_operator_phi
-            d.compute_phi_ladder_operator_phi();
-
             // only eigenstate whose OTOC may converge to 1 at initial time is computed. This implies eigenstate selected to compute OTOC should be in small energy window.
             d.compute_selected_eigenstate_index();
 
+            // comput <phi_m | a_{i} | phi_l> and <phi_m | a^{+}_{i} | phi_l>. result in 3d array: phi_ladder_operator_phi
+            d.compute_phi_ladder_operator_phi();
 
-            // compute OTOC for eigenstate solved and output to file.
-            d.compute_Eigenstate_OTOC();
+//
+//
+//            // compute OTOC for eigenstate solved and output to file.
+//            d.compute_Eigenstate_OTOC();
 
             if(my_id == 0){
                 cout <<" Finish computing Eigenstate OTOC ." << endl;
