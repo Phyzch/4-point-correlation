@@ -19,6 +19,9 @@ bool no_coupling = false;
 bool compute_overlap_with_eigenstate = false ;
 bool compute_state_space_and_coupling_suing_symmetry_bool = true;
 
+bool compute_eigenvector_use_MKL_module = true;
+bool compute_Eigenstate_OTOC_bool = true ;
+
 // About matflag in input.txt: If matflag==2, +We output all x,y (after the pre_coupling), matrix element, detector matrix element etc.
 // if matflag==1: We don't output anything but still we will save our final simulation results in save.txt
 // We also set bool Continue_Simulation in class full_system , which indicate we will read from save.txt the wavefunction and begin our simulation at that point. True means start from the middle of simulation.

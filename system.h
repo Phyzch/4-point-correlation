@@ -76,7 +76,7 @@ public:
     double ** xd_all, ** yd_all;
 	vector<double> * dmat; // matrix
 	double *proptime; // we set proptime for two different mode to be the same
-
+    double tprint;
 
     int ** remoteVecCount,  ** remoteVecPtr,  **  remoteVecIndex;
     int ** tosendVecCount,  **tosendVecPtr,  ** tosendVecIndex;
@@ -226,6 +226,33 @@ public:
 
     void diagonalize(double * eigenvalue_list, int & numlam,  ofstream & eigenvalue_log_file);
 
+
+    // algorithm used to compute Eigenstate and Thermal OTOC
+    int eigenstate_num; // denote as M
+    double * Eigenvalue_list; // [M]
+    double ** Eigenstate_list; // [M, total_dmatsize[0]]
+    vector<int> selected_eigenstate_index; // only eigenstate within small energy window whose OTOC converge will be computed.
+    int selected_eigenstate_num ;
+
+    double * Eigenstate_energy_std_list ;
+    double Eigenstate_OTOC_sift_criteria;  // criteria used to discard small value in OTOC computation.
+    void Broadcast_eigenstate_and_eigenvalue();
+    void compute_eigenstate_energy_std();
+    void compute_selected_eigenstate_index();
+
+    vector<vector<int>> neighbor_state_index_list_for_all_state ; // store nearby state index. size: [total_dmat_size[0], dof * 2]
+    void construct_neighbor_state_index_list_for_all_state();  // construct nearby state index
+
+    double *** phi_ladder_operator_phi;
+    vector<vector<vector<phi_operator_phi_tuple>>> phi_ladder_operator_phi_tuple_list ;
+    void compute_phi_ladder_operator_phi();
+
+    void  compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, double time, double *** Eigenstate_OTOC , double *** local_Eigenstate_OTOC,
+                                            complex<double> **** l_M_m_overlap_value , int **** l_M_m_index_l,
+                                            vector<complex<double>> *** l_M_m_local_overlap_value , vector<int> *** l_M_m_local_index_l  ,
+                                            int * recv_count, int * displs  );
+
+    void compute_Eigenstate_OTOC();
 
     // code to construct state from initial state including symmetry.
     vector<vector<int>> * Mode_combination_list3; // for 3nd order anharmonicity

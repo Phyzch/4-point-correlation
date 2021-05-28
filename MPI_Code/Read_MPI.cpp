@@ -19,11 +19,13 @@ void full_system:: read_input_with_MPI(){
               >> noise_strength >> Rmax >> d.V_intra >> d.detector_energy_window_size
               >>detector_lower_bright_state_energy_window_shrink >> distance_cutoff_for_4_piont_corre
               >> Energy_Range_4_point_corre_function_average >> Distance_Range_4_point_corre_function_average ;
-        // read time used for simulation.  delt: time step. tstart: time start to turn on coupling. tmax: maximum time for simulation.   tprint: time step to print result.
+
+        input >> Emin >> Emax >> Emin2 >> Emax2;  // Emin, Emax , Emin2, Emax2 for solving eigenstate spectrum
 
         // In this model we fix V_intra to 3050
         d.V_intra = 3050 ;
 
+        // read time used for simulation.  delt: time step. tstart: time start to turn on coupling. tmax: maximum time for simulation.   tprint: time step to print result.
         input >> delt >> tstart >> tmax >> tprint;
         // check if input is valid
         if ( !Detector_Continue_Simulation) {
@@ -84,6 +86,11 @@ void full_system:: read_input_with_MPI(){
     MPI_Bcast(&Energy_Range_4_point_corre_function_average,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&Distance_Range_4_point_corre_function_average,1,MPI_INT,0,MPI_COMM_WORLD);
 
+    MPI_Bcast(&Emin, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&Emax, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&Emin2, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&Emax2, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);
+
     // Bcast delt tstart tmax tprint to other process.
     MPI_Bcast(&delt, 1, MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&tstart, 1, MPI_DOUBLE, 0 , MPI_COMM_WORLD);
@@ -93,6 +100,7 @@ void full_system:: read_input_with_MPI(){
     // used to rescale the matrix element amplitude.
     cf = 0.0299792458*delt * pi2;
     d.cf = cf;
+    d.tprint = tprint;
 }
 
 
