@@ -159,7 +159,7 @@ void detector:: compute_phi_ladder_operator_phi( ){
 
     for(i=0;i<2 * nmodes[0]; i++){
         for(m=0;m<local_eigenstate_num;m++){
-
+                // <l  | a_{i} | m >
             for(l=0;l<eigenstate_num;l++){
                 temporary_phi_ladder_operator_phi_list[l] = 0 ;
             }
@@ -177,12 +177,12 @@ void detector:: compute_phi_ladder_operator_phi( ){
                 eigenstate_m_index = local_eigenstate_begin_index + m;
                 eigenstate_l_index = l;
 
-                energy_difference = abs( Eigenvalue_list[eigenstate_l_index] +
-                                         ladder_operator_energy_change - Eigenvalue_list[eigenstate_m_index] );
+                energy_difference = abs( Eigenvalue_list[eigenstate_m_index] +
+                                         ladder_operator_energy_change - Eigenvalue_list[eigenstate_l_index] );
 
                 Energy_sift_criteria = 10000 ;
                 if(energy_difference > Energy_sift_criteria ){
-                    local_phi_ladder_operator_phi[i][m][l] = 0;
+                    ;
                 }
                 else {
                     // we need to compute <\phi_m | a_{i} | phi_l> or <\phi_m | a_{i}^{+} | \phi_l>
@@ -198,14 +198,14 @@ void detector:: compute_phi_ladder_operator_phi( ){
                             if (i < nmodes[0]) {
                                 // lowering operator
                                 local_ladder_operator_value = local_ladder_operator_value +
-                                                              Eigenstate_list[eigenstate_l_index][basis_set_state_index] *
-                                                              Eigenstate_list[eigenstate_m_index][nearby_basis_set_state_index] *
+                                                              Eigenstate_list[eigenstate_m_index][basis_set_state_index] *
+                                                              Eigenstate_list[eigenstate_l_index][nearby_basis_set_state_index] *
                                                               sqrt(dv_all[0][basis_set_state_index][i]);
                             } else {
                                 // raising operator
                                 local_ladder_operator_value = local_ladder_operator_value +
-                                                              Eigenstate_list[eigenstate_l_index][basis_set_state_index] *
-                                                              Eigenstate_list[eigenstate_m_index][nearby_basis_set_state_index] *
+                                                              Eigenstate_list[eigenstate_m_index][basis_set_state_index] *
+                                                              Eigenstate_list[eigenstate_l_index][nearby_basis_set_state_index] *
                                                               sqrt(dv_all[0][basis_set_state_index][i - nmodes[0]] + 1);
                             }
 
