@@ -453,6 +453,7 @@ public:
                                                         vector<double> * old_layer_energy_ptr,
                                                         vector<double> * new_layer_energy_ptr
     );
+    void find_resonant_state_to_initial_state( double energy_window_cutoff , vector<vector<int> > & resonant_state_mode_list , vector<double> & resonant_state_energy );
 };
 
 

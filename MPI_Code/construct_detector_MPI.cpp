@@ -431,7 +431,10 @@ void Broadcast_dmat_vmode(int stlnum, vector<double> & dmat0,  vector<double> & 
 
 
 void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1){
-    int i,j,m,k;
+    int i,j,m,k, l ;
+    int index1;
+    int index2;
+    int index_combine;
     int begin_index;
     int ntot;
     double value, lij;
@@ -458,12 +461,38 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
         for(i=begin_index;i<begin_index + dmatsize[m];i++){  // for my_id==0 , O(dmatsize * dmatsize/ proc_num)
             for(j=0;j<total_dmat_size[m];j++){ // j is different from serial program. Now we record both symmetric Hamiltonian element
                 if (i==j) continue;
+
                 ntot=0;
                 for(k=0;k<nmodes[m];k++){
                     deln[k]= abs( (*vmode_ptr)[i][k] - (*vmode_ptr)[j][k] ); // same as deln[k] = abs(dv[m][i][k] - dv[m][j][k]);
                     nbar[k]= sqrt(sqrt(double(max(1, (*vmode_ptr)[i][k])) * double(max(1, (*vmode_ptr)[j][k]  ))));
                     ntot= ntot+ deln[k];
                 }
+
+                // add symmetry criteria here:
+                vector<int> mode_diff_index;
+                for(k=0;k<nmodes[m];k++){
+                    for(l=0;l< abs(deln[k]) ; l++ ){
+                        mode_diff_index.push_back(k);
+                    }
+                }
+                if(mode_diff_index.size() == 1){
+                    if(Mode_Symmetry[0][mode_diff_index[0]] != 0){
+                        continue;
+                    }
+                }
+                else{
+                    index1 = Mode_Symmetry[0][mode_diff_index[0]];
+                    for(k=1; k< mode_diff_index.size(); k++){
+                        index2 = Mode_Symmetry[0][mode_diff_index[k]];
+                        index_combine = Symmetry_Table[index1][index2];
+                        index1 = index_combine ;
+                    }
+                    if(index_combine != 0){
+                        continue;
+                    }
+                }
+
                 // this is because we don't have 1st order ladder operator in Harmonic oscillator's expression
                 if (ntot == 2) {
                     for (k = 0; k < nmodes[m]; k++) {
@@ -488,10 +517,10 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
                     }
 
                     // noise term
-                    if (intra_detector_coupling) {
-                        do (random_number = 2*((double(rand())/RAND_MAX)-0.5)  ); while (random_number==0) ;
-                        value = value * (1+intra_detector_coupling_noise * random_number);
-                    }
+//                    if (intra_detector_coupling) {
+//                        do (random_number = 2*((double(rand())/RAND_MAX)-0.5)  ); while (random_number==0) ;
+//                        value = value * (1+intra_detector_coupling_noise * random_number);
+//                    }
 
                     for (k = 0; k < nmodes[m]; k++) {
                         // aij  = f^{1/2} / 270

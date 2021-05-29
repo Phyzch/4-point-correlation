@@ -601,7 +601,7 @@ void full_system :: include_nearby_state(vector<int> & initial_state_mode, doubl
             if(nearby_state_mode[i] >=0 and nearby_state_mode[i] <= d.nmax[0][i]){
                 location = find_position_for_insert_binary(vmode0, nearby_state_mode, exist);
                 if(!exist){
-                    // if not exist. start constructing states from nearby state.
+                    // if this state not exist in list. start constructing nearby state.
                     vmode0.insert(vmode0.begin() + location, nearby_state_mode);
                     dmat0.insert(dmat0.begin() + location,  nearby_state_energy);
                 }
@@ -609,6 +609,72 @@ void full_system :: include_nearby_state(vector<int> & initial_state_mode, doubl
             }
         }
     }
+
+}
+
+void full_system:: find_resonant_state_to_initial_state( double energy_window_cutoff , vector<vector<int> > & resonant_state_mode_list , vector<double> & resonant_state_energy ){
+    int i, j , k;
+    int i1;
+    double  detector0_energy;
+    vector<int> ndetector0(d.nmodes[0]);
+    int location;
+    bool exist=false;
+    ndetector0[0] = -1; // this is for:  when we go into code: ndetector0[i]= ndetector0[i]+1, our first state is |000000>
+    double Cutoff_criteria = 0.05;
+    double energy_diff ;
+    while (1) {
+        label2:;  // label2 is for detector1 to jump out of while(1) loop (this is inner layer of while(1))
+        detector0_energy = 0;
+        for (i1 = 0; i1 < d.nmodes[0]; i1++) {  // loop through detector0
+            // define the way we loop through detector0:
+            ndetector0[i1] = ndetector0[i1] + 1;
+            if (ndetector0[i1] <= d.nmax[0][i1]) break;
+            if (ndetector0[d.nmodes[0] - 1] > d.nmax[0][d.nmodes[0] - 1]) {
+                ndetector0[d.nmodes[0] - 1] = 0;
+                goto label1;  // use goto to jump out of nested loop
+            }
+            ndetector0[i1] = 0;
+        }
+        // calculate detector 0 energy
+        for (i = 0; i < d.nmodes[0]; i++) {
+            detector0_energy = detector0_energy + ndetector0[i] * d.mfreq[0][i];
+        }
+
+        //--------------------------------------------------------------------------------------------
+        // criteria below make sure detector 0 's energy is reasonable.
+        if (detector0_energy > d.initial_Detector_energy[0] + energy_window_cutoff ) {
+            // detector 0's energy can not be larger than its initial energy + photon energy
+            // jump to next detector state.
+            k = 0;
+            while (ndetector0[k] == 0) {
+                ndetector0[k] = d.nmax[0][k];
+                k++;
+                if (k >= d.nmodes[0]) {
+                    break;
+                }
+            }
+            if (k < d.nmodes[0]) {
+                ndetector0[k] = d.nmax[0][k];
+            }
+            goto label2;
+        }
+
+        if(detector0_energy > d.initial_Detector_energy[0] - energy_window_cutoff and detector0_energy < d.initial_Detector_energy[0] + energy_window_cutoff){
+            // criteria here will be coupling strength / energy_diff
+            energy_diff = abs ( detector0_energy - d.initial_Detector_energy[0] );
+
+            //--------------------------------------insert this state in detector's state.-----------------------------------------------------------
+            location=find_position_for_insert_binary(vmode0, ndetector0, exist);  // we check if this mode exist and the location we have to insert this state at the same time.
+            if (!exist) {
+                // when we push back we should consider arrange them in order. We compute location to insert in find_position_for_insert_binary() function:
+                vmode0.insert(vmode0.begin() + location, ndetector0);
+                dmat0.insert(dmat0.begin() + location, detector0_energy);
+                resonant_state_mode_list.push_back(ndetector0);
+                resonant_state_energy.push_back(detector0_energy);
+            }
+        }
+    }
+    label1:;
 
 }
 
@@ -661,7 +727,7 @@ void full_system:: construct_state_space_using_symmetry(){
          // use submodule. As return. old_layer_ptr and new_layer_ptr are all empty
          construct_state_space_using_symmetry_submodule(Rmax,old_layer_mode_ptr,new_layer_mode_ptr,old_layer_energy_ptr,new_layer_energy_ptr);
 
-         // put nearby state into list
+         // put state with one quanta difference into list
          for(i=0; i< d.nmodes[0];i++){
              for(j=0;j<2;j++){
                  if(j==0) {
@@ -707,6 +773,26 @@ void full_system:: construct_state_space_using_symmetry(){
          if(my_id == 0){
              cout << "number of states in layers starting from states next to initial state   " << vmode_diff << endl;
          }
+
+//        // include state resonant to initial state into list. We also have to include state with one ladder operator difference into list
+//        double energy_window = 200;
+//         vector<vector<int>> resonant_state_mode_list ;
+//         vector<double> resonant_state_energy_list;
+//         find_resonant_state_to_initial_state(energy_window, resonant_state_mode_list, resonant_state_energy_list );
+//
+//         int list_len = resonant_state_energy_list.size();
+//         cout <<"resonant state : " << endl;
+//         for(i=0;i<list_len;i++){
+//             cout << "energy:   " << resonant_state_energy_list[i] <<"      mode :    ";
+//             for(j=0;j<d.nmodes[0];j++){
+//                 cout << resonant_state_mode_list[i][j] << "  ";
+//             }
+//             cout << endl;
+//         }
+//         // push state with one mode quanta into list
+//         for(i=0;i< list_len ; i++ ){
+//             include_nearby_state(resonant_state_mode_list[i], resonant_state_energy_list[i]);
+//         }
 
      }
 

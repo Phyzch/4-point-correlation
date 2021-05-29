@@ -72,6 +72,7 @@ extern double Emin, Emax; // range to solve eigenvalue and eigenvector using Int
 extern double Emin2, Emax2;
 extern double Emin_for_core, Emax_for_core;
 
+extern int Symmetry_Table[4][4];
 
 // define function here
 float ran2(long& idum);

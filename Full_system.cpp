@@ -184,7 +184,7 @@ void full_system::Quantum_evolution() {
         vector<double> sorted_dmat0 = dmat0;
         sort(sorted_dmat0.begin() , sorted_dmat0.end());
 
-        double eigen_energy = 2000 ;
+        double eigen_energy = d.initial_Detector_energy[0] ;
         double eigen_energy_window = 100;
         double eigen_energy_window2 = 100;
         double eigen_energy_range_low = eigen_energy - eigen_energy_window2;

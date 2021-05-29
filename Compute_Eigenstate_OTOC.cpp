@@ -387,6 +387,25 @@ void detector:: compute_phi_ladder_operator_phi( vector<double> & dmat0 ){
         }
         ladder_operator_overlap_output.close();
     }
+
+    double initial_state_overlap_value_cutoff = 0.1;
+    if(my_id == 0){
+        ofstream eigenstate_overlap_with_initial_state_output(path + "overlap with initial state.txt");
+        int eigenstate_index;
+        int initial_state_index_in_total_dmatrix;
+        initial_state_index_in_total_dmatrix = initial_state_index[0]
+                                               + total_dmat_size[0]/num_proc * initial_state_pc_id[0] ;
+        for(i=0;i<selected_eigenstate_num;i++){
+            eigenstate_index = selected_eigenstate_index[i] ;
+            if( abs ( Eigenstate_list[eigenstate_index][initial_state_index_in_total_dmatrix] ) > initial_state_overlap_value_cutoff ){
+                eigenstate_overlap_with_initial_state_output << Eigenvalue_list[eigenstate_index] <<"   " << Eigenstate_list[eigenstate_index][initial_state_index_in_total_dmatrix] << endl;
+            }
+        }
+
+        eigenstate_overlap_with_initial_state_output.close();
+    }
+
+
     // ----------------------------------------
 
     // free space
