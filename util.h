@@ -80,7 +80,8 @@ void convert_dv(const vector<vector<int>> & vec_2d, vector <int>  & vec_1d , vec
 // used for cnostruct buffer for communication between process for matrix multiplication.
 int construct_send_buffer_index(int * remoteVecCount, int * remoteVecPtr, int * remoteVecIndex, int * tosendVecCount_element, int * tosendVecPtr_element, int * & tosendVecIndex_ptr);
 
-void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorted_dmat_diagonal_part );
+void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorted_dmat_diagonal_part ,const  vector<double> & Emin_energy_range_list,const vector<double> & Emax_energy_range_list,
+                                                          vector<double>  & Emin_list , vector<double> & Emax_list);
 
 int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_submodule(  int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize  ,int dmatnum,
                                                              vector<double> & dmat_diagonal_part ,
@@ -90,7 +91,7 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_submodule(  int * dir
 int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize  ,int dmatnum,
                                                                           vector<double> & dmat_diagonal_part ,
                                                                           vector<double> & Eigenvalue_list , vector<vector<double>> & Eigenvector_list,
-                                                                          double Emin_of_choice, double Emax_of_choice);
+                                                                          vector<double> & Emin_list, vector<double> & Emax_list );
 
 int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_given_energy_and_num(  int * dirow_list,  int * dicol_list,  double * dmat_list , vector<double> &  dmat_diagonal_list ,  int dmatsize  ,int dmatnum,
                                                                                   ofstream & Eigenvector_output,

@@ -238,79 +238,151 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_given_energy_and_num(
     return M;
 }
 
-void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorted_dmat_diagonal_part ) {
+void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorted_dmat_diagonal_part ,const  vector<double> & Emin_energy_range_list,const vector<double> & Emax_energy_range_list,
+                                                          vector<double>  & Emin_list , vector<double> & Emax_list) {
     // we divide energy range into different part and let different process work in parallel to solve eigenvalue and eigenvector.
     int i, j , k ;
-    int index1;
+    int index1 , list_index;
     int total_state_num_in_range = 0 ;
     int dmat_diagonal_num = sorted_dmat_diagonal_part.size();
+    int Energy_range_list_size = Emin_energy_range_list.size();
+    vector<int> num_eigenstate_in_each_range (Energy_range_list_size , 0);
+    vector<vector<int>> eigenstate_index_list_in_each_range;
+    for(i=0;i<Energy_range_list_size; i++){
+        vector<int> v;
+        eigenstate_index_list_in_each_range.push_back(v);
+    }
 
+    index1 = 0;
+    list_index = 0;
+    while(index1 < dmat_diagonal_num ){
+        if(sorted_dmat_diagonal_part[index1] > Emax_energy_range_list[list_index]){
+            list_index = list_index + 1;
+        }
+        if(list_index >= Energy_range_list_size){
+            break;
+        }
 
-    bool initial_index_bool = false;
-    bool end_index_bool = false;
-    int initial_index; // initial index in sorted diagonal energy part within energy range
-    int end_index;  // end index in sorted diagonal energy part within energy range
-    for(index1=0; index1 < dmat_diagonal_num ; index1++){
-        if(sorted_dmat_diagonal_part[index1] > Emin and sorted_dmat_diagonal_part[index1] < Emax){
-            total_state_num_in_range = total_state_num_in_range + 1 ;
+        if (sorted_dmat_diagonal_part[index1] > Emin_energy_range_list[list_index] and sorted_dmat_diagonal_part[index1] <= Emax_energy_range_list[list_index] ){
+            total_state_num_in_range ++ ;
+            num_eigenstate_in_each_range[list_index ] ++ ;
+            eigenstate_index_list_in_each_range[list_index].push_back(index1);
         }
-        if(sorted_dmat_diagonal_part[index1] > Emin and !initial_index_bool ){
-            initial_index_bool = true;
-            initial_index = index1;
-        }
-        if(sorted_dmat_diagonal_part[index1] >= Emax and !end_index_bool){
-            end_index_bool = true;
-            end_index = index1 - 1 ;
-        }
+        index1 ++ ;
     }
 
     int num_of_state_for_solving_eigenvec_per_proc = int (total_state_num_in_range / num_proc ) ;
-    vector<int> block ;
-    double block_Emin ;
-    double block_Emax;
-
-    for(i=0;i< num_proc   ; i++ ){
-        block.push_back( i * num_of_state_for_solving_eigenvec_per_proc );
+    int proc_index = 0 ;
+    double E_min;
+    double E_max;
+    int state_num_left_for_single_proc = num_of_state_for_solving_eigenvec_per_proc ;
+    int state_num_left_for_energy_range_list =  num_eigenstate_in_each_range[0];
+    int begin_index = 0 ;
+    int end_index;
+    list_index = 0;
+    vector<vector<double>> Emin_list_for_all_proc;
+    vector<vector<double>> Emax_list_for_all_proc;
+    for(i=0;i<num_proc;i++){
+        vector<double> v;
+        Emin_list_for_all_proc.push_back(v);
+        Emax_list_for_all_proc.push_back(v);
     }
-    block.push_back(total_state_num_in_range);
+    vector<double> Emin_list_for_single_proc;
+    vector<double> Emax_list_for_single_proc;
+    while( list_index < Energy_range_list_size ){
 
-    vector<double> block_energy_range ;
-    block_energy_range.push_back(Emin);
+        if( state_num_left_for_energy_range_list >= state_num_left_for_single_proc ){
+            // energy within energy_list is enough  for energy range for single process.
+            end_index = begin_index + state_num_left_for_single_proc ;
 
-    vector<double> sorted_dmat_diagonal_part_slice ;
-    for(i=initial_index ; i <= end_index; i++ ){
-        sorted_dmat_diagonal_part_slice.push_back(sorted_dmat_diagonal_part[i]);
-    }
+            if(begin_index != 0 ){
+                Emin = sorted_dmat_diagonal_part [ eigenstate_index_list_in_each_range[list_index][begin_index] ];
+            }
+            else{
+                Emin = Emin_energy_range_list[list_index];
+            }
+            if(end_index != num_eigenstate_in_each_range[list_index]){
+                Emax = sorted_dmat_diagonal_part[ eigenstate_index_list_in_each_range[list_index][end_index] ];
+            }
+            else{
+                Emax = Emax_energy_range_list[list_index];
+            }
 
-    for(i=1 ; i< num_proc  ; i++ ){
-        block_energy_range.push_back (  sorted_dmat_diagonal_part_slice[ block[i] ] ) ;
-    }
-    block_energy_range.push_back(Emax);
 
-    Emin_for_core = block_energy_range[ my_id ];
-    Emax_for_core = block_energy_range[ my_id + 1 ];
-    if(my_id == 0){
-        cout << "total number of eigenstate estimated:  " << total_state_num_in_range << endl;
-        cout << "each process estimate to solve number of eigenstate:  " << num_of_state_for_solving_eigenvec_per_proc << endl;
-        cout <<" Each process solve block index below : " << endl;
-        for(i=0;i<num_proc + 1 ;i++){
-            cout << block[i] << " ";
+            Emin_list_for_single_proc.push_back(Emin);
+            Emax_list_for_single_proc.push_back(Emax);
+            Emin_list_for_all_proc[proc_index] = Emin_list_for_single_proc ;
+            Emax_list_for_all_proc[proc_index] = Emax_list_for_single_proc ;
+            state_num_left_for_energy_range_list = state_num_left_for_energy_range_list - state_num_left_for_single_proc;
+
+            // begin new list for new proc.
+            proc_index ++ ;
+            if(proc_index >= num_proc){
+                break;
+            }
+            if(proc_index == num_proc - 1){
+                state_num_left_for_single_proc = total_state_num_in_range - int (total_state_num_in_range / num_proc ) * (num_proc-1) ;
+            }
+            else{
+                state_num_left_for_single_proc = num_of_state_for_solving_eigenvec_per_proc;
+            }
+            Emin_list_for_single_proc.clear();
+            Emax_list_for_single_proc.clear();
+
+            begin_index = end_index;
+
         }
-        cout << endl;
+        else {
+            // energy within energy_list is  not enough .
+            state_num_left_for_single_proc = state_num_left_for_single_proc - state_num_left_for_energy_range_list;
 
-        cout <<"energy range for block " << endl;
-        for(i=0;i<num_proc + 1 ; i++){
-            cout << block_energy_range[i] << "  ";
+            // push Emin, Emax into list for single process.
+            if(begin_index != 0 ){
+                Emin = sorted_dmat_diagonal_part [ eigenstate_index_list_in_each_range[list_index][begin_index] ];
+            }
+            else{
+                Emin = Emin_energy_range_list[list_index];
+            }
+            Emax = Emax_energy_range_list[list_index];
+            Emin_list_for_single_proc.push_back(Emin);
+            Emax_list_for_single_proc.push_back(Emax);
+
+            list_index ++ ;
+            if(list_index< Energy_range_list_size ){
+                state_num_left_for_energy_range_list = num_eigenstate_in_each_range[list_index];
+            }
+            begin_index = 0;
         }
-        cout << endl;
+
     }
+
+    Emin_list = Emin_list_for_all_proc[my_id];
+    Emax_list = Emax_list_for_all_proc[my_id];
+
+//    if(my_id == 0){
+//        for(i=0;i<num_proc;i++){
+//            cout <<"for process " << i << endl;
+//            cout << "Emin list: " << endl;
+//            for(j=0;j<Emin_list_for_all_proc[i].size(); j++){
+//                cout << Emin_list_for_all_proc[i][j] <<" ";
+//            }
+//            cout << endl;
+//            cout << "Emax list: " << endl;
+//            for(j=0;j<Emax_list_for_all_proc[i].size(); j++){
+//                cout << Emax_list_for_all_proc[i][j] <<" ";
+//            }
+//            cout << endl;
+//        }
+//    }
+
 }
 
 int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * dirow_list,  int * dicol_list,  double * dmat_list , int dmatsize  ,int dmatnum,
                                                                           vector<double> & dmat_diagonal_part ,
                                                                           vector<double> & Eigenvalue_list , vector<vector<double>> & Eigenvector_list,
-                                                                          double Emin_of_choice, double Emax_of_choice){
+                                                                          vector<double> & Emin_list, vector<double> & Emax_list ){
     int i, j , k ;
+    int m ;
     int index1;
     int total_state_num_in_range = 0 ;
     int dmat_diagonal_num = dmat_diagonal_part.size();
@@ -324,46 +396,78 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * 
     vector<double> sorted_dmat_diagonal_part = dmat_diagonal_part ;
     sort(sorted_dmat_diagonal_part.begin() , sorted_dmat_diagonal_part.end());
 
-    bool initial_index_bool = false;
-    bool end_index_bool = false;
-    int initial_index; // initial index in sorted diagonal energy part within energy range
-    int end_index;  // end index in sorted diagonal energy part within energy range
-    for(index1=0; index1 < dmat_diagonal_num ; index1++){
-        if(sorted_dmat_diagonal_part[index1] > Emin_of_choice and sorted_dmat_diagonal_part[index1] < Emax_of_choice){
-            total_state_num_in_range = total_state_num_in_range + 1 ;
-        }
-        if(sorted_dmat_diagonal_part[index1] > Emin_of_choice and !initial_index_bool ){
-            initial_index_bool = true;
-            initial_index = index1;
-        }
-        if(sorted_dmat_diagonal_part[index1] >= Emax_of_choice and !end_index_bool){
-            end_index_bool = true;
-            end_index = index1;
-        }
-    }
-
-    int block_number = int(total_state_num_in_range / num_of_state_for_solving_eigenvec) + 1;
     vector<int> block ;
+    vector<double> block_energy_range ;
     double block_Emin ;
     double block_Emax;
 
-    for(i=0;i<block_number -1 ; i++ ){
-        block.push_back( i * num_of_state_for_solving_eigenvec );
-    }
-    block.push_back(total_state_num_in_range);
 
-    vector<double> block_energy_range ;
-    block_energy_range.push_back(Emin_of_choice);
+    bool initial_index_bool ;
+    int initial_index; // initial index in sorted diagonal energy part within energy range
+    int end_index;  // end index in sorted diagonal energy part within energy range
+    double Emin_of_choice;
+    double Emax_of_choice;
+    int block_number;
+    for(m=0;m<Emin_list.size(); m++ ){
+       Emin_of_choice = Emin_list[m];
+       Emax_of_choice = Emax_list[m];
+       initial_index_bool = false;
+       total_state_num_in_range = 0;
+        for(index1=0; index1 < dmat_diagonal_num ; index1++){
+            if(sorted_dmat_diagonal_part[index1] > Emin_of_choice and sorted_dmat_diagonal_part[index1] < Emax_of_choice){
+                total_state_num_in_range = total_state_num_in_range + 1 ;
+            }
+            if(sorted_dmat_diagonal_part[index1] > Emin_of_choice and !initial_index_bool ){
+                initial_index_bool = true;
+                initial_index = index1;
+            }
+            if(sorted_dmat_diagonal_part[index1] >= Emax_of_choice ){
+                end_index = index1;
+                break;
+            }
+        }
 
-    vector<double> sorted_dmat_diagonal_part_slice ;
-    for(i=initial_index ; i < end_index; i++ ){
-        sorted_dmat_diagonal_part_slice.push_back(sorted_dmat_diagonal_part[i]);
-    }
+        vector<double> sorted_dmat_diagonal_part_slice ;
+        for(i=initial_index ; i < end_index; i++ ){
+            sorted_dmat_diagonal_part_slice.push_back(sorted_dmat_diagonal_part[i]);
+        }
 
-    for(i=1 ; i< block_number - 1 ; i++ ){
-        block_energy_range.push_back (  sorted_dmat_diagonal_part_slice[ block[i] ] ) ;
+        block.clear();
+        block_energy_range.clear();
+
+        block_number = int( double(total_state_num_in_range-0.1) / num_of_state_for_solving_eigenvec) + 1;
+
+        for(i=0;i <= block_number -1 ; i++ ){
+            block.push_back( i * num_of_state_for_solving_eigenvec );
+        }
+        block.push_back(total_state_num_in_range );
+
+        block_energy_range.push_back(Emin_of_choice);
+
+        for(i=1 ; i<= block_number - 1 ; i++ ){
+            block_energy_range.push_back (  sorted_dmat_diagonal_part_slice[ block[i] ] ) ;
+        }
+        block_energy_range.push_back(Emax_of_choice);
+
+
+        for (i=0; i<block_number ; i++ ){
+            block_Emin = block_energy_range[i];
+            block_Emax = block_energy_range[i + 1];
+//            printf("proc:  %d :  Emin %.5e,  Emax %.5e \n" , my_id,block_Emin, block_Emax );
+            vector<double> Eigenvalue_temp ;
+            vector<vector<double>> Eigenvector_temp ;
+            eigenstate_num_solved = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_submodule(dirow_list ,dicol_list ,dmat_list , dmatsize,  dmatnum ,
+                                                                                                     dmat_diagonal_part , Eigenvalue_temp , Eigenvector_temp , block_Emin, block_Emax );
+            total_eigenstate_num_solved = total_eigenstate_num_solved + eigenstate_num_solved ;
+
+            for(j = 0;j < eigenstate_num_solved; j++ ){
+                Eigenvalue_list.push_back(Eigenvalue_temp[j]);
+                vector<double> v = Eigenvector_temp[j] ;
+                Eigenvector_list.push_back(v);
+            }
+        }
+
     }
-    block_energy_range.push_back(Emax_of_choice);
 
 //    cout << "Block_number :  " << block_number << endl;
 //    cout << "Block" << endl;
@@ -377,21 +481,6 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * 
 //    }
 //    cout << endl;
 
-    for (i=0; i<block_number-1 ; i++ ){
-        block_Emin = block_energy_range[i];
-        block_Emax = block_energy_range[i + 1];
-        vector<double> Eigenvalue_temp ;
-        vector<vector<double>> Eigenvector_temp ;
-        eigenstate_num_solved = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_submodule(dirow_list ,dicol_list ,dmat_list , dmatsize,  dmatnum ,
-                                                                                       dmat_diagonal_part , Eigenvalue_temp , Eigenvector_temp , block_Emin, block_Emax );
-        total_eigenstate_num_solved = total_eigenstate_num_solved + eigenstate_num_solved ;
-
-        for(j = 0;j < eigenstate_num_solved; j++ ){
-            Eigenvalue_list.push_back(Eigenvalue_temp[j]);
-            vector<double> v = Eigenvector_temp[j] ;
-            Eigenvector_list.push_back(v);
-        }
-    }
 
     printf("total number of eigenstate solved in proc %d :   %d \n" , my_id ,total_eigenstate_num_solved );
 
@@ -461,16 +550,20 @@ void construct_energy_window_for_eigenstate(int nmode, double * mfreq, double ei
     int index;
     int i , j;
     double connected_eigen_state_energy;
+    // push state with energy one mode lower
     for (i=0; i<nmode; i++){
         connected_eigen_state_energy = eigen_energy - mfreq[i] ;
         if(connected_eigen_state_energy > 0){
             Energy_range_list.push_back(connected_eigen_state_energy);
         }
     }
+    // push state with energy one mode higher
     for(i=0; i<nmode; i++ ){
         connected_eigen_state_energy = eigen_energy + mfreq[i] ;
         Energy_range_list.push_back(connected_eigen_state_energy) ;
     }
+    // push state itself.
+    Energy_range_list.push_back(eigen_energy);
 
     sort(Energy_range_list.begin(), Energy_range_list.end());
 
@@ -495,6 +588,19 @@ void construct_energy_window_for_eigenstate(int nmode, double * mfreq, double ei
         else{
             i = i + 1;
         }
+    }
+
+    if(my_id == 0){
+        cout <<"Emin list: " << endl;
+        for(i=0;i<energy_range_list_size;i++){
+            cout << Energy_range_min_list[i] <<' ';
+        }
+        cout << endl;
+        cout <<"Emax list:  " << endl;
+        for(i=0;i<energy_range_list_size;i++){
+            cout << Energy_range_max_list[i] << ' ';
+        }
+        cout << endl;
     }
 
 

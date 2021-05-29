@@ -211,6 +211,9 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_submodule(  int * dir
 
     L = int( L * 2 );
 
+    if(L==0){
+        L = 20;
+    }
     if(L > dmatsize){
         L = dmatsize - 100 ;
     }
@@ -273,7 +276,7 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_submodule(  int * dir
     );
     // X eigenvector have the form: M(row) * dmatsize(column). Here M is number of eigenvector found.
 
-    printf("Number of eigenvalues found in  interval [ %.5e, %.5e  ].  eigenvalue estimate %d, eigenvalue found %d \n",Emin_of_choice, Emax_of_choice , M0,  M);
+//    printf("Number of eigenvalues found in  interval [ %.5e, %.5e  ].  eigenvalue estimate %d, eigenvalue found %d \n",Emin_of_choice, Emax_of_choice , M0,  M);
 
 
     // construct Matrix X

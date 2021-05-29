@@ -181,29 +181,35 @@ void full_system::Quantum_evolution() {
 
     if(compute_eigenvector_use_MKL_module){
 
-        vector<double> dmat0_copy = dmat0;
-        sort(dmat0_copy.begin() , dmat0_copy.end());
+        vector<double> sorted_dmat0 = dmat0;
+        sort(sorted_dmat0.begin() , sorted_dmat0.end());
 
         double eigen_energy = 2000 ;
-        double eigen_energy_window = 50;
+        double eigen_energy_window = 100;
+        double eigen_energy_window2 = 100;
+        double eigen_energy_range_low = eigen_energy - eigen_energy_window2;
+        double eigen_energy_range_high = eigen_energy + eigen_energy_window2;
+
         vector<double> Energy_range_min_list;
         vector<double> Energy_range_max_list;
         construct_energy_window_for_eigenstate(d.nmodes[0],d.mfreq[0], eigen_energy, eigen_energy_window , Energy_range_min_list , Energy_range_max_list );
 
+        vector<double> Emin_list_for_proc;
+        vector<double> Emax_list_for_proc;
         // compute Emin_for_core,  Emax_for_core
-        allocate_diagonalization_energy_range_for_diff_proc(dmat0_copy);
+        allocate_diagonalization_energy_range_for_diff_proc(sorted_dmat0 , Energy_range_min_list , Energy_range_max_list, Emin_list_for_proc, Emax_list_for_proc);
 
         vector<double> Eigenvalue_temp ;
         vector<vector<double>> Eigenvector_temp ;
 
         if(my_id == 0 ){
-            cout << "Min energy for system:  " << dmat0_copy[0] << endl;
-            cout <<" Max energy for system:   "<< dmat0_copy[dmat0_copy.size() - 1 ] << endl;
+            cout << "Min energy for system:  " << sorted_dmat0[0] << endl;
+            cout <<" Max energy for system:   "<< sorted_dmat0[sorted_dmat0.size() - 1 ] << endl;
             cout <<"dmatsize :   " << d.total_dmat_size[0] << "   dmatnum:   " << d.total_dmat_num[0] << endl;
         }
 
         d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
-                                                                                                 dmat0 ,Eigenvalue_temp , Eigenvector_temp , Emin_for_core , Emax_for_core );
+                                                                                                 dmat0 ,Eigenvalue_temp , Eigenvector_temp , Emin_list_for_proc, Emax_list_for_proc );
 
         // Broadcast all eigenvalue and eigenvector to all process.
         d.Broadcast_eigenstate_and_eigenvalue(Eigenvalue_temp, Eigenvector_temp);
@@ -234,7 +240,7 @@ void full_system::Quantum_evolution() {
             d.compute_eigenstate_energy_std();
 
             // only eigenstate whose OTOC may converge to 1 at initial time is computed. This implies eigenstate selected to compute OTOC should be in small energy window.
-            d.compute_selected_eigenstate_index(Emin2, Emax2);
+            d.compute_selected_eigenstate_index(eigen_energy_range_low, eigen_energy_range_high);
 
             // comput <phi_m | a_{i} | phi_l> and <phi_m | a^{+}_{i} | phi_l>. result in 3d array: phi_ladder_operator_phi
             d.compute_phi_ladder_operator_phi();
@@ -248,7 +254,7 @@ void full_system::Quantum_evolution() {
 
             delete [] d.Eigenstate_energy_std_list;
 
-            // free space for phi_ladder_operator_phi
+//            // free space for phi_ladder_operator_phi
             for(i=0;i<2*d.nmodes[0];i++){
                 for(j=0;j< d.eigenstate_num;j++){
                     delete [] d.phi_ladder_operator_phi[i][j];
