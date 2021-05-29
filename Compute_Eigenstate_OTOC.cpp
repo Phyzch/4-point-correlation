@@ -110,7 +110,7 @@ void detector::compute_eigenstate_energy_std(){
     }
 }
 
-void detector:: compute_phi_ladder_operator_phi( ){
+void detector:: compute_phi_ladder_operator_phi( vector<double> & dmat0 ){
     int i, j, k ;
     int l, m;
     int local_eigenstate_num;
@@ -159,7 +159,7 @@ void detector:: compute_phi_ladder_operator_phi( ){
 
     for(i=0;i<2 * nmodes[0]; i++){
         for(m=0;m<local_eigenstate_num;m++){
-
+                // <l  | a_{i} | m >
             for(l=0;l<eigenstate_num;l++){
                 temporary_phi_ladder_operator_phi_list[l] = 0 ;
             }
@@ -177,12 +177,12 @@ void detector:: compute_phi_ladder_operator_phi( ){
                 eigenstate_m_index = local_eigenstate_begin_index + m;
                 eigenstate_l_index = l;
 
-                energy_difference = abs( Eigenvalue_list[eigenstate_l_index] +
-                                         ladder_operator_energy_change - Eigenvalue_list[eigenstate_m_index] );
+                energy_difference = abs( Eigenvalue_list[eigenstate_m_index] +
+                                         ladder_operator_energy_change - Eigenvalue_list[eigenstate_l_index] );
 
-                Energy_sift_criteria = 10000 ;
+                Energy_sift_criteria = 200 ;
                 if(energy_difference > Energy_sift_criteria ){
-                    local_phi_ladder_operator_phi[i][m][l] = 0;
+                    ;
                 }
                 else {
                     // we need to compute <\phi_m | a_{i} | phi_l> or <\phi_m | a_{i}^{+} | \phi_l>
@@ -198,14 +198,14 @@ void detector:: compute_phi_ladder_operator_phi( ){
                             if (i < nmodes[0]) {
                                 // lowering operator
                                 local_ladder_operator_value = local_ladder_operator_value +
-                                                              Eigenstate_list[eigenstate_l_index][basis_set_state_index] *
-                                                              Eigenstate_list[eigenstate_m_index][nearby_basis_set_state_index] *
+                                                              Eigenstate_list[eigenstate_m_index][basis_set_state_index] *
+                                                              Eigenstate_list[eigenstate_l_index][nearby_basis_set_state_index] *
                                                               sqrt(dv_all[0][basis_set_state_index][i]);
                             } else {
                                 // raising operator
                                 local_ladder_operator_value = local_ladder_operator_value +
-                                                              Eigenstate_list[eigenstate_l_index][basis_set_state_index] *
-                                                              Eigenstate_list[eigenstate_m_index][nearby_basis_set_state_index] *
+                                                              Eigenstate_list[eigenstate_m_index][basis_set_state_index] *
+                                                              Eigenstate_list[eigenstate_l_index][nearby_basis_set_state_index] *
                                                               sqrt(dv_all[0][basis_set_state_index][i - nmodes[0]] + 1);
                             }
 
@@ -329,12 +329,27 @@ void detector:: compute_phi_ladder_operator_phi( ){
     }
 
     // ------------ for debug ---------------
+    double basis_set_overlap_value_cutoff = 0.2;
+    int coupled_eigen_state_index;
     if(my_id == 0){
         int state_index_1 = selected_eigenstate_index[ int(selected_eigenstate_num / 2) ];
         int tuple_list_size;
         ofstream ladder_operator_overlap_output( path + "ladder_operator_overlap.txt");
         ladder_operator_overlap_output << nmodes[0] << endl;
         ladder_operator_overlap_output << Eigenvalue_list[state_index_1] << endl;
+        ladder_operator_overlap_output << " basis set : " << endl;
+        for(j=0;j<total_dmat_size[0]; j++ ){
+            if( abs ( Eigenstate_list[state_index_1][j] ) > basis_set_overlap_value_cutoff){
+                ladder_operator_overlap_output << Eigenstate_list[state_index_1][j] <<"  :  ";
+                ladder_operator_overlap_output <<" E =  " << dmat0[j] <<endl;
+                for(k=0;k<nmodes[0];k++){
+                    ladder_operator_overlap_output << dv_all[0][j][k] << " ";
+                }
+                ladder_operator_overlap_output << endl;
+            }
+        }
+
+
         for(i=0;i< 2 * nmodes[0]; i++){
             if(i<nmodes[0]){
                 energy_difference = - mfreq[0][i];
@@ -352,6 +367,23 @@ void detector:: compute_phi_ladder_operator_phi( ){
                 ladder_operator_overlap_output <<  phi_ladder_operator_phi_tuple_list[i][state_index_1][j].phi_operator_phi_value << " ";
             }
             ladder_operator_overlap_output << endl;
+
+            for(j=0;j<tuple_list_size; j++ ){
+                coupled_eigen_state_index = phi_ladder_operator_phi_tuple_list[i][state_index_1][j].eigenstate_index;
+                ladder_operator_overlap_output << Eigenvalue_list[coupled_eigen_state_index] << endl;
+                ladder_operator_overlap_output << " basis set : " << endl;
+                for(m=0;m<total_dmat_size[0]; m++ ){
+                    if( abs ( Eigenstate_list[coupled_eigen_state_index][m] ) > basis_set_overlap_value_cutoff){
+                        ladder_operator_overlap_output << Eigenstate_list[coupled_eigen_state_index][m] <<"  :  ";
+                        ladder_operator_overlap_output <<" E =  " << dmat0[m] <<endl;
+                        for(k=0;k<nmodes[0];k++){
+                            ladder_operator_overlap_output << dv_all[0][m][k] << " ";
+                        }
+                        ladder_operator_overlap_output << endl;
+                    }
+                }
+            }
+
         }
         ladder_operator_overlap_output.close();
     }

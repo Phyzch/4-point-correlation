@@ -243,7 +243,7 @@ void full_system::Quantum_evolution() {
             d.compute_selected_eigenstate_index(eigen_energy_range_low, eigen_energy_range_high);
 
             // comput <phi_m | a_{i} | phi_l> and <phi_m | a^{+}_{i} | phi_l>. result in 3d array: phi_ladder_operator_phi
-            d.compute_phi_ladder_operator_phi();
+            d.compute_phi_ladder_operator_phi(dmat0);
 
 //            // compute OTOC for eigenstate solved and output to file.
             d.compute_Eigenstate_OTOC();
