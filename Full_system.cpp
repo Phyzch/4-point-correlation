@@ -254,15 +254,6 @@ void full_system::Quantum_evolution() {
 
             delete [] d.Eigenstate_energy_std_list;
 
-//            // free space for phi_ladder_operator_phi
-            for(i=0;i<2*d.nmodes[0];i++){
-                for(j=0;j< d.eigenstate_num;j++){
-                    delete [] d.phi_ladder_operator_phi[i][j];
-                }
-                delete [] d.phi_ladder_operator_phi[i];
-            }
-            delete [] d.phi_ladder_operator_phi;
-
         }
 
 

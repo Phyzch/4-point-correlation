@@ -243,7 +243,6 @@ public:
     vector<vector<int>> neighbor_state_index_list_for_all_state ; // store nearby state index. size: [total_dmat_size[0], dof * 2]
     void construct_neighbor_state_index_list_for_all_state();  // construct nearby state index
 
-    double *** phi_ladder_operator_phi;
     vector<vector<vector<phi_operator_phi_tuple>>> phi_ladder_operator_phi_tuple_list ;
     void compute_phi_ladder_operator_phi();
 

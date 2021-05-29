@@ -124,13 +124,28 @@ void detector:: compute_phi_ladder_operator_phi( ){
     int local_eigenstate_begin_index = int(eigenstate_num / num_proc)  * my_id  ;
 
     // size : [2 * nmodes[0] ,  local_eigenstate_num ,  eigenstate_num ]. First nmodes[0] index is for lowering operator and last nmodes[0] is for raising operator
-    double *** local_phi_ladder_operator_phi = new double ** [2 * nmodes[0]];
-    for(i=0;i< 2 * nmodes[0] ; i++){
-        local_phi_ladder_operator_phi[i] = new double * [local_eigenstate_num];
-        for(j=0;j< local_eigenstate_num ; j++){
-            local_phi_ladder_operator_phi[i][j] = new double [ eigenstate_num];
+    vector<vector<vector<double>> > local_phi_ladder_operator_phi;
+    for(i=0; i<2 * nmodes[0]; i++){
+        vector<vector<double> > v1 ;
+        for(j=0;j<local_eigenstate_num;j++){
+            vector<double> v2;
+            v1.push_back(v2);
         }
+        local_phi_ladder_operator_phi.push_back(v1);
     }
+
+    vector<vector<vector<int>> > local_phi_ladder_operator_phi_index;
+    for(i=0; i<2 * nmodes[0]; i++){
+        vector<vector<int> > v1 ;
+        for(j=0;j<local_eigenstate_num;j++){
+            vector<int> v2;
+            v1.push_back(v2);
+        }
+        local_phi_ladder_operator_phi_index.push_back(v1);
+    }
+
+    double * temporary_phi_ladder_operator_phi_list = new double [ eigenstate_num];
+    Eigenstate_OTOC_sift_criteria = double(1) / (20) ;
 
     int eigenstate_m_index , eigenstate_l_index;
     double ladder_operator_energy_change ; // if ladder operator is a_{i} , energy change is -frequency[i]. if it's a_{i}^{+} , energy change is + frequency[i]
@@ -144,6 +159,11 @@ void detector:: compute_phi_ladder_operator_phi( ){
 
     for(i=0;i<2 * nmodes[0]; i++){
         for(m=0;m<local_eigenstate_num;m++){
+
+            for(l=0;l<eigenstate_num;l++){
+                temporary_phi_ladder_operator_phi_list[l] = 0 ;
+            }
+
             for(l=0;l<eigenstate_num;l++){
                 if(i< nmodes[0]){
                     // lowering operator
@@ -192,103 +212,105 @@ void detector:: compute_phi_ladder_operator_phi( ){
                         }
 
                     }
-                    local_phi_ladder_operator_phi[i][m][l] = local_ladder_operator_value;
+                    temporary_phi_ladder_operator_phi_list[l] = local_ladder_operator_value;
 
                 }
 
 
             }
-        }
-    }
 
-    // now we send local ladder operator to all process and free this space.
-    double  ** local_phi_ladder_operator_send = new double * [2 * nmodes[0]];
-    int index = 0;
-    for(i=0;i< 2 * nmodes[0] ; i++ ){
-        local_phi_ladder_operator_send[i] = new double[local_eigenstate_num * eigenstate_num] ;
-        index = 0;
-        for(j=0;j< local_eigenstate_num; j++ ){
-            for(k=0;k<eigenstate_num ; k++){
-                local_phi_ladder_operator_send[i][index] = local_phi_ladder_operator_phi[i][j][k];
-                index ++ ;
+            for(l=0;l<eigenstate_num;l++){
+                if( abs(temporary_phi_ladder_operator_phi_list[l]) > Eigenstate_OTOC_sift_criteria ){
+                    local_phi_ladder_operator_phi[i][m].push_back(temporary_phi_ladder_operator_phi_list[l]);
+                    local_phi_ladder_operator_phi_index[i][m].push_back(l);
+                }
             }
+
+
         }
-
     }
 
-    double ** phi_ladder_operator_phi_1d = new double * [2 * nmodes[0]];
-    for(i=0;i< 2* nmodes[0] ; i++ ){
-        phi_ladder_operator_phi_1d [i] = new double [eigenstate_num * eigenstate_num ] ;
-    }
 
+    // Now broadcast result in each process to all process.
     int * recv_count = new int [num_proc];
     int * displs = new int [num_proc];
+    int send_pc_id ;
+    int local_eigenstate_index;
     for(i=0;i<num_proc-1;i++){
-        recv_count [i] = int(eigenstate_num / num_proc) * eigenstate_num ;
+        recv_count [i] = int(eigenstate_num / num_proc) ;
     }
-    recv_count[num_proc - 1] = int(eigenstate_num - int(eigenstate_num / num_proc) * (num_proc - 1)) * eigenstate_num;
+    recv_count[num_proc - 1] = int(eigenstate_num - int(eigenstate_num / num_proc) * (num_proc - 1));
     displs[0] = 0;
     for(i=1;i<num_proc;i++){
         displs[i] = displs[i - 1] + recv_count[ i - 1 ];
     }
 
-    for(i=0;i<2*nmodes[0];i++){
-        MPI_Gatherv(& local_phi_ladder_operator_send[i][0], local_eigenstate_num * eigenstate_num , MPI_DOUBLE,
-                    &phi_ladder_operator_phi_1d[i][0], &recv_count[0], &displs[0], MPI_DOUBLE,0,MPI_COMM_WORLD );
+    int * phi_operator_phi_list_size = new int [eigenstate_num];
+    int * phi_operator_phi_list_size_local = new int [local_eigenstate_num];
 
-        MPI_Bcast(&phi_ladder_operator_phi_1d[i][0], eigenstate_num * eigenstate_num, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    double ***  phi_ladder_operator_phi = new double ** [2 * nmodes[0] ];
+    for(i=0; i<2 * nmodes[0]; i++){
+        phi_ladder_operator_phi [i] = new double * [eigenstate_num];
     }
 
-
-    // free space:
-    for(i=0;i<2 * nmodes[0] ; i++){
-        for(j=0;j<local_eigenstate_num;j++){
-            delete [] local_phi_ladder_operator_phi[i][j];
-        }
-        delete [] local_phi_ladder_operator_phi[i];
-    }
-    delete [] local_phi_ladder_operator_phi;
-
-    for(i=0;i<2*nmodes[0];i++){
-        delete [] local_phi_ladder_operator_send[i];
-    }
-    delete [] local_phi_ladder_operator_send;
-    delete [] recv_count;
-    delete [] displs;
-
-    // construct 3d array to store phi_ladder_operator_phi
-    phi_ladder_operator_phi = new double ** [2 * nmodes[0]];
-    for(i=0;i< 2* nmodes[0]; i++){
-        phi_ladder_operator_phi[i] = new double * [eigenstate_num];
-        for(j=0; j< eigenstate_num; j++ ){
-            phi_ladder_operator_phi[i][j] = new double [ eigenstate_num ];
-        }
+    int *** phi_ladder_operator_phi_index = new int ** [2 * nmodes[0]];
+    for(i=0; i<2 * nmodes[0]; i++){
+        phi_ladder_operator_phi_index[i] = new int * [ eigenstate_num ];
     }
 
-    for(i=0;i<2 * nmodes[0]; i++){
-        index = 0;
-        for(j=0;j<eigenstate_num; j++){
-            for(k=0;k<eigenstate_num;k++){
-                phi_ladder_operator_phi[i][j][k] = phi_ladder_operator_phi_1d[i][index];
-                index ++ ;
+    for(i=0;i<2*nmodes[0]; i++ ){
+            // send number of state
+            for (m=0; m< local_eigenstate_num; m++ ){
+                phi_operator_phi_list_size_local[m] = local_phi_ladder_operator_phi_index[i][m].size();
             }
-        }
-    }
+            MPI_Allgatherv(&phi_operator_phi_list_size_local[0], local_eigenstate_num, MPI_INT, & phi_operator_phi_list_size[0], recv_count, displs, MPI_INT, MPI_COMM_WORLD);
 
-    Eigenstate_OTOC_sift_criteria = double(1) / (20) ;
+            for(m=0;m<eigenstate_num;m++){
+                phi_ladder_operator_phi[i][m] = new double [phi_operator_phi_list_size[m]];
+                phi_ladder_operator_phi_index[i][m] = new int [phi_operator_phi_list_size[m]];
+            }
+            for(m=0;m<eigenstate_num;m++){
+                send_pc_id = m / int(eigenstate_num / num_proc) ;
+                if(send_pc_id  >= num_proc ){
+                    send_pc_id = num_proc - 1 ;
+                }
+                local_eigenstate_index = m - send_pc_id * int(eigenstate_num / num_proc) ;
+                if(send_pc_id == my_id ){
+                    for(l=0;l<phi_operator_phi_list_size[m]; l++ ){
+                        phi_ladder_operator_phi[i][m][l] = local_phi_ladder_operator_phi[i][local_eigenstate_index][l];
+                        phi_ladder_operator_phi_index[i][m][l] = local_phi_ladder_operator_phi_index[i][local_eigenstate_index][l];
+                    }
+                }
+
+                MPI_Bcast(&phi_ladder_operator_phi[i][m][0], phi_operator_phi_list_size[m] , MPI_DOUBLE, send_pc_id, MPI_COMM_WORLD);
+                MPI_Bcast(&phi_ladder_operator_phi_index[i][m][0], phi_operator_phi_list_size[m], MPI_INT, send_pc_id, MPI_COMM_WORLD);
+
+            }
+
+    }
 
     // construct phi_operator_phi_tuple_list : size : [2 * nmodes[0] , eigenstate_num ] (list)
     // phi_ladder_operator_phi_tuple_list record <l | a_{i} | m> for all state m. in this list, it will have state l which have value of operator larger than criteria.
     int Total_Element_num = 0;
     for(i=0; i< 2 * nmodes[0] ; i++ ){
         vector<vector<phi_operator_phi_tuple>> phi_operator_phi_tuple_for_dof ;
+
+        // send number of state
+        for (m=0; m< local_eigenstate_num; m++ ){
+            phi_operator_phi_list_size_local[m] = local_phi_ladder_operator_phi_index[i][m].size();
+        }
+        MPI_Allgatherv(&phi_operator_phi_list_size_local[0], local_eigenstate_num, MPI_INT, & phi_operator_phi_list_size[0], recv_count, displs, MPI_INT, MPI_COMM_WORLD);
+
         for(m=0;m<eigenstate_num ; m++){
             vector< phi_operator_phi_tuple > phi_operator_phi_tuple_for_state;
-            for(l=0;l<eigenstate_num;l++){
 
-                if( abs(phi_ladder_operator_phi[i][l][m])  > Eigenstate_OTOC_sift_criteria){
+
+            for(l=0;l<phi_operator_phi_list_size[m];l++){
+
+                if( abs(phi_ladder_operator_phi[i][m][l])  > Eigenstate_OTOC_sift_criteria){
                     Total_Element_num ++ ;
-                    phi_operator_phi_tuple Tuple1 (l,phi_ladder_operator_phi[i][l][m]);
+                    phi_operator_phi_tuple Tuple1 ( phi_ladder_operator_phi_index[i][m][l] , phi_ladder_operator_phi[i][m][l] );
                     phi_operator_phi_tuple_for_state.push_back(Tuple1);
                 }
 
@@ -336,11 +358,22 @@ void detector:: compute_phi_ladder_operator_phi( ){
     // ----------------------------------------
 
     // free space
-    for(i=0;i<2*nmodes[0];i++){
-        delete [] phi_ladder_operator_phi_1d[i];
-    }
-    delete [] phi_ladder_operator_phi_1d;
+    delete [] recv_count;
+    delete [] displs;
+    delete [] temporary_phi_ladder_operator_phi_list;
+    delete [] phi_operator_phi_list_size;
+    delete [] phi_operator_phi_list_size_local;
 
+    for(i=0;i<2*nmodes[0];i++){
+        for(j=0;j<eigenstate_num;j++){
+            delete [] phi_ladder_operator_phi[i][j];
+            delete [] phi_ladder_operator_phi_index[i][j];
+        }
+        delete[] phi_ladder_operator_phi[i];
+        delete [] phi_ladder_operator_phi_index[i];
+    }
+    delete [] phi_ladder_operator_phi;
+    delete [] phi_ladder_operator_phi_index;
 
 }
 
@@ -403,8 +436,10 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
         local_eigenstate_begin_index = my_id ;
     }
     if(my_id == 0){
-        cout <<"selected eigenstate number:  " << selected_eigenstate_num << "  <  num_proc:   " << num_proc << endl;
-        cout <<"This may cause bug here:  " << endl;
+        if(selected_eigenstate_num < num_proc ){
+            cout <<"selected eigenstate number:  " << selected_eigenstate_num << "  <  num_proc:   " << num_proc << endl;
+            cout <<"This may cause bug here:  " << endl;
+        }
     }
 
 
