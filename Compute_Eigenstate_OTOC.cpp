@@ -9,10 +9,10 @@
 #include "system.h"
 using namespace std;
 
-void detector::compute_selected_eigenstate_index(){
+void detector::compute_selected_eigenstate_index(double selected_Emin, double selected_Emax ){
     int i;
     for(i=0;i<eigenstate_num;i++){
-        if(Eigenvalue_list[i] > Emin2 and Eigenvalue_list[i] < Emax2){
+        if(Eigenvalue_list[i] > selected_Emin and Eigenvalue_list[i] < selected_Emax){
             selected_eigenstate_index.push_back(i);
         }
     }
@@ -157,11 +157,7 @@ void detector:: compute_phi_ladder_operator_phi( ){
                 energy_difference = abs( Eigenvalue_list[eigenstate_l_index] +
                                          ladder_operator_energy_change - Eigenvalue_list[eigenstate_m_index] );
 
-
-                Energy_sift_criteria =  5 * (Eigenstate_energy_std_list[eigenstate_l_index] + Eigenstate_energy_std_list[eigenstate_m_index]);
-                if(Energy_sift_criteria < 10000){
-                    Energy_sift_criteria = 10000;
-                }
+                Energy_sift_criteria = 500 ;
                 if(energy_difference > Energy_sift_criteria ){
                     local_phi_ladder_operator_phi[i][m][l] = 0;
                 }

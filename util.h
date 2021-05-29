@@ -64,7 +64,7 @@ extern bool Evolve_dynamics;  // bool variable to decide if we run Detector_Evol
 extern bool compute_eigenvalue_spectrum; // bool variable to decide if use Lanczos algorithm to compute spectrum of syste
 extern bool no_coupling;  // if this is Ture, we do not have off-diagonal coupling
 extern bool compute_overlap_with_eigenstate; // If this is True, we will use MFD to compute overlap of initial state with eigenvalue
-extern bool compute_state_space_and_coupling_suing_symmetry_bool;
+extern bool compute_state_space_and_coupling_using_symmetry_bool;
 
 extern bool compute_eigenvector_use_MKL_module ;
 extern bool compute_Eigenstate_OTOC_bool ;
@@ -97,8 +97,13 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_given_energy_and_num(
                                                                                   double * &E , double ** &Matrix_X,
                                                                                   double energy_of_choice, int eigenstate_number);
 
+void construct_energy_window_for_eigenstate(int nmode, double * mfreq, double eigen_energy, double energy_window_for_eigenstate,
+                                            vector<double> & Energy_range_min_list,
+                                            vector<double> & Energy_range_max_list);
+
 void convert_COO_to_CSR(const int * dirow_list, const int * dicol_list, const double * dmat_list , int dmatsize, int dmatnum,
                         vector<int> & dirow_CSR_form_fortran, vector<int> & dicol_CSR_form_fortran, vector<double> & sorted_dmat );
+
 
 int compar(const void * a, const void * b);
 

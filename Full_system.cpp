@@ -66,7 +66,7 @@ full_system::full_system(string path1, string cvpt_path1) {
 	        }
 	        else {
 
-	            if(not compute_state_space_and_coupling_suing_symmetry_bool){
+	            if(not compute_state_space_and_coupling_using_symmetry_bool){
                     if(Sphere_cutoff_in_state_space){
                         compute_detector_matrix_size_MPI_sphere();
                     }
@@ -184,6 +184,12 @@ void full_system::Quantum_evolution() {
         vector<double> dmat0_copy = dmat0;
         sort(dmat0_copy.begin() , dmat0_copy.end());
 
+        double eigen_energy = 2000 ;
+        double eigen_energy_window = 50;
+        vector<double> Energy_range_min_list;
+        vector<double> Energy_range_max_list;
+        construct_energy_window_for_eigenstate(d.nmodes[0],d.mfreq[0], eigen_energy, eigen_energy_window , Energy_range_min_list , Energy_range_max_list );
+
         // compute Emin_for_core,  Emax_for_core
         allocate_diagonalization_energy_range_for_diff_proc(dmat0_copy);
 
@@ -209,7 +215,7 @@ void full_system::Quantum_evolution() {
             cout <<"Finish solving eigenvector and eigenvalue " << endl;
             Eigenvector_solver << d.eigenstate_num << endl;
             for(i=0;i<d.eigenstate_num ; i++ ){
-                Eigenvector_solver << d.Eigenvalue_list << " ";
+                Eigenvector_solver << d.Eigenvalue_list[i] << " ";
             }
             Eigenvector_solver << endl;
 
@@ -228,15 +234,13 @@ void full_system::Quantum_evolution() {
             d.compute_eigenstate_energy_std();
 
             // only eigenstate whose OTOC may converge to 1 at initial time is computed. This implies eigenstate selected to compute OTOC should be in small energy window.
-            d.compute_selected_eigenstate_index();
+            d.compute_selected_eigenstate_index(Emin2, Emax2);
 
             // comput <phi_m | a_{i} | phi_l> and <phi_m | a^{+}_{i} | phi_l>. result in 3d array: phi_ladder_operator_phi
             d.compute_phi_ladder_operator_phi();
 
-//
-//
 //            // compute OTOC for eigenstate solved and output to file.
-//            d.compute_Eigenstate_OTOC();
+            d.compute_Eigenstate_OTOC();
 
             if(my_id == 0){
                 cout <<" Finish computing Eigenstate OTOC ." << endl;

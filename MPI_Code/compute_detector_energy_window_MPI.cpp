@@ -580,6 +580,38 @@ void full_system:: construct_state_space_using_symmetry_submodule(int distance_c
     (*old_layer_mode_ptr).clear();
 }
 
+void full_system :: include_nearby_state(vector<int> & initial_state_mode, double initial_state_energy ){
+    int i , j;
+    int sign;
+    int location;
+    bool exist;
+    // put nearby state into list
+    for(i=0; i< d.nmodes[0];i++){
+        for(j=0;j<2;j++){
+            if(j==0) {
+                sign = -1;
+            }
+            else{
+                sign = 1;
+            }
+            vector<int> nearby_state_mode = initial_state_mode;
+            double nearby_state_energy;
+            nearby_state_mode[i] = initial_state_mode[i]  + sign ;
+            nearby_state_energy = initial_state_energy + sign *  d.mfreq[0][i];
+            if(nearby_state_mode[i] >=0 and nearby_state_mode[i] <= d.nmax[0][i]){
+                location = find_position_for_insert_binary(vmode0, nearby_state_mode, exist);
+                if(!exist){
+                    // if not exist. start constructing states from nearby state.
+                    vmode0.insert(vmode0.begin() + location, nearby_state_mode);
+                    dmat0.insert(dmat0.begin() + location,  nearby_state_energy);
+                }
+
+            }
+        }
+    }
+
+}
+
 void full_system:: construct_state_space_using_symmetry(){
 
      if(my_id == 0){
@@ -656,6 +688,12 @@ void full_system:: construct_state_space_using_symmetry(){
                  }
              }
          }
+
+         // add one more layer of neraby state
+         for(i=0;i<(*old_layer_energy_ptr).size(); i++ ){
+             include_nearby_state((*old_layer_mode_ptr)[i], (*old_layer_energy_ptr)[i] );
+         }
+
          int vmode_size = vmode0.size();
          if(my_id == 0){
              cout << "number of states around initial state " << vmode_size << endl;
@@ -669,6 +707,7 @@ void full_system:: construct_state_space_using_symmetry(){
          if(my_id == 0){
              cout << "number of states in layers starting from states next to initial state   " << vmode_diff << endl;
          }
+
      }
 
 

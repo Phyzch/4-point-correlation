@@ -451,3 +451,51 @@ void detector::Broadcast_eigenstate_and_eigenvalue(vector<double> & Eigenvalue_t
     delete [] Eigenstate_recv_list;
 
 }
+
+void construct_energy_window_for_eigenstate(int nmode, double * mfreq, double eigen_energy, double energy_window_for_eigenstate,
+                                            vector<double> & Energy_range_min_list,
+                                            vector<double> & Energy_range_max_list){
+    // To compute OTOC for particular eigenstate, we do not have to resolve all eigenstate and eigenvalue.
+    vector<double> Energy_range_list;
+    int energy_range_list_size;
+    int index;
+    int i , j;
+    double connected_eigen_state_energy;
+    for (i=0; i<nmode; i++){
+        connected_eigen_state_energy = eigen_energy - mfreq[i] ;
+        if(connected_eigen_state_energy > 0){
+            Energy_range_list.push_back(connected_eigen_state_energy);
+        }
+    }
+    for(i=0; i<nmode; i++ ){
+        connected_eigen_state_energy = eigen_energy + mfreq[i] ;
+        Energy_range_list.push_back(connected_eigen_state_energy) ;
+    }
+
+    sort(Energy_range_list.begin(), Energy_range_list.end());
+
+    // construct an energy window around these energy to solve for possible eigenstate .
+    energy_range_list_size = Energy_range_list.size();
+    for(i=0;i<energy_range_list_size; i++ ){
+        Energy_range_min_list.push_back(Energy_range_list[i] - energy_window_for_eigenstate);
+        Energy_range_max_list.push_back(Energy_range_list[i] + energy_window_for_eigenstate);
+    }
+
+    i = 0;
+    while(1){
+        if(i == energy_range_list_size - 1 ){
+            break;
+        }
+        if(Energy_range_max_list[i] > Energy_range_min_list[i+1]){
+            Energy_range_max_list[i] = Energy_range_max_list[i+1];
+            Energy_range_min_list.erase(Energy_range_min_list.begin() + i + 1);
+            Energy_range_max_list.erase(Energy_range_max_list.begin() + i + 1);
+            energy_range_list_size = energy_range_list_size - 1 ;
+        }
+        else{
+            i = i + 1;
+        }
+    }
+
+
+}
