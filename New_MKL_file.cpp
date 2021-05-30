@@ -291,7 +291,7 @@ void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorte
     vector<double> Emax_list_for_single_proc;
     while( list_index < Energy_range_list_size ){
 
-        if( state_num_left_for_energy_range_list >= state_num_left_for_single_proc ){
+        if( state_num_left_for_energy_range_list > state_num_left_for_single_proc ){
             // energy within energy_list is enough  for energy range for single process.
             end_index = begin_index + state_num_left_for_single_proc ;
 
@@ -332,7 +332,7 @@ void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorte
             begin_index = end_index;
 
         }
-        else {
+        else if (state_num_left_for_energy_range_list < state_num_left_for_single_proc ) {
             // energy within energy_list is  not enough .
             state_num_left_for_single_proc = state_num_left_for_single_proc - state_num_left_for_energy_range_list;
 
@@ -352,6 +352,42 @@ void allocate_diagonalization_energy_range_for_diff_proc( vector<double> & sorte
                 state_num_left_for_energy_range_list = num_eigenstate_in_each_range[list_index];
             }
             begin_index = 0;
+        }
+        else{
+            // two list have same size. need extra care here
+            if(begin_index != 0 ){
+                Emin = sorted_dmat_diagonal_part [ eigenstate_index_list_in_each_range[list_index][begin_index] ];
+            }
+            else{
+                Emin = Emin_energy_range_list[list_index];
+            }
+            Emax = Emax_energy_range_list[list_index];
+            Emin_list_for_single_proc.push_back(Emin);
+            Emax_list_for_single_proc.push_back(Emax);
+
+            list_index ++ ;
+            if(list_index< Energy_range_list_size ){
+                state_num_left_for_energy_range_list = num_eigenstate_in_each_range[list_index];
+            }
+            begin_index = 0;
+
+            Emin_list_for_all_proc[proc_index] = Emin_list_for_single_proc ;
+            Emax_list_for_all_proc[proc_index] = Emax_list_for_single_proc ;
+
+            // begin new list for new proc.
+            proc_index ++ ;
+            if(proc_index >= num_proc){
+                break;
+            }
+            if(proc_index == num_proc - 1){
+                state_num_left_for_single_proc = total_state_num_in_range - int (total_state_num_in_range / num_proc ) * (num_proc-1) ;
+            }
+            else{
+                state_num_left_for_single_proc = num_of_state_for_solving_eigenvec_per_proc;
+            }
+            Emin_list_for_single_proc.clear();
+            Emax_list_for_single_proc.clear();
+
         }
 
     }
