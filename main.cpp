@@ -29,13 +29,13 @@ bool compute_Eigenstate_OTOC_bool = true ;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/Other Molecule/Using_symmetry/Cyclopentanone/eigenstate/try/";
+                       "/Other Molecule/Using_symmetry/Cyclopentanone/eigenstate/T=300/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
  //   string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";
     string cvpt_path;
     int i;
-    int Filenumber=1;
+    int Filenumber= 14 ;
     string path;
 
     // MPI Command
@@ -43,21 +43,10 @@ int main(int argc,char * argv []) {
     MPI_Comm_size(MPI_COMM_WORLD,&num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
 
-    string c_list[3] = {
-            "0.1",
-            "0.2",
-            "0.3"
-    };
-    string V_list[3] = {
-            "V=100",
-            "V=200",
-            "V=300"
-    };
     for(i=0;i<Filenumber;i++){
         if(Filenumber!=1) {
             path = parentpath + to_string(i + 1) + "/";   // path for sub-folder.
-            cvpt_path =cvpt_parent_path + V_list[i]+"/";
-//            cvpt_path = cvpt_parent_path;
+            cvpt_path = cvpt_parent_path;
         }
         else{
             path=parentpath;

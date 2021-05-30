@@ -632,12 +632,23 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
             }
 
             for(m=0; m< selected_eigenstate_num ; m++ ){
-                send_pc_id = m / int(selected_eigenstate_num / num_proc) ;
+                if(num_proc <= selected_eigenstate_num){
+                    send_pc_id = m / int(selected_eigenstate_num / num_proc) ;
+                }
+                else{
+                    send_pc_id = m;
+                }
+
                 if(send_pc_id  >= num_proc ){
                     send_pc_id = num_proc - 1 ;
                 }
+                if(num_proc <= selected_eigenstate_num){
+                    local_eigenstate_index = m - send_pc_id * int(selected_eigenstate_num / num_proc) ;
+                }
+                else{
+                    local_eigenstate_index = 0;
+                }
 
-                local_eigenstate_index = m - send_pc_id * int(selected_eigenstate_num / num_proc) ;
                 l_M_m_bcast_real = new double [ l_M_m_list_size[m] ];
                 l_M_m_bcast_imag = new double [ l_M_m_list_size[m] ];
 
@@ -812,10 +823,22 @@ void detector::compute_Eigenstate_OTOC(){
     }
     int Time_series_len = Time_series.size();
 
-    int local_eigenstate_num = selected_eigenstate_num / num_proc;
-    if(my_id == num_proc -1){
-        local_eigenstate_num = selected_eigenstate_num -  int(selected_eigenstate_num / num_proc) * (num_proc - 1);
+    int local_eigenstate_num ;
+    if(selected_eigenstate_num >= num_proc){
+        local_eigenstate_num = selected_eigenstate_num / num_proc;
+        if(my_id == num_proc -1){
+            local_eigenstate_num = selected_eigenstate_num -  int(selected_eigenstate_num / num_proc) * (num_proc - 1);
+        }
     }
+    else{
+        if(my_id <selected_eigenstate_num){
+            local_eigenstate_num = 1;
+        }
+        else{
+            local_eigenstate_num = 0;
+        }
+    }
+
 
 
     // size: [eigenstate_num , 2* nmodes[0], 2* nmodes[0]] store final result
@@ -836,7 +859,12 @@ void detector::compute_Eigenstate_OTOC(){
     for(i=0;i<2*nmodes[0];i++){
         local_Eigenstate_OTOC[i] = new  double * [ 2 * nmodes[0]];
         for(j=0;j<2*nmodes[0]; j++){
-            local_Eigenstate_OTOC[i][j] = new  double  [local_eigenstate_num];
+            if(local_eigenstate_num != 0){
+                local_Eigenstate_OTOC[i][j] = new  double  [local_eigenstate_num];
+            }
+            else{
+                local_Eigenstate_OTOC[i][j] = new  double  [1];
+            }
         }
     }
 
@@ -861,17 +889,34 @@ void detector::compute_Eigenstate_OTOC(){
         l_M_m_local_overlap_value[i] = new vector<complex<double>> * [2 * nmodes[0]];
         l_M_m_local_index_l[i] = new vector<int> * [ 2 * nmodes[0] ];
         for(j=0;j<2*nmodes[0];j++){
-            l_M_m_local_overlap_value[i][j] = new vector<complex<double>>  [local_eigenstate_num];
-            l_M_m_local_index_l[i][j] = new vector<int>  [ local_eigenstate_num ] ;
+            if(local_eigenstate_num != 0){
+                l_M_m_local_overlap_value[i][j] = new vector<complex<double>>  [local_eigenstate_num];
+                l_M_m_local_index_l[i][j] = new vector<int>  [ local_eigenstate_num ] ;
+            }
+            else{
+                l_M_m_local_overlap_value[i][j] = new vector<complex<double>>[1];
+                l_M_m_local_index_l[i][j] = new vector<int> [1];
+            }
+
         }
     }
 
     int * recv_count = new int [num_proc];
     int * displs = new int [num_proc];
-    for(i=0;i<num_proc-1;i++){
-        recv_count [i] = int(selected_eigenstate_num / num_proc) ;
+    if(num_proc <= selected_eigenstate_num){
+        for(i=0;i<num_proc-1;i++){
+            recv_count [i] = int(selected_eigenstate_num / num_proc) ;
+        }
+        recv_count[num_proc - 1] = selected_eigenstate_num -  int(selected_eigenstate_num / num_proc) * (num_proc - 1);
     }
-    recv_count[num_proc - 1] = selected_eigenstate_num -  int(selected_eigenstate_num / num_proc) * (num_proc - 1);
+    else{
+        for(i=0;i<selected_eigenstate_num;i++){
+            recv_count[i] = 1;
+        }
+        for(i=selected_eigenstate_num; i<num_proc; i++){
+            recv_count[i] = 0;
+        }
+    }
     displs[0] = 0;
     for(i=1;i<num_proc;i++){
         displs[i] = displs[i - 1] + recv_count[ i - 1 ];
