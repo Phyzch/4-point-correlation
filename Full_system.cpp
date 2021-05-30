@@ -186,7 +186,7 @@ void full_system::Quantum_evolution() {
 
         double eigen_energy = d.initial_Detector_energy[0] ;
         double eigen_energy_window = 100;
-        double eigen_energy_window2 = 100;
+        double eigen_energy_window2 = 20;
         double eigen_energy_range_low = eigen_energy - eigen_energy_window2;
         double eigen_energy_range_high = eigen_energy + eigen_energy_window2;
 

@@ -889,7 +889,7 @@ void full_system:: construct_state_space_using_symmetry(){
              resonant_state_output << endl;
          }
          resonant_state_output.close();
-         
+
          // push state with one mode quanta into list
          for(i=0;i< list_len ; i++ ){
              include_nearby_state(resonant_state_mode_list[i], resonant_state_energy_list[i]);
