@@ -673,96 +673,103 @@ void full_system:: find_resonant_state_to_initial_state( double energy_window_cu
         }
 
         if(detector0_energy > d.initial_Detector_energy[0] - energy_window_cutoff and detector0_energy < d.initial_Detector_energy[0] + energy_window_cutoff){
-            // criteria here will be coupling strength / energy_diff
-            energy_diff = abs ( detector0_energy - d.initial_Detector_energy[0] );
+//            // criteria here will be coupling strength / energy_diff
+//            energy_diff = abs ( detector0_energy - d.initial_Detector_energy[0] );
+//
+//            // compute coupling strength below
+//            ntot = 0;
+//            for(k=0;k<d.nmodes[0];k++){
+//                deln[k] = abs( ndetector0[k] - d.initial_detector_state[0][k] );
+//                nbar[k]= sqrt(sqrt(double(max(1, ndetector0[k])) * double(max(1, d.initial_detector_state[0][k]  ))));
+//                ntot = ntot + deln[k] ;
+//            }
+//            if(ntot == 0){
+//                continue;
+//            }
+//// add symmetry criteria here:
+//            vector<int> mode_diff_index;
+//            for(k=0;k<d.nmodes[0];k++){
+//                for(l=0;l< abs(deln[k]) ; l++ ){
+//                    mode_diff_index.push_back(k);
+//                }
+//            }
+//            if(mode_diff_index.size() == 1){
+//                if(d.Mode_Symmetry[0][mode_diff_index[0]] != 0){
+//                    continue;
+//                }
+//            }
+//            else{
+//                index1 = d.Mode_Symmetry[0][mode_diff_index[0]];
+//                for(k=1; k< mode_diff_index.size(); k++){
+//                    index2 = d.Mode_Symmetry[0][mode_diff_index[k]];
+//                    index_combine = Symmetry_Table[index1][index2];
+//                    index1 = index_combine ;
+//                }
+//                if(index_combine != 0){
+//                    continue;
+//                }
+//            }
+//
+//            // this is because we don't have 1st order ladder operator in Harmonic oscillator's expression
+//            if (ntot == 2) {
+//                for (k = 0; k < d.nmodes[0]; k++) {
+//                    if (deln[k] == 2) deln[k] = 4;
+//                    if (deln[k] == 1) deln[k] = 2;
+//                }
+//            }
+//            else if (ntot == 1) {
+//                for (k = 0; k < d.nmodes[0]; k++) {
+//                    if (deln[k] == 1) deln[k] = 3;
+//                }
+//            }
+//            if(ntot < d.maxdis){
+//                value = d.V_intra;
+//                for(k=0; k<d.nmodes[0]; k++){
+//                    value = value * pow(d.aij[0][k] * nbar[k], deln[k]);
+//                }
+//                coupling_over_energydiff = abs( value / energy_diff ) ;
+//            }
+//            else{
+//                continue;
+//            }
+//
+//            //--------------------------------------insert this state in detector's state.-----------------------------------------------------------
+//            candidate_resonant_state_mode_list.push_back(ndetector0);
+//            candidate_resonant_state_energy_list.push_back(detector0_energy);
+//            coupling_over_energydiff_list.push_back(coupling_over_energydiff);
 
-            // compute coupling strength below
-            ntot = 0;
-            for(k=0;k<d.nmodes[0];k++){
-                deln[k] = abs( ndetector0[k] - d.initial_detector_state[0][k] );
-                nbar[k]= sqrt(sqrt(double(max(1, ndetector0[k])) * double(max(1, d.initial_detector_state[0][k]  ))));
-                ntot = ntot + deln[k] ;
-            }
-            if(ntot == 0){
-                continue;
-            }
-// add symmetry criteria here:
-            vector<int> mode_diff_index;
-            for(k=0;k<d.nmodes[0];k++){
-                for(l=0;l< abs(deln[k]) ; l++ ){
-                    mode_diff_index.push_back(k);
-                }
-            }
-            if(mode_diff_index.size() == 1){
-                if(d.Mode_Symmetry[0][mode_diff_index[0]] != 0){
-                    continue;
-                }
-            }
-            else{
-                index1 = d.Mode_Symmetry[0][mode_diff_index[0]];
-                for(k=1; k< mode_diff_index.size(); k++){
-                    index2 = d.Mode_Symmetry[0][mode_diff_index[k]];
-                    index_combine = Symmetry_Table[index1][index2];
-                    index1 = index_combine ;
-                }
-                if(index_combine != 0){
-                    continue;
-                }
-            }
-
-            // this is because we don't have 1st order ladder operator in Harmonic oscillator's expression
-            if (ntot == 2) {
-                for (k = 0; k < d.nmodes[0]; k++) {
-                    if (deln[k] == 2) deln[k] = 4;
-                    if (deln[k] == 1) deln[k] = 2;
-                }
-            }
-            else if (ntot == 1) {
-                for (k = 0; k < d.nmodes[0]; k++) {
-                    if (deln[k] == 1) deln[k] = 3;
-                }
-            }
-            if(ntot < d.maxdis){
-                value = d.V_intra;
-                for(k=0; k<d.nmodes[0]; k++){
-                    value = value * pow(d.aij[0][k] * nbar[k], deln[k]);
-                }
-                coupling_over_energydiff = abs( value / energy_diff ) ;
-            }
-            else{
-                continue;
-            }
-
-            //--------------------------------------insert this state in detector's state.-----------------------------------------------------------
-            candidate_resonant_state_mode_list.push_back(ndetector0);
-            candidate_resonant_state_energy_list.push_back(detector0_energy);
-            coupling_over_energydiff_list.push_back(coupling_over_energydiff);
-
+                 resonant_state_mode_list.push_back(ndetector0);
+                 resonant_state_energy.push_back(detector0_energy);
+                 location = find_position_for_insert_binary(vmode0, ndetector0 , exist);
+                 if(!exist){
+                     vmode0.insert(vmode0.begin() + location, ndetector0  );
+                     dmat0.insert(dmat0.begin() + location, detector0_energy );
+                 }
         }
     }
     label1:;
 
-    // sort list to get N states which is strongly coupled to our initial state.
-    vector<double> coupling_over_energydiff_list_sorted = coupling_over_energydiff_list ;
-    sort(coupling_over_energydiff_list_sorted.begin() , coupling_over_energydiff_list_sorted.end() , greater<double>() );
-    candidate_list_size = candidate_resonant_state_energy_list.size();
-    if(candidate_list_size < resonant_state_number){
-        resonant_state_number = candidate_list_size;
-    }
-    for(i=0;i<resonant_state_number;i++){
-        for(k=0;k< candidate_list_size; k++){
-            if( coupling_over_energydiff_list_sorted[i] == coupling_over_energydiff_list [k] ){
-                 resonant_state_mode_list.push_back( candidate_resonant_state_mode_list[k] );
-                 resonant_state_energy.push_back(candidate_resonant_state_energy_list[k]);
-                 location = find_position_for_insert_binary(vmode0, candidate_resonant_state_mode_list[k] , exist);
-                 if(!exist){
-                     vmode0.insert(vmode0.begin() + location, candidate_resonant_state_mode_list[k]  );
-                     dmat0.insert(dmat0.begin() + location, candidate_resonant_state_energy_list[k] );
-                 }
-                 break;
-            }
-        }
-    }
+//    // sort list to get N states which is strongly coupled to our initial state.
+//    vector<double> coupling_over_energydiff_list_sorted = coupling_over_energydiff_list ;
+//    sort(coupling_over_energydiff_list_sorted.begin() , coupling_over_energydiff_list_sorted.end() , greater<double>() );
+//    candidate_list_size = candidate_resonant_state_energy_list.size();
+//    if(candidate_list_size < resonant_state_number){
+//        resonant_state_number = candidate_list_size;
+//    }
+//    for(i=0;i<resonant_state_number;i++){
+//        for(k=0;k< candidate_list_size; k++){
+//            if( coupling_over_energydiff_list_sorted[i] == coupling_over_energydiff_list [k] ){
+//                 resonant_state_mode_list.push_back( candidate_resonant_state_mode_list[k] );
+//                 resonant_state_energy.push_back(candidate_resonant_state_energy_list[k]);
+//                 location = find_position_for_insert_binary(vmode0, candidate_resonant_state_mode_list[k] , exist);
+//                 if(!exist){
+//                     vmode0.insert(vmode0.begin() + location, candidate_resonant_state_mode_list[k]  );
+//                     dmat0.insert(dmat0.begin() + location, candidate_resonant_state_energy_list[k] );
+//                 }
+//                 break;
+//            }
+//        }
+//    }
 
     delete [] nbar;
     delete [] deln;
@@ -865,21 +872,24 @@ void full_system:: construct_state_space_using_symmetry(){
          }
 
         // include state resonant to initial state into list. We also have to include state with one ladder operator difference into list
-        double energy_window = 200;
+        double energy_window = 3.5;
          vector<vector<int>> resonant_state_mode_list ;
          vector<double> resonant_state_energy_list;
          int resonant_state_number = 10;
          find_resonant_state_to_initial_state(energy_window, resonant_state_mode_list, resonant_state_energy_list , resonant_state_number );
 
          int list_len = resonant_state_energy_list.size();
-         cout <<"resonant state : " << endl;
+         ofstream resonant_state_output(path + "resonant_state.txt");
+         resonant_state_output<<"resonant state : " << endl;
          for(i=0;i<list_len;i++){
-             cout << "energy:   " << resonant_state_energy_list[i] <<"      mode :    ";
+             resonant_state_output << "energy:   " << resonant_state_energy_list[i] <<"      mode :    ";
              for(j=0;j<d.nmodes[0];j++){
-                 cout << resonant_state_mode_list[i][j] << "  ";
+                 resonant_state_output << resonant_state_mode_list[i][j] << "  ";
              }
-             cout << endl;
+             resonant_state_output << endl;
          }
+         resonant_state_output.close();
+         
          // push state with one mode quanta into list
          for(i=0;i< list_len ; i++ ){
              include_nearby_state(resonant_state_mode_list[i], resonant_state_energy_list[i]);
