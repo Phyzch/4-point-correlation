@@ -278,6 +278,16 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_submodule(  int * dir
 
 //    printf("Number of eigenvalues found in  interval [ %.5e, %.5e  ].  eigenvalue estimate %d, eigenvalue found %d \n",Emin_of_choice, Emax_of_choice , M0,  M);
 
+    if(M<0 or M > dmatsize){
+        printf("Bad M value returned from dfeast_scsrev:  Exit.");
+        MPI_Abort(MPI_COMM_WORLD,-22);
+    }
+
+    if ( info >=100 or info<0 )
+    {
+        printf("Routine dfeast_scsrev returns code of ERROR: %i", (int)info);
+        MPI_Abort(MPI_COMM_WORLD, -21);
+    }
 
     // construct Matrix X
     for(i=0;i<M;i++){

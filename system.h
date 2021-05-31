@@ -231,6 +231,8 @@ public:
     int eigenstate_num; // denote as M
     double * Eigenvalue_list; // [M]
     double ** Eigenstate_list; // [M, total_dmatsize[0]]
+    vector<vector<int>> nonzero_Eigenstate_basis_set_index;
+    vector<vector<double>> nonzero_Eigenstate_basis_set_value;
     vector<int> selected_eigenstate_index; // only eigenstate within small energy window whose OTOC converge will be computed.
     int selected_eigenstate_num ;
 

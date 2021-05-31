@@ -423,7 +423,7 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * 
     int total_state_num_in_range = 0 ;
     int dmat_diagonal_num = dmat_diagonal_part.size();
 
-    int num_of_state_for_solving_eigenvec = 20;
+    int num_of_state_for_solving_eigenvec = 50;
 
     int eigenstate_num_solved  =  0;
     int total_eigenstate_num_solved = 0;
@@ -589,7 +589,7 @@ void construct_energy_window_for_eigenstate(int nmode, double * mfreq, double ei
     // push state with energy one mode lower
     for (i=0; i<nmode; i++){
         connected_eigen_state_energy = eigen_energy - mfreq[i] ;
-        if(connected_eigen_state_energy > 0){
+        if(connected_eigen_state_energy >= 0){
             Energy_range_list.push_back(connected_eigen_state_energy);
         }
     }

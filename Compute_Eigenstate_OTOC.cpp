@@ -157,6 +157,21 @@ void detector:: compute_phi_ladder_operator_phi( vector<double> & dmat0 ){
 
     double Energy_sift_criteria = 0;
 
+    // nonzero basis set.
+    double basis_set_cutoff_criteria = 0.05;
+    for(i=0;i<eigenstate_num;i++){
+        vector <int> v_index;
+        vector <double> v_value;
+        for(j=0;j<total_dmat_size[0];j++){
+            if( abs(Eigenstate_list[i][j]) > basis_set_cutoff_criteria ){
+                v_index.push_back(j);
+                v_value.push_back(Eigenstate_list[i][j]);
+            }
+        }
+        nonzero_Eigenstate_basis_set_index.push_back(v_index);
+        nonzero_Eigenstate_basis_set_value.push_back(v_value);
+    }
+
     for(i=0;i<2 * nmodes[0]; i++){
         for(m=0;m<local_eigenstate_num;m++){
                 // <l  | a_{i} | m >
@@ -500,12 +515,6 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
         }
         local_eigenstate_begin_index = my_id ;
     }
-    if(my_id == 0){
-        if(selected_eigenstate_num < num_proc ){
-            cout <<"selected eigenstate number:  " << selected_eigenstate_num << "  <  num_proc:   " << num_proc << endl;
-            cout <<"This may cause bug here:  " << endl;
-        }
-    }
 
 
     int state_l_index ;
@@ -537,6 +546,12 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
                     temporary_list[l] = 0;
                 }
 
+                if(i== 18 and j==57){
+                    cout <<"Found" <<endl;
+                }
+                if(i==21 and j== 57){
+                    cout <<"Found" << endl;
+                }
 
                 state_m_index = selected_eigenstate_index[ local_eigenstate_begin_index + m ];
 
@@ -592,6 +607,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
                         l_M_m_local_overlap_value[i][j][m].push_back(temporary_list[l]);
                     }
                 }
+
 
             }
 
@@ -726,34 +742,35 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
 
                 state_m_index = local_eigenstate_begin_index + m  ;
 
-                for(k=0;k<2 * nmodes[0] ; k++){
-                    ptr3 = & l_M_m_nonzero[k][i][state_m_index];   // l_M_m[k][i][:][state_m]
-                    l_M_m_nonzero_m_list_length = (*ptr3).size();
-                    ptr4 = & l_M_m_nonzero[k][j][state_m_index]; // l_M_m[k][j][:][state_m]
-
-                    // loop for a_i_a_j_m_index is equivalent to loop for state l
-                    for(a_i_a_j_m_index = 0; a_i_a_j_m_index < l_M_m_nonzero_m_list_length ; a_i_a_j_m_index ++ ){
-                        l = (*ptr3)[a_i_a_j_m_index].eigenstate_index;
-                        Value3 = (*ptr3)[a_i_a_j_m_index].phi_operator_phi_value;  // l_M_m[k][i][l][state_m]
-
-                        position = Binary_search_phi_operator_phi_tuple_complex((*ptr4) , l );
-                        if(position != -1){
-                            // state l have non-negligible contribution
-                            Value4 = (*ptr4)[position].phi_operator_phi_value; // l_M_m[k][j][l][state_m]
-                            local_l_M_m_sum = local_l_M_m_sum +  conj(Value3) * Value4;
-
-                        }
-
-                    }
-                }
+//                for(k=0;k<2 * nmodes[0] ; k++){
+//                    ptr3 = & l_M_m_nonzero[k][i][state_m_index];   // l_M_m[k][i][:][state_m]
+//                    l_M_m_nonzero_m_list_length = (*ptr3).size();
+//                    ptr4 = & l_M_m_nonzero[k][j][state_m_index]; // l_M_m[k][j][:][state_m]
+//
+//
+//                    // loop for a_i_a_j_m_index is equivalent to loop for state l
+//                    for(a_i_a_j_m_index = 0; a_i_a_j_m_index < l_M_m_nonzero_m_list_length ; a_i_a_j_m_index ++ ){
+//                        l = (*ptr3)[a_i_a_j_m_index].eigenstate_index;
+//                        Value3 = (*ptr3)[a_i_a_j_m_index].phi_operator_phi_value;  // l_M_m[k][i][l][state_m]
+//
+//                        position = Binary_search_phi_operator_phi_tuple_complex((*ptr4) , l );
+//                        if(position != -1){
+//                            // state l have non-negligible contribution
+//                            Value4 = (*ptr4)[position].phi_operator_phi_value; // l_M_m[k][j][l][state_m]
+//                            local_l_M_m_sum = local_l_M_m_sum +  conj(Value3) * Value4;
+//
+//                        }
+//
+//                    }
+//                }
 
             // ------ For debug : We do not compute Lyapunov spectrum but <m| [a_{i} , a_{j}]^2 | m > ---------
-//                ptr3 = & l_M_m_nonzero[i][j][state_m_index];   // l_M_m[i][j][:][state_m]
-//                l_M_m_nonzero_m_list_length = (*ptr3).size();
-//                for(a_i_a_j_m_index = 0; a_i_a_j_m_index < l_M_m_nonzero_m_list_length ; a_i_a_j_m_index ++ ){
-//                    Value3 = (*ptr3)[a_i_a_j_m_index].phi_operator_phi_value;  // l_M_m[i][j][l][state_m]
-//                    local_l_M_m_sum = local_l_M_m_sum + conj(Value3) * Value3;
-//                }
+                ptr3 = & l_M_m_nonzero[i][j][state_m_index];   // l_M_m[i][j][:][state_m]
+                l_M_m_nonzero_m_list_length = (*ptr3).size();
+                for(a_i_a_j_m_index = 0; a_i_a_j_m_index < l_M_m_nonzero_m_list_length ; a_i_a_j_m_index ++ ){
+                    Value3 = (*ptr3)[a_i_a_j_m_index].phi_operator_phi_value;  // l_M_m[i][j][l][state_m]
+                    local_l_M_m_sum = local_l_M_m_sum + conj(Value3) * Value3;
+                }
             // -------------- For debug -------------------------------------------
 
                 local_Eigenstate_OTOC[i][j][m] = real(local_l_M_m_sum);
@@ -772,6 +789,21 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
 
     // output to Eigenstate_OTOC_output
     if(my_id == 0){
+
+        if(time == 0){
+            // diagonal_part :
+            ofstream diagonal_part(path + "diagonal_part.txt");
+            diagonal_part << time << endl;
+            for(m=0;m<selected_eigenstate_num;m++){
+                for(i=0;i< nmodes[0] ; i++){
+                    diagonal_part<< i+1 <<"  " <<  mfreq[0][i] << "  " << Eigenstate_OTOC[i][i + nmodes[0] ][m] <<endl;
+
+                }
+                diagonal_part  << endl;
+            }
+
+        }
+
         // output time
         Eigenstate_OTOC_output << time << endl;
 

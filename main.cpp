@@ -29,13 +29,13 @@ bool compute_Eigenstate_OTOC_bool = true ;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/Other Molecule/Using_symmetry/Cyclopentanone/eigenstate/T=300/";
+                       "/Other Molecule/Using_symmetry/Cyclopentanone/eigenstate/T=300/3/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
  //   string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";
     string cvpt_path;
     int i;
-    int Filenumber= 14 ;
+    int Filenumber= 1 ;
     string path;
 
     // MPI Command

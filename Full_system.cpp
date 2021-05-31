@@ -104,7 +104,7 @@ full_system::full_system(string path1, string cvpt_path1) {
 void full_system::Quantum_evolution() {
     // -----------------------------------------------------------------------------------
 	// Now we construct our wavefunction /phi for our detector and full_system. (For system it is already constructed in s.read())
-    int i,j;
+    int i,j,k;
 	clock_t start_time, end_time, duration;
 
 
@@ -185,7 +185,7 @@ void full_system::Quantum_evolution() {
         sort(sorted_dmat0.begin() , sorted_dmat0.end());
 
         double eigen_energy = d.initial_Detector_energy[0] ;
-        double eigen_energy_window = 100;
+        double eigen_energy_window = 200;
         double eigen_energy_window2 = 20;
         double eigen_energy_range_low = eigen_energy - eigen_energy_window2;
         double eigen_energy_range_high = eigen_energy + eigen_energy_window2;
@@ -221,13 +221,48 @@ void full_system::Quantum_evolution() {
             cout <<"Finish solving eigenvector and eigenvalue " << endl;
             Eigenvector_solver << d.eigenstate_num << endl;
             for(i=0;i<d.eigenstate_num ; i++ ){
-                Eigenvector_solver << d.Eigenvalue_list[i] << " ";
+                Eigenvector_solver << i << "  " << d.Eigenvalue_list[i] << endl;
             }
             Eigenvector_solver << endl;
 
             // optional here: output eigenstate
 
             Eigenvector_solver.close();
+
+            // check orthgonality
+            vector<vector<double>> Y ;
+            double y1;
+            double maximum_deviation = 0 ;
+            int maximum_i = 0;
+            int maximum_j = 0;
+            for(i=0;i<d.eigenstate_num;i++){
+                vector<double>v1;
+                for(j=0;j<d.eigenstate_num;j++){
+                    y1 = 0;
+                    for(k=0;k<d.total_dmat_size[0];k++){
+                        y1 = y1 + d.Eigenstate_list[i][k] * d.Eigenstate_list[j][k];
+                    }
+                    v1.push_back(y1);
+                }
+                Y.push_back(v1);
+            }
+            for(i=0;i<d.eigenstate_num;i++){
+                Y[i][i] = Y[i][i] - 1;
+            }
+            for(i=0;i<d.eigenstate_num;i++){
+                for(j=0;j<d.eigenstate_num;j++){
+                    if(abs(Y[i][j]) > maximum_deviation){
+                        maximum_deviation = abs(Y[i][j]);
+                        maximum_i = i;
+                        maximum_j = j;
+                    }
+                }
+            }
+            cout << "Maximum nonzero overlap is  " << maximum_deviation << "  for index:  " <<maximum_i <<"  " << maximum_j << endl;
+            if(maximum_deviation > 0.05){
+                cout<< "Error.  maximum deviation is not zero . Check eigenstae orthgonality. " << endl;
+                MPI_Abort(-100,MPI_COMM_WORLD);
+            }
         }
 
         if (compute_Eigenstate_OTOC_bool){

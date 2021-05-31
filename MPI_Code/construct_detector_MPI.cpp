@@ -123,6 +123,7 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
         std::uniform_real_distribution<double> distribution(0,1);  // random number in range [0,1]
         if (!Continue_Simulation) {
             for(i=0;i<tlnum;i++) {
+                cout <<"frequency:  " << endl;
                 for(j=0;j<nmodes[0];j++) {
                     if (j == 0) {
                         mfreq[i][j] = mfreq[i][j] * (1 + noise_strength * (distribution(generator)-0.5) * 2 );
@@ -135,7 +136,7 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
                     // set precision of mfreq to 0.01. Convenient to restart simulation.
                     mfreq[i][j] = floor(mfreq[i][j] *100) /100;
                 }
-
+                cout << endl;
                 if (noise_strength not_eq 0){
                     cout << "Nonzero noise strength" << endl;
                 }
