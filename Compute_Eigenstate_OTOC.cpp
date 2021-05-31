@@ -145,7 +145,7 @@ void detector:: compute_phi_ladder_operator_phi( vector<double> & dmat0 ){
     }
 
     double * temporary_phi_ladder_operator_phi_list = new double [ eigenstate_num];
-    Eigenstate_OTOC_sift_criteria = double(1) / (20) ;
+    Eigenstate_OTOC_sift_criteria = double(1) / (500) ;
 
     int eigenstate_m_index , eigenstate_l_index;
     double ladder_operator_energy_change ; // if ladder operator is a_{i} , energy change is -frequency[i]. if it's a_{i}^{+} , energy change is + frequency[i]
@@ -546,13 +546,6 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
                     temporary_list[l] = 0;
                 }
 
-                if(i== 18 and j==57){
-                    cout <<"Found" <<endl;
-                }
-                if(i==21 and j== 57){
-                    cout <<"Found" << endl;
-                }
-
                 state_m_index = selected_eigenstate_index[ local_eigenstate_begin_index + m ];
 
                 // first compute part : <l | a_{i}(t) a_{j} | m>
@@ -612,6 +605,24 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
             }
 
         }
+
+//        if(i== 18){
+//            for(j=0;j<2*nmodes[0];j++){
+//                cout << j << endl;
+//                for(k=0; k< l_M_m_local_overlap_value[i][j][0].size(); k++ ){
+//                    cout << l_M_m_local_index_l[i][j][0][k] << " ";
+//                }
+//                cout << endl;
+//                for(k=0; k< l_M_m_local_overlap_value[i][j][0].size(); k++ ){
+//                    cout << l_M_m_local_overlap_value [i][j][0][k] << " ";
+//                }
+//                cout << endl;
+//                cout << endl;
+//
+//            }
+//            cout << "Found" << endl;
+//        }
+
     }
 
 
@@ -742,35 +753,35 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
 
                 state_m_index = local_eigenstate_begin_index + m  ;
 
-//                for(k=0;k<2 * nmodes[0] ; k++){
-//                    ptr3 = & l_M_m_nonzero[k][i][state_m_index];   // l_M_m[k][i][:][state_m]
-//                    l_M_m_nonzero_m_list_length = (*ptr3).size();
-//                    ptr4 = & l_M_m_nonzero[k][j][state_m_index]; // l_M_m[k][j][:][state_m]
-//
-//
-//                    // loop for a_i_a_j_m_index is equivalent to loop for state l
-//                    for(a_i_a_j_m_index = 0; a_i_a_j_m_index < l_M_m_nonzero_m_list_length ; a_i_a_j_m_index ++ ){
-//                        l = (*ptr3)[a_i_a_j_m_index].eigenstate_index;
-//                        Value3 = (*ptr3)[a_i_a_j_m_index].phi_operator_phi_value;  // l_M_m[k][i][l][state_m]
-//
-//                        position = Binary_search_phi_operator_phi_tuple_complex((*ptr4) , l );
-//                        if(position != -1){
-//                            // state l have non-negligible contribution
-//                            Value4 = (*ptr4)[position].phi_operator_phi_value; // l_M_m[k][j][l][state_m]
-//                            local_l_M_m_sum = local_l_M_m_sum +  conj(Value3) * Value4;
-//
-//                        }
-//
-//                    }
-//                }
+                for(k=0;k<2 * nmodes[0] ; k++){
+                    ptr3 = & l_M_m_nonzero[k][i][state_m_index];   // l_M_m[k][i][:][state_m]
+                    l_M_m_nonzero_m_list_length = (*ptr3).size();
+                    ptr4 = & l_M_m_nonzero[k][j][state_m_index]; // l_M_m[k][j][:][state_m]
+
+
+                    // loop for a_i_a_j_m_index is equivalent to loop for state l
+                    for(a_i_a_j_m_index = 0; a_i_a_j_m_index < l_M_m_nonzero_m_list_length ; a_i_a_j_m_index ++ ){
+                        l = (*ptr3)[a_i_a_j_m_index].eigenstate_index;
+                        Value3 = (*ptr3)[a_i_a_j_m_index].phi_operator_phi_value;  // l_M_m[k][i][l][state_m]
+
+                        position = Binary_search_phi_operator_phi_tuple_complex((*ptr4) , l );
+                        if(position != -1){
+                            // state l have non-negligible contribution
+                            Value4 = (*ptr4)[position].phi_operator_phi_value; // l_M_m[k][j][l][state_m]
+                            local_l_M_m_sum = local_l_M_m_sum +  conj(Value3) * Value4;
+
+                        }
+
+                    }
+                }
 
             // ------ For debug : We do not compute Lyapunov spectrum but <m| [a_{i} , a_{j}]^2 | m > ---------
-                ptr3 = & l_M_m_nonzero[i][j][state_m_index];   // l_M_m[i][j][:][state_m]
-                l_M_m_nonzero_m_list_length = (*ptr3).size();
-                for(a_i_a_j_m_index = 0; a_i_a_j_m_index < l_M_m_nonzero_m_list_length ; a_i_a_j_m_index ++ ){
-                    Value3 = (*ptr3)[a_i_a_j_m_index].phi_operator_phi_value;  // l_M_m[i][j][l][state_m]
-                    local_l_M_m_sum = local_l_M_m_sum + conj(Value3) * Value3;
-                }
+//                ptr3 = & l_M_m_nonzero[i][j][state_m_index];   // l_M_m[i][j][:][state_m]
+//                l_M_m_nonzero_m_list_length = (*ptr3).size();
+//                for(a_i_a_j_m_index = 0; a_i_a_j_m_index < l_M_m_nonzero_m_list_length ; a_i_a_j_m_index ++ ){
+//                    Value3 = (*ptr3)[a_i_a_j_m_index].phi_operator_phi_value;  // l_M_m[i][j][l][state_m]
+//                    local_l_M_m_sum = local_l_M_m_sum + conj(Value3) * Value3;
+//                }
             // -------------- For debug -------------------------------------------
 
                 local_Eigenstate_OTOC[i][j][m] = real(local_l_M_m_sum);
@@ -796,7 +807,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
             diagonal_part << time << endl;
             for(m=0;m<selected_eigenstate_num;m++){
                 for(i=0;i< nmodes[0] ; i++){
-                    diagonal_part<< i+1 <<"  " <<  mfreq[0][i] << "  " << Eigenstate_OTOC[i][i + nmodes[0] ][m] <<endl;
+                    diagonal_part<< i+1 <<"  " <<  mfreq[0][i] << "  " << Eigenstate_OTOC[i][i ][m] <<endl;
 
                 }
                 diagonal_part  << endl;

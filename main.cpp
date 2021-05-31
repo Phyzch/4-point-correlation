@@ -34,7 +34,7 @@ int main(int argc,char * argv []) {
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
  //   string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";
     string cvpt_path;
-    int i;
+    int i,j;
     int Filenumber= 1 ;
     string path;
 
@@ -65,6 +65,13 @@ int main(int argc,char * argv []) {
 
         { // the parenthese here let destructor called after we use this instance.
             // pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
+            if(Filenumber!=1){
+                for(j = 0; j< 5; j++){
+                    cout << endl;
+                }
+                cout <<" Folder: " << i+1 << endl;
+            }
+
             full_system photon_entangled_system(path,cvpt_path);  // set parameter and construct Hamiltonian.
             photon_entangled_system.Quantum_evolution(); // creat initial state (or read from file). Then complete simulation.
         }
