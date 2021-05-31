@@ -423,7 +423,7 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * 
     int total_state_num_in_range = 0 ;
     int dmat_diagonal_num = dmat_diagonal_part.size();
 
-    int num_of_state_for_solving_eigenvec = 50;
+    int num_of_state_for_solving_eigenvec = 300;
 
     int eigenstate_num_solved  =  0;
     int total_eigenstate_num_solved = 0;
@@ -525,55 +525,86 @@ int MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(int * 
 }
 
 void detector::Broadcast_eigenstate_and_eigenvalue(vector<double> & Eigenvalue_temp, vector<vector<double>> & Eigenvector_temp){
-    int i,j , k;
-    // broadcast total number of eigenstate found to other process
-    int eigenstate_num_in_all_proc;
-    int * eigenstate_num_in_each_proc = new int [num_proc];
-    int * eigenstate_num_disp = new int [num_proc];
-    MPI_Allgather(&eigenstate_num, 1, MPI_INT, &eigenstate_num_in_each_proc[0], 1, MPI_INT, MPI_COMM_WORLD );
 
-    eigenstate_num_disp[0] = 0;
-    for(i=1;i<num_proc;i++){
-        eigenstate_num_disp[i] = eigenstate_num_disp[i - 1] + eigenstate_num_in_each_proc[i-1];
+    if( use_multiple_core_to_solve_eigenstate_spectrum){
+        int i,j , k;
+        // broadcast total number of eigenstate found to other process
+        int eigenstate_num_in_all_proc;
+        int * eigenstate_num_in_each_proc = new int [num_proc];
+        int * eigenstate_num_disp = new int [num_proc];
+        MPI_Allgather(&eigenstate_num, 1, MPI_INT, &eigenstate_num_in_each_proc[0], 1, MPI_INT, MPI_COMM_WORLD );
+
+        eigenstate_num_disp[0] = 0;
+        for(i=1;i<num_proc;i++){
+            eigenstate_num_disp[i] = eigenstate_num_disp[i - 1] + eigenstate_num_in_each_proc[i-1];
+        }
+
+        MPI_Allreduce(&eigenstate_num,&eigenstate_num_in_all_proc,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+        eigenstate_num = eigenstate_num_in_all_proc;
+
+
+        // other process allocate space for eigenvalue and eigenvector
+        Eigenvalue_list = new double[eigenstate_num];
+        Eigenstate_list = new double * [eigenstate_num];
+        for(i=0;i<eigenstate_num ; i++){
+            Eigenstate_list[i] = new double [total_dmat_size[0]];
+        }
+
+        double * Eigenstate_recv_list = new double [total_dmat_size[0]];
+
+        // AllGather Eigenvalue_list
+        MPI_Allgatherv(&Eigenvalue_temp[0], eigenstate_num_in_each_proc[my_id], MPI_DOUBLE, &Eigenvalue_list[0], eigenstate_num_in_each_proc, eigenstate_num_disp, MPI_DOUBLE, MPI_COMM_WORLD);
+
+        // AllGather Eigenstate_list
+        int eigenstate_index = 0;
+        for(i=0;i<num_proc;i++){
+            for(j=0;j<eigenstate_num_in_each_proc[i];j++){
+                if(my_id == i){
+                    for(k=0;k<total_dmat_size[0]; k++){
+                        Eigenstate_recv_list[k] = Eigenvector_temp[j][k];
+                    }
+                }
+                MPI_Bcast(&Eigenstate_recv_list[0],total_dmat_size[0], MPI_DOUBLE, i, MPI_COMM_WORLD);
+                for(k=0;k<total_dmat_size[0];k++){
+                    Eigenstate_list[eigenstate_index][k] = Eigenstate_recv_list[k] ;
+                }
+
+                eigenstate_index = eigenstate_index + 1;
+            }
+        }
+
+        delete [] eigenstate_num_in_each_proc;
+        delete [] eigenstate_num_disp;
+        delete [] Eigenstate_recv_list;
     }
+    else{
+        int i,j;
+        // broadcast total number of eigenstate found to other process
+        MPI_Bcast(&eigenstate_num,1,MPI_INT,0,MPI_COMM_WORLD);
 
-    MPI_Allreduce(&eigenstate_num,&eigenstate_num_in_all_proc,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
-    eigenstate_num = eigenstate_num_in_all_proc;
+        // other process allocate space for eigenvalue and eigenvector
 
+        Eigenvalue_list = new double[eigenstate_num];
+        Eigenstate_list = new double * [eigenstate_num];
+        for(i=0;i<eigenstate_num ; i++){
+            Eigenstate_list[i] = new double [total_dmat_size[0]];
+        }
 
-    // other process allocate space for eigenvalue and eigenvector
-    Eigenvalue_list = new double[eigenstate_num];
-    Eigenstate_list = new double * [eigenstate_num];
-    for(i=0;i<eigenstate_num ; i++){
-        Eigenstate_list[i] = new double [total_dmat_size[0]];
-    }
-
-    double * Eigenstate_recv_list = new double [total_dmat_size[0]];
-
-    // AllGather Eigenvalue_list
-    MPI_Allgatherv(&Eigenvalue_temp[0], eigenstate_num_in_each_proc[my_id], MPI_DOUBLE, &Eigenvalue_list[0], eigenstate_num_in_each_proc, eigenstate_num_disp, MPI_DOUBLE, MPI_COMM_WORLD);
-
-    // AllGather Eigenstate_list
-    int eigenstate_index = 0;
-    for(i=0;i<num_proc;i++){
-        for(j=0;j<eigenstate_num_in_each_proc[i];j++){
-            if(my_id == i){
-                for(k=0;k<total_dmat_size[0]; k++){
-                    Eigenstate_recv_list[k] = Eigenvector_temp[j][k];
+        if(my_id == 0){
+            for(i=0;i<eigenstate_num;i++){
+                Eigenvalue_list[i] = Eigenvalue_temp[i];
+                for(j=0;j<total_dmat_size[0]; j++){
+                    Eigenstate_list[i][j] = Eigenvector_temp[i][j];
                 }
             }
-            MPI_Bcast(&Eigenstate_recv_list[0],total_dmat_size[0], MPI_DOUBLE, i, MPI_COMM_WORLD);
-            for(k=0;k<total_dmat_size[0];k++){
-                Eigenstate_list[eigenstate_index][k] = Eigenstate_recv_list[k] ;
-            }
+        }
 
-            eigenstate_index = eigenstate_index + 1;
+        // Broadcast eigenvalue and eigenvector to other process
+        MPI_Bcast(&Eigenvalue_list[0], eigenstate_num,MPI_DOUBLE,0,MPI_COMM_WORLD);
+        for(i=0;i<eigenstate_num;i++){
+            MPI_Bcast(&Eigenstate_list[i][0], total_dmat_size[0], MPI_DOUBLE, 0 , MPI_COMM_WORLD);
         }
     }
-
-    delete [] eigenstate_num_in_each_proc;
-    delete [] eigenstate_num_disp;
-    delete [] Eigenstate_recv_list;
 
 }
 

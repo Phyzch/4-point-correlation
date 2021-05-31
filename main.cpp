@@ -21,6 +21,7 @@ bool compute_state_space_and_coupling_using_symmetry_bool = true;
 
 bool compute_eigenvector_use_MKL_module = true ;
 bool compute_Eigenstate_OTOC_bool = true ;
+bool use_multiple_core_to_solve_eigenstate_spectrum = false;
 
 // About matflag in input.txt: If matflag==2, +We output all x,y (after the pre_coupling), matrix element, detector matrix element etc.
 // if matflag==1: We don't output anything but still we will save our final simulation results in save.txt
@@ -29,7 +30,7 @@ bool compute_Eigenstate_OTOC_bool = true ;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/Other Molecule/Using_symmetry/Cyclopentanone/eigenstate/T=300/3/";
+                       "/Other Molecule/Using_symmetry/Cyclopentanone/eigenstate/T=300/13 (copy)/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
  //   string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";
@@ -66,10 +67,12 @@ int main(int argc,char * argv []) {
         { // the parenthese here let destructor called after we use this instance.
             // pay attention to destructor to avoid memory leak when we do 1000 case simulation in the future.
             if(Filenumber!=1){
-                for(j = 0; j< 5; j++){
-                    cout << endl;
+                if(my_id == 0){
+                    for(j = 0; j< 5; j++){
+                        cout << endl;
+                    }
+                    cout <<" Folder: " << i+1 << endl;
                 }
-                cout <<" Folder: " << i+1 << endl;
             }
 
             full_system photon_entangled_system(path,cvpt_path);  // set parameter and construct Hamiltonian.

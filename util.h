@@ -73,6 +73,7 @@ extern double Emin2, Emax2;
 extern double Emin_for_core, Emax_for_core;
 
 extern int Symmetry_Table[4][4];
+extern bool  use_multiple_core_to_solve_eigenstate_spectrum;
 
 // define function here
 float ran2(long& idum);

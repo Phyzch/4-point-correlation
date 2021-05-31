@@ -196,8 +196,6 @@ void full_system::Quantum_evolution() {
 
         vector<double> Emin_list_for_proc;
         vector<double> Emax_list_for_proc;
-        // compute Emin_for_core,  Emax_for_core
-        allocate_diagonalization_energy_range_for_diff_proc(sorted_dmat0 , Energy_range_min_list , Energy_range_max_list, Emin_list_for_proc, Emax_list_for_proc);
 
         vector<double> Eigenvalue_temp ;
         vector<vector<double>> Eigenvector_temp ;
@@ -208,9 +206,21 @@ void full_system::Quantum_evolution() {
             cout <<"dmatsize :   " << d.total_dmat_size[0] << "   dmatnum:   " << d.total_dmat_num[0] << endl;
         }
 
-        d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
-                                                                                                 dmat0 ,Eigenvalue_temp , Eigenvector_temp , Emin_list_for_proc, Emax_list_for_proc );
+        // we have two options, use multiple process to solve eigenvalue spectrum or single process to solve it.
+        // remember we have to make number of state every time we solve using dfeast large enough, otherwise convergence will be problem.
+        if(!use_multiple_core_to_solve_eigenstate_spectrum){
+            if(my_id == 0){
+                d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
+                                                                                                         dmat0 ,Eigenvalue_temp , Eigenvector_temp , Energy_range_min_list, Energy_range_max_list );
+            }
+        }
+        else{
+            // compute Emin_for_core,  Emax_for_core
+        allocate_diagonalization_energy_range_for_diff_proc(sorted_dmat0 , Energy_range_min_list , Energy_range_max_list, Emin_list_for_proc, Emax_list_for_proc);
 
+            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
+                                                                                                     dmat0 ,Eigenvalue_temp , Eigenvector_temp , Emin_list_for_proc, Emax_list_for_proc);
+        }
         // Broadcast all eigenvalue and eigenvector to all process.
         d.Broadcast_eigenstate_and_eigenvalue(Eigenvalue_temp, Eigenvector_temp);
 
