@@ -200,8 +200,7 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
 
             lower_bright_state_distance = state_distance(ndetector0, d.initial_detector_state[0], d.nmodes[0]);
             // we do not use distance constraint for state whose energy is between two
-            if ( (detector0_energy < d.initial_Detector_energy[0] - 4000 or
-                  detector0_energy > d.initial_Detector_energy[0] + 4000 ) and lower_bright_state_distance > Rmax ) {
+            if ( lower_bright_state_distance > Rmax ) {
                 goto label2;
             }
 

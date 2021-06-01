@@ -172,7 +172,6 @@ void full_system::Quantum_evolution() {
     if(compute_eigenvector_use_MKL_module){
 
         if(my_id == 0){
-            ofstream Eigenvector_solver(path + "MKL_eigenvalue_Eigenvector.txt");
 
             vector<double> dmat0_copy = dmat0;
             sort(dmat0_copy.begin() , dmat0_copy.end());
@@ -185,11 +184,12 @@ void full_system::Quantum_evolution() {
 
             vector<double> Eigenvalue_temp ;
             vector<vector<double>> Eigenvector_temp ;
-            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
-                                                                                      dmat0 ,Eigenvector_solver,Eigenvalue_temp , Eigenvector_temp , Emin, Emax );
-
-//            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
-//                                                                                                     dmat0 ,Eigenvector_solver,Eigenvalue_temp , Eigenvector_temp , Emin, Emax );
+            vector<double> Emin_list ;
+            vector<double> Emax_list;
+            Emin_list.push_back(Emin);
+            Emax_list.push_back(Emax);
+            d.eigenstate_num = MKL_Extended_Eigensolver_dfeast_scsrev_for_eigenvector_divide_by_part(d.total_dirow[0],d.total_dicol[0],d.total_dmat[0],d.total_dmat_size[0], d.total_dmat_num[0],
+                                                                                                     dmat0 , Eigenvalue_temp , Eigenvector_temp , Emin_list, Emax_list );
 
             // convert Eigenvalue_temp , Eigenvector_temp to d.eigenvalue, d.eigenvector
             d.Eigenvalue_list = new double [d.eigenstate_num];
@@ -202,12 +202,59 @@ void full_system::Quantum_evolution() {
                 }
             }
 
+            ofstream Eigenvector_solver(path + "MKL_eigenvalue_Eigenvector.txt");
+
+            cout << "total number of eigenstate solved:  " << d.eigenstate_num << endl;
             cout <<"Finish solving eigenvector and eigenvalue " << endl;
+            Eigenvector_solver << d.eigenstate_num << endl;
+            for(i=0;i<d.eigenstate_num ; i++ ){
+                Eigenvector_solver  << d.Eigenvalue_list[i] << " ";
+            }
+            Eigenvector_solver << endl;
+
+            // optional here: output eigenstate
+
             Eigenvector_solver.close();
+
+            // check orthgonality
+            vector<vector<double>> Y ;
+            double y1;
+            double maximum_deviation = 0 ;
+            int maximum_i = 0;
+            int maximum_j = 0;
+            for(i=0;i<d.eigenstate_num;i++){
+                vector<double>v1;
+                for(j=0;j<d.eigenstate_num;j++){
+                    y1 = 0;
+                    for(k=0;k<d.total_dmat_size[0];k++){
+                        y1 = y1 + d.Eigenstate_list[i][k] * d.Eigenstate_list[j][k];
+                    }
+                    v1.push_back(y1);
+                }
+                Y.push_back(v1);
+            }
+            for(i=0;i<d.eigenstate_num;i++){
+                Y[i][i] = Y[i][i] - 1;
+            }
+            for(i=0;i<d.eigenstate_num;i++){
+                for(j=0;j<d.eigenstate_num;j++){
+                    if(abs(Y[i][j]) > maximum_deviation){
+                        maximum_deviation = abs(Y[i][j]);
+                        maximum_i = i;
+                        maximum_j = j;
+                    }
+                }
+            }
+            cout << "Maximum nonzero overlap is  " << maximum_deviation << "  for index:  " <<maximum_i <<"  " << maximum_j << endl;
+            if(maximum_deviation > 0.05){
+                cout<< "Error.  maximum deviation is not zero . Check eigenstae orthgonality. " << endl;
+                MPI_Abort(-100,MPI_COMM_WORLD);
+            }
+
         }
 
-        if (compute_Eigenstate_OTOC_bool){
 
+        if (compute_Eigenstate_OTOC_bool){
             // Broadcast eigenstate and eigenvalue found to all other process.
             d.Broadcast_eigenstate_and_eigenvalue();
 
