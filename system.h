@@ -186,7 +186,7 @@ public:
     double *** receive_xd_for_xp;
     double *** receive_yd_for_xp;
 
-    complex<double> compute_c_overlap(int state_m, int state_l, int mode_k,
+    complex<double> compute_c_overlap(int state_m, int relative_position_to_initial_state, int mode_k,
                                       vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
                                       vector<vector<int>> * index_for_xp_sparsify);
 
@@ -194,6 +194,19 @@ public:
     void compute_M_matrix(int state_m, int state_l, complex<double> ** M_matrix ,
                           vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
                           vector<vector<int>> * index_for_xp_sparsify);
+    void compute_Time_ordered_correlation_func_per_state(int state_m, int state_l, double ** M_matrix,
+                                                  vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
+                                                  vector<vector<int>> * index_for_xp_sparsify);
+
+    double compute_two_point_func_zt_zt (int mode_k, vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
+                                                  vector<vector<int>> * index_for_xp_sparsify , vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp );
+
+    void output_TOC_factorization(double * Two_point_func1 , double * Two_point_func2, double ** TOC_per_state,
+                                            double ** TOC,
+                                            vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp,
+                                            vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
+                                            vector<vector<int>> * index_for_xp_sparsify,
+                                            double t,  ofstream & TOC_output );
 
     void compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_spectrum_for_xp, complex<double>  ** Lyapunov_spectrum_for_xp_from_single_state,
                                           complex<double> ** M_matrix,

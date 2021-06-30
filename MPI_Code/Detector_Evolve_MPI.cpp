@@ -470,6 +470,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream Lyapunov_spectrum_for_xp_output;
 
     ofstream Every_states_contribution_to_OTOC_xp;
+
+    ofstream TOC_output ;
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
         if(Detector_Continue_Simulation){
@@ -490,6 +492,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             another_form_of_OTOC_output.open(path+ "another_OTOC.txt", ofstream::app);
             Lyapunov_spectrum_for_xp_output.open(path+ "Lyapunov_spectrum_for_xp.txt",ofstream::app);
             Every_states_contribution_to_OTOC_xp.open(path + "OTOC_xp_for_every_state.txt", ofstream::app);
+
+            TOC_output.open(path + "TOC_factorization.txt", ofstream::app);
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
@@ -509,6 +513,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             another_form_of_OTOC_output.open(path+ "another_OTOC.txt");
             Lyapunov_spectrum_for_xp_output.open(path+"Lyapunov_spectrum_for_xp.txt");
             Every_states_contribution_to_OTOC_xp.open(path+"OTOC_xp_for_every_state.txt");
+            TOC_output.open(path + "TOC_factorization.txt");
         }
     }
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
@@ -684,6 +689,17 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         yd_for_xp[i] = v2;
     }
 
+    // ----------------- Variable for Time ordered correlation function TOC -------------------
+    double * Two_point_func1 = new double [2 * d.nmodes[0]];
+    double * Two_point_func2 = new double [2* d.nmodes[0] ];
+    double ** TOC_per_state = new double * [ 2* d.nmodes[0] ];
+    double ** TOC = new double * [2* d.nmodes[0]];
+    for(i=0;i<2*d.nmodes[0];i++){
+        TOC_per_state[i] = new double [2 * d.nmodes[0] ];
+        TOC[i] = new double [2 * d.nmodes[0] ];
+    }
+
+
     //------ Allocate space for sparse version of xd_for_xp and yd_for_xp
     vector<vector<double>> * xd_for_xp_sparsify = new vector<vector<double>> [1 + 2 * d.nmodes[0]];
     vector<vector<double>> * yd_for_xp_sparsify = new vector<vector<double>> [1 + 2* d.nmodes[0] ];
@@ -824,6 +840,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
 
                 Lyapunov_spectrum_for_xp_output << d.nmodes[0] << endl;
+
+                TOC_output << d.nmodes[0] << endl;
 
                 Every_states_contribution_to_OTOC_xp << d.nmodes[0] << endl;
                 for(m=0;m<nearby_state_index_size;m++){
@@ -969,6 +987,10 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     Lyapunov_spectrum_for_xp_output << endl;
 
                 }
+
+                // --------------- output information for Time ordered correlation function --------
+                d.output_TOC_factorization(Two_point_func1, Two_point_func2, TOC_per_state, TOC, xd_for_xp, yd_for_xp,
+                                           xd_for_xp_sparsify, yd_for_xp_sparsify, index_for_xp_sparsify, t, TOC_output);
 
                 // ---------- output 4-point correlation function average over states and variance -------------------
 //                compute_4_point_corre_for_multiple_states(state_for_average_size,nearby_state_index_size,n_offdiag_element,
@@ -1121,6 +1143,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         another_form_of_OTOC_output.close();
         Lyapunov_spectrum_for_xp_output.close();
         Every_states_contribution_to_OTOC_xp.close();
+        TOC_output.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){
@@ -1247,8 +1270,21 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     delete [] Lyapunov_spectrum_for_xp_from_single_state;
     delete [] Matrix_M;
 
+    delete [] Two_point_func1;
+    delete [] Two_point_func2;
+    for(i=0;i<2*d.nmodes[0];i++){
+        delete [] TOC_per_state[i];
+        delete [] TOC[i];
+    }
+    delete [] TOC_per_state;
+    delete [] TOC;
+
+
     delete [] mode_quanta;
     delete [] total_mode_quanta;
     delete [] start_time;
     delete [] final_time;
+
+
+
 };

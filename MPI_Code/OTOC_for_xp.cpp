@@ -321,11 +321,6 @@ void detector:: update_xd_yd_for_xp(vector<vector<double>> * xd_for_xp, vector<v
 
             }
             sparsify_ratio = double(state_num) / (2* nmodes[0] * dmatsize[0]);
-            double xx = 0;
-        }
-        else{
-            // state do not exist. We will not use xd_for_xp and yd_for_xp. Thus we do not have to distribute data there.
-            double xx = 0;
         }
 
 
