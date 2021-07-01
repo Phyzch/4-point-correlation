@@ -470,6 +470,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream Lyapunov_spectrum_for_xp_output;
 
     ofstream Every_states_contribution_to_OTOC_xp;
+
+    ofstream TOC_output ;
+
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
         if(Detector_Continue_Simulation){
@@ -490,6 +493,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             another_form_of_OTOC_output.open(path+ "another_OTOC.txt", ofstream::app);
             Lyapunov_spectrum_for_xp_output.open(path+ "Lyapunov_spectrum_for_xp.txt",ofstream::app);
             Every_states_contribution_to_OTOC_xp.open(path + "OTOC_xp_for_every_state.txt", ofstream::app);
+
+            TOC_output.open(path + "TOC_factorization.txt", ofstream::app);
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
@@ -509,6 +514,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             another_form_of_OTOC_output.open(path+ "another_OTOC.txt");
             Lyapunov_spectrum_for_xp_output.open(path+"Lyapunov_spectrum_for_xp.txt");
             Every_states_contribution_to_OTOC_xp.open(path+"OTOC_xp_for_every_state.txt");
+
+            TOC_output.open(path + "TOC_factorization.txt");
         }
     }
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
@@ -684,6 +691,16 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         yd_for_xp[i] = v2;
     }
 
+    // ----------------- Variable for Time ordered correlation function TOC -------------------
+    double * Two_point_func1 = new double [2 * d.nmodes[0]];
+    double * Two_point_func2 = new double [2* d.nmodes[0] ];
+    double ** TOC_per_state = new double * [ 2* d.nmodes[0] ];
+    double ** TOC = new double * [2* d.nmodes[0]];
+    for(i=0;i<2*d.nmodes[0];i++){
+        TOC_per_state[i] = new double [2 * d.nmodes[0] ];
+        TOC[i] = new double [2 * d.nmodes[0] ];
+    }
+
     //------ Allocate space for sparse version of xd_for_xp and yd_for_xp
     vector<vector<double>> * xd_for_xp_sparsify = new vector<vector<double>> [1 + 2 * d.nmodes[0]];
     vector<vector<double>> * yd_for_xp_sparsify = new vector<vector<double>> [1 + 2* d.nmodes[0] ];
@@ -824,6 +841,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
                 Lyapunov_spectrum_for_xp_output << d.nmodes[0] << endl;
 
+                TOC_output << d.nmodes[0] << endl;
+
                 Every_states_contribution_to_OTOC_xp << d.nmodes[0] << endl;
                 for(m=0;m<nearby_state_index_size;m++){
                     if(d.bool_neighbor_state_all_in_nearby_state_index[m]){
@@ -862,50 +881,50 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             output_step_for_all_state = int(output_all_state_time_unit / delt);
 
             // ----- output state real and imaginary part for all state in simulation ----------------------
-            if(k%output_step_for_all_state==0){
-                MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
-                            &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],
-                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
-                MPI_Gatherv(&d.yd[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize[0], MPI_DOUBLE,
-                            &d.yd_all[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize_each_process[0],
-                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
-                if(my_id == 0){
-                    Detector_precoup_all_state_output << t << endl;
-                    for(i=0;i<d.total_dmat_size[0];i++){
-                        Detector_precoup_all_state_output << d.xd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
-                    }
-                    Detector_precoup_all_state_output << endl;
-                    for(i=0;i<d.total_dmat_size[0];i++){
-                        Detector_precoup_all_state_output << d.yd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
-                    }
-                    Detector_precoup_all_state_output << endl;
-                }
-            }
+//            if(k%output_step_for_all_state==0){
+//                MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
+//                            &d.xd_all[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize_each_process[0],
+//                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+//                MPI_Gatherv(&d.yd[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize[0], MPI_DOUBLE,
+//                            &d.yd_all[d.initial_state_index_in_nearby_state_index_list][0], d.dmatsize_each_process[0],
+//                            d.dmatsize_offset_each_process[0],MPI_DOUBLE,0,MPI_COMM_WORLD);
+//                if(my_id == 0){
+//                    Detector_precoup_all_state_output << t << endl;
+//                    for(i=0;i<d.total_dmat_size[0];i++){
+//                        Detector_precoup_all_state_output << d.xd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
+//                    }
+//                    Detector_precoup_all_state_output << endl;
+//                    for(i=0;i<d.total_dmat_size[0];i++){
+//                        Detector_precoup_all_state_output << d.yd_all[d.initial_state_index_in_nearby_state_index_list][i] <<" ";
+//                    }
+//                    Detector_precoup_all_state_output << endl;
+//                }
+//            }
             // --------- output IPR for all state --------------------------------------
-            if(k%output_step_for_all_state == 0){
-                for(i=0;i<nearby_state_index_size;i++){
-                    inverse_IPR_in_one_process[i] = 0;
-                    for(j=0;j<d.dmatsize[0];j++){
-                        inverse_IPR_in_one_process[i] = inverse_IPR_in_one_process[i] + pow(pow(d.xd[i][j],2) + pow(d.yd[i][j],2),2);
-                    }
-                }
+//            if(k%output_step_for_all_state == 0){
+//                for(i=0;i<nearby_state_index_size;i++){
+//                    inverse_IPR_in_one_process[i] = 0;
+//                    for(j=0;j<d.dmatsize[0];j++){
+//                        inverse_IPR_in_one_process[i] = inverse_IPR_in_one_process[i] + pow(pow(d.xd[i][j],2) + pow(d.yd[i][j],2),2);
+//                    }
+//                }
+//
+//                MPI_Reduce(&inverse_IPR_in_one_process[0],&inverse_IPR_all[0],nearby_state_index_size,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+//
+//                if(my_id == 0){
+//                    for(i=0;i<nearby_state_index_size;i++){
+//                        IPR_all[i] = 1/ inverse_IPR_all[i];
+//                    }
 
-                MPI_Reduce(&inverse_IPR_in_one_process[0],&inverse_IPR_all[0],nearby_state_index_size,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-
-                if(my_id == 0){
-                    for(i=0;i<nearby_state_index_size;i++){
-                        IPR_all[i] = 1/ inverse_IPR_all[i];
-                    }
-
-                    // output result
-                    IPR_for_all_state_output << t << endl;
-                    for(i=0;i<nearby_state_index_size;i++){
-                        IPR_for_all_state_output << IPR_all[i] <<" ";
-                    }
-                    IPR_for_all_state_output << endl;
-                }
-
-            }
+//                    // output result
+//                    IPR_for_all_state_output << t << endl;
+//                    for(i=0;i<nearby_state_index_size;i++){
+//                        IPR_for_all_state_output << IPR_all[i] <<" ";
+//                    }
+//                    IPR_for_all_state_output << endl;
+//                }
+//
+//            }
 
 
             if(k % output_step ==0) {
@@ -921,29 +940,29 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                     four_point_correlation_output<<endl;
                 }
                 // ------------- output overlap with initial state and n_offdiag_total for all state |b> we choose:
-                if(my_id == 0){
-                    n_offdiag_total_output <<"Time:  "<<t << endl;
-                    for(i=0; i< nearby_state_index_size; i++){
-                        for(j=0;j<d.nmodes[0];j++){
-                            n_offdiag_total_output << std::norm(n_offdiag_total[j][i]) <<"  ";
-                        }
-                        n_offdiag_total_output << endl;
-                    }
-                }
+//                if(my_id == 0){
+//                    n_offdiag_total_output <<"Time:  "<<t << endl;
+//                    for(i=0; i< nearby_state_index_size; i++){
+//                        for(j=0;j<d.nmodes[0];j++){
+//                            n_offdiag_total_output << std::norm(n_offdiag_total[j][i]) <<"  ";
+//                        }
+//                        n_offdiag_total_output << endl;
+//                    }
+//                }
 
                 // -------- output another form of OTOC ------------------------------
-                compute_another_form_of_OTOC(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
-                                             n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,
-                                             n_offdiag_one_mode_quanta_below,n_offdiag_one_mode_quanta_below_real,n_offdiag_one_mode_quanta_below_imag,
-                                             n_offdiag_total_one_mode_quanta_below,n_offdiag_total_one_mode_quanta_below_real,n_offdiag_total_one_mode_quanta_below_imag,
-                                             initial_state_index_in_total_dmatrix, another_OTOC);
-                if(my_id == 0){
-                    another_form_of_OTOC_output << "Time:  " << t <<endl;
-                    for(i=0;i<d.nmodes[0];i++){
-                        another_form_of_OTOC_output << another_OTOC[i] << "  ";
-                    }
-                    another_form_of_OTOC_output << endl;
-                }
+//                compute_another_form_of_OTOC(nearby_state_index_size,n_offdiag_element,n_offdiag,n_offdiag_real,n_offdiag_imag,
+//                                             n_offdiag_total,n_offdiag_total_real,n_offdiag_total_imag,
+//                                             n_offdiag_one_mode_quanta_below,n_offdiag_one_mode_quanta_below_real,n_offdiag_one_mode_quanta_below_imag,
+//                                             n_offdiag_total_one_mode_quanta_below,n_offdiag_total_one_mode_quanta_below_real,n_offdiag_total_one_mode_quanta_below_imag,
+//                                             initial_state_index_in_total_dmatrix, another_OTOC);
+//                if(my_id == 0){
+//                    another_form_of_OTOC_output << "Time:  " << t <<endl;
+//                    for(i=0;i<d.nmodes[0];i++){
+//                        another_form_of_OTOC_output << another_OTOC[i] << "  ";
+//                    }
+//                    another_form_of_OTOC_output << endl;
+//                }
 
 //                 ----------- output Lyapunovian spectrum for xp ---------------------------------------
                 d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Lyapunov_spectrum_for_xp_from_single_state,
@@ -969,51 +988,55 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
                 }
 
+                // --------------- output information for Time ordered correlation function --------
+                d.output_TOC_factorization(Two_point_func1, Two_point_func2, TOC_per_state, TOC, xd_for_xp, yd_for_xp,
+                                           xd_for_xp_sparsify, yd_for_xp_sparsify, index_for_xp_sparsify, t, TOC_output);
+
                 // ---------- output 4-point correlation function average over states and variance -------------------
-                compute_4_point_corre_for_multiple_states(state_for_average_size,nearby_state_index_size,n_offdiag_element,
-                                                          n_offdiag_for_states_ensemble,n_offdiag_for_states_ensemble_real,
-                                                          n_offdiag_for_states_ensemble_imag,n_offdiag_total_for_states_ensemble,
-                                                          n_offdiag_total_for_states_ensemble_real,n_offdiag_total_for_states_ensemble_imag,
-                                                          four_point_correlation_function_average_over_states, four_point_correlation_function_variance_over_states,
-                                                          four_point_correlation_function_for_each_states);
-
-                if(my_id == 0){
-                    four_point_correlation_average_output << "Time:   " << t << endl;
-                    for(i=0;i<d.nmodes[0];i++){
-                        four_point_correlation_average_output<< four_point_correlation_function_average_over_states[i] << " ";
-                    }
-                    four_point_correlation_average_output<<endl;
-
-                    // for variance.
-                    four_point_correlation_variance_output <<"Time:    " << t << endl;
-                    for(i=0;i<d.nmodes[0];i++){
-                        four_point_correlation_variance_output << four_point_correlation_function_variance_over_states[i]<< " ";
-                    }
-                    four_point_correlation_variance_output<<endl;
-
-                    // output all states
-                    four_point_correlation_every_state_output << "Time:   " <<t << endl;
-                    for(a=0;a<state_for_average_size;a++){
-                        for(i=0;i<d.nmodes[0];i++){
-                            four_point_correlation_every_state_output << four_point_correlation_function_for_each_states[i][a] <<" ";
-                        }
-                        four_point_correlation_every_state_output << endl;
-                    }
-                }
+//                compute_4_point_corre_for_multiple_states(state_for_average_size,nearby_state_index_size,n_offdiag_element,
+//                                                          n_offdiag_for_states_ensemble,n_offdiag_for_states_ensemble_real,
+//                                                          n_offdiag_for_states_ensemble_imag,n_offdiag_total_for_states_ensemble,
+//                                                          n_offdiag_total_for_states_ensemble_real,n_offdiag_total_for_states_ensemble_imag,
+//                                                          four_point_correlation_function_average_over_states, four_point_correlation_function_variance_over_states,
+//                                                          four_point_correlation_function_for_each_states);
+//
+//                if(my_id == 0){
+//                    four_point_correlation_average_output << "Time:   " << t << endl;
+//                    for(i=0;i<d.nmodes[0];i++){
+//                        four_point_correlation_average_output<< four_point_correlation_function_average_over_states[i] << " ";
+//                    }
+//                    four_point_correlation_average_output<<endl;
+//
+//                    // for variance.
+//                    four_point_correlation_variance_output <<"Time:    " << t << endl;
+//                    for(i=0;i<d.nmodes[0];i++){
+//                        four_point_correlation_variance_output << four_point_correlation_function_variance_over_states[i]<< " ";
+//                    }
+//                    four_point_correlation_variance_output<<endl;
+//
+//                    // output all states
+//                    four_point_correlation_every_state_output << "Time:   " <<t << endl;
+//                    for(a=0;a<state_for_average_size;a++){
+//                        for(i=0;i<d.nmodes[0];i++){
+//                            four_point_correlation_every_state_output << four_point_correlation_function_for_each_states[i][a] <<" ";
+//                        }
+//                        four_point_correlation_every_state_output << endl;
+//                    }
+//                }
 
                 // --------- output Stability_Matrix  -----------------------------------
-                compute_Stability_Matrix(Stability_Matrix,nearby_state_index_size,n_offdiag_element,n_offdiag_element_real,n_offdiag_element_imag,
-                                         n_offdiag_element_all_pc,n_offdiag_element_real_all_pc,n_offdiag_element_imag_all_pc,initial_state_index_in_total_dmatrix);
-
-                if(my_id == 0){
-                    Stability_matrix_output << t << endl;
-                    for(i=0;i<d.nmodes[0];i++){
-                        for(j=0;j<d.nmodes[0];j++){
-                            Stability_matrix_output << Stability_Matrix[i][j] <<" ";
-                        }
-                    }
-                    Stability_matrix_output << endl;
-                }
+//                compute_Stability_Matrix(Stability_Matrix,nearby_state_index_size,n_offdiag_element,n_offdiag_element_real,n_offdiag_element_imag,
+//                                         n_offdiag_element_all_pc,n_offdiag_element_real_all_pc,n_offdiag_element_imag_all_pc,initial_state_index_in_total_dmatrix);
+//
+//                if(my_id == 0){
+//                    Stability_matrix_output << t << endl;
+//                    for(i=0;i<d.nmodes[0];i++){
+//                        for(j=0;j<d.nmodes[0];j++){
+//                            Stability_matrix_output << Stability_Matrix[i][j] <<" ";
+//                        }
+//                    }
+//                    Stability_matrix_output << endl;
+//                }
                 // ------------- output state <a(t)|a>  ----------------------------------------
                 if (my_id == d.initial_state_pc_id[0]){
                     special_state_x = d.xd[d.initial_state_index_in_nearby_state_index_list][d.initial_state_index[0]];
@@ -1028,29 +1051,29 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
 
                 // --------- output other state's overlap with initial state |a> ----------------------
-                if(my_id == d.initial_state_pc_id[0]){
-                    for(i=0;i<nearby_state_index_size;i++){
-                        other_state_overlap_with_initial_state[i] = pow(d.xd[i][d.initial_state_index[0]] ,2)
-                                                                    + pow(d.yd[i][d.initial_state_index[0]],2) ;
-                    }
-                }
-                if(d.initial_state_pc_id[0] != 0){
-                    // pass data to process with id 0 if data is not initially there
-                    if(my_id == d.initial_state_pc_id[0]){
-                        MPI_Send(&other_state_overlap_with_initial_state[0],nearby_state_index_size,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
-                    }
-                    if(my_id == 0){
-                        MPI_Recv(&other_state_overlap_with_initial_state[0],nearby_state_index_size,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_ANY_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-                    }
-                }
-
-                if(my_id == 0){
-                    overlap_with_initial_state_output << t << endl;
-                    for(i=0;i<nearby_state_index_size;i++){
-                        overlap_with_initial_state_output << other_state_overlap_with_initial_state[i] <<" ";
-                    }
-                    overlap_with_initial_state_output << endl;
-                }
+//                if(my_id == d.initial_state_pc_id[0]){
+//                    for(i=0;i<nearby_state_index_size;i++){
+//                        other_state_overlap_with_initial_state[i] = pow(d.xd[i][d.initial_state_index[0]] ,2)
+//                                                                    + pow(d.yd[i][d.initial_state_index[0]],2) ;
+//                    }
+//                }
+//                if(d.initial_state_pc_id[0] != 0){
+//                    // pass data to process with id 0 if data is not initially there
+//                    if(my_id == d.initial_state_pc_id[0]){
+//                        MPI_Send(&other_state_overlap_with_initial_state[0],nearby_state_index_size,MPI_DOUBLE,0,0,MPI_COMM_WORLD);
+//                    }
+//                    if(my_id == 0){
+//                        MPI_Recv(&other_state_overlap_with_initial_state[0],nearby_state_index_size,MPI_DOUBLE,d.initial_state_pc_id[0],MPI_ANY_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+//                    }
+//                }
+//
+//                if(my_id == 0){
+//                    overlap_with_initial_state_output << t << endl;
+//                    for(i=0;i<nearby_state_index_size;i++){
+//                        overlap_with_initial_state_output << other_state_overlap_with_initial_state[i] <<" ";
+//                    }
+//                    overlap_with_initial_state_output << endl;
+//                }
 
                 // ----  output IPR (inverse participation ratio) ----------------------------
                 MPI_Gatherv(&d.xd[d.initial_state_index_in_nearby_state_index_list][0],d.dmatsize[0],MPI_DOUBLE,
@@ -1120,6 +1143,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         another_form_of_OTOC_output.close();
         Lyapunov_spectrum_for_xp_output.close();
         Every_states_contribution_to_OTOC_xp.close();
+        TOC_output.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){
@@ -1245,6 +1269,17 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     delete [] Lyapunov_spectrum_for_xp;
     delete [] Lyapunov_spectrum_for_xp_from_single_state;
     delete [] Matrix_M;
+
+
+    delete [] Two_point_func1;
+    delete [] Two_point_func2;
+    for(i=0;i<2*d.nmodes[0];i++){
+        delete [] TOC_per_state[i];
+        delete [] TOC[i];
+    }
+    delete [] TOC_per_state;
+    delete [] TOC;
+
 
     delete [] mode_quanta;
     delete [] total_mode_quanta;

@@ -25,10 +25,10 @@ bool compute_overlap_with_eigenstate = false ;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/SCCL2 sample/SCCL2 scaling/high energy 36180/0.2(V=10)/";
+                       "SCCL2 sample/SCCL2 full Hamiltonian/333222 factorization of TOC/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
-    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
- //   string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";
+//    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
+    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";
     string cvpt_path;
     int i;
     int Filenumber=1;

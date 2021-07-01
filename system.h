@@ -202,6 +202,21 @@ public:
                                           vector<vector<int>> * index_for_xp_sparsify,
                                           double t ,ofstream & Every_states_contribution_to_OTOC_xp);
 
+    void compute_Time_ordered_correlation_func_per_state(int state_m, int state_l, double ** M_matrix,
+                                                         vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
+                                                         vector<vector<int>> * index_for_xp_sparsify);
+
+    double compute_two_point_func_zt_zt (int mode_k, vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
+                                         vector<vector<int>> * index_for_xp_sparsify , vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp );
+
+    void output_TOC_factorization(double * Two_point_func1 , double * Two_point_func2, double ** TOC_per_state,
+                                  double ** TOC,
+                                  vector<vector<double>> * xd_for_xp, vector<vector<double>> * yd_for_xp,
+                                  vector<vector<double>> * xd_for_xp_sparsify, vector<vector<double>> * yd_for_xp_sparsify,
+                                  vector<vector<int>> * index_for_xp_sparsify,
+                                  double t,  ofstream & TOC_output );
+
+
     void prepare_computing_Lyapunovian_for_xp();
 
     void delete_variable_for_computing_Lyapunovian_xp();
