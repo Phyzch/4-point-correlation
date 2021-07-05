@@ -169,7 +169,7 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
         }
     }
 
-    double cutoff_criteria = pow(10,-2);
+    double cutoff_criteria = pow(10,-3);
 
     update_xd_yd_for_xp(xd_for_xp,yd_for_xp,xd_for_xp_sparsify,yd_for_xp_sparsify,index_for_xp_sparsify, cutoff_criteria);
 
