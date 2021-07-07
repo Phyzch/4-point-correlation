@@ -260,14 +260,15 @@ public:
     vector<vector<int>> Boltzmann_weighted_basis_index_sparsify;
 
     vector<vector<vector<double>>> ladder_operator_Boltzmann_weighted_x_sparsify; // use list to record a_{i} e^{-\beta H/4} |\phi>
-    vector<vector<vector<double>>> lader_operator_Boltzmann_weighted_y_sparsify;
+    vector<vector<vector<double>>> ladder_operator_Boltzmann_weighted_y_sparsify;
     vector<vector<vector<int>>> ladder_operator_Boltzmann_weighted_basis_index_sparsify ;
 
     void update_polyn23();
     void prepare_compute_Boltzmann_factor_use_Chebyshev_polynomial(double one_fourth_beta , ofstream & log );
     void Chebyshev_method_Boltzmann_factor(const  vector<double> & wave_func_x ,const vector<double> & wave_func_y,
                                            vector<double> & Boltzmann_factor_weighted_wave_func_x, vector<double> & Boltzmann_factor_weighted_wave_func_y );
-    void Boltzmann_factor_decorated_basis_set_and_with_ladder_operator() ;
+    void Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(double sparsify_criteria = pow(10,-3) ) ;
+
 
     // for ladder operator operation
     double ** send_xd_ladder_operator;
@@ -281,11 +282,33 @@ public:
                                     vector<vector<double>> & xd_for_ladder_operator ,
                                     vector<vector<double>> & yd_for_ladder_operator );
 
-    // Haar_random_vector should also be evolved in state space. Thus we need to incorporate it into nearby_state_index list.
-    // We use vector<int> Haar_state_index to indicate their location. j ~ j+2N (N : dof) stores e^{-\beta H/4} |Haar> and  a_{j} e^{-\beta H/4} |Haar>
     // state_number_for evolution is number of state we have to evolve (including Haar random state.)
     int state_number_for_evolution;
+
+    // Haar_random_vector should also be evolved in state space. Thus we need to incorporate it into nearby_state_index list.
+    // We use vector<int> Haar_state_index to indicate their location. j ~ j+2N (N : dof) stores e^{-\beta H/4} |Haar> and  a_{j} e^{-\beta H/4} |Haar>
     vector<int> Haar_state_index_list;
+    vector<double> Haar_state_normalization_list;
+
+
+    vector<vector<complex<double>>> regularized_thermal_Lyapunov_spectrum;
+    vector<vector<vector< complex <double> >>>  regularized_thermal_Lyapunov_spectrum_each_Haar_state;
+    vector<vector<vector<vector<  complex<double>   >>>>   regularized_thermal_OTOC_overlap_Haar_state_basis_set  ;
+    vector<vector<vector<vector<  complex<double>   >>>>  Haar_state_overlap_time_dependent_basis_set ;
+    vector<vector<double>> ** Haar_state_with_ladder_operator_x_sparsify;
+    vector<vector<double>> ** Haar_state_with_ladder_operator_y_sparsify;
+    vector<vector<int>> ** Haar_state_with_ladder_operator_basis_set_sparsify;
+
+    // compute <Haar | e^{-\beta H } | Haar>
+    void compute_normalization_factor_for_Boltzmann_weighted_factor();
+
+    void allocate_space_for_Haar_state_calculation(  );
+
+    void compute_Haar_random_state_with_ladder_operator(  double sparsify_criteria = pow(10,-3)  );
+    void compute_Haar_random_state_with_ladder_operator_overlap_with_time_dependent_basis_set(  );
+    void  compute_regularized_thermal_OTOC_component(  ) ;
+
+    void  compute_regularized_thermal_OTOC_Lyapunov_spectrum(  );
 
 };
 

@@ -585,7 +585,7 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
     std::default_random_engine  generator;
     std::normal_distribution<double> distribution(0,1);
     int state_index ;
-    for(i=0;i<N_Harr; i++ ){
+    for(i=0;i<N_Haar; i++ ){
         state_index = Haar_state_index_list[i];
 
         // initialize Haar random state  xd [state_index] , yd[state_index]
@@ -610,9 +610,7 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
     update_dx(state_number_for_evolution);
     update_dy(state_number_for_evolution);
 
-
-    // decorate Haar random state with e^{-\beta H/4}
-    for(i = 0; i< N_Harr; i++ ){
+    for(i = 0; i< N_Haar; i++ ){
         state_index = Haar_state_index_list[i] ;
 
         vector<double> Boltzmann_factor_weighted_wave_func_x ;
@@ -625,7 +623,7 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
     }
 
     // compute wave function after ladder operator a_{j} is operated on Boltzmann weighted wave function:
-    for( i = 0; i<N_Harr; i++ ){
+    for( i = 0; i<N_Haar; i++ ){
         state_index = Haar_state_index_list[i] ;  // index for Haar random variable (after multiply e^{-\beta H/4})
         vector<vector<double>>  xd_for_ladder_operator;
         vector<vector<double>>  yd_for_ladder_operator;
@@ -899,11 +897,11 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     // incorporate random Haar state to compute thermal average. For information for random Haar state, see: https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.112.120601
     state_number_for_evolution = nearby_state_index.size();
     Haar_state_index = total_dmat_size[0];
-    for(i=0;i<N_Harr; i++){
+    for(i=0;i<N_Haar; i++){
         Haar_state_index_list.push_back(Haar_state_index);
         Haar_state_index = Haar_state_index + 2 * nmodes[0] + 1 ; // we have to incorporate a_{j} e^{-\beta H/4} | Haar>
     }
-    state_number_for_evolution = state_number_for_evolution + ( 2 * nmodes[0] + 1 ) * N_Harr;
+    state_number_for_evolution = state_number_for_evolution + ( 2 * nmodes[0] + 1 ) * N_Haar;
 
     nearby_state_index_size = nearby_state_index.size();
     for(i=0;i<nearby_state_index_size;i++){

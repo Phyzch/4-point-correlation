@@ -8,7 +8,7 @@
 
 #include "../util.h"
 #include "../system.h"
-int N_Harr = 5 ; // Haar random state number.
+int N_Haar = 5 ; // Haar random state number.
 double Boltzmann_beta; // 1/T.
 
 void detector::prepare_compute_Boltzmann_factor_use_Chebyshev_polynomial(double one_fourth_beta , ofstream & log ){
@@ -199,7 +199,7 @@ void detector:: Chebyshev_method_Boltzmann_factor(const  vector<double> & wave_f
 
 }
 
-void detector::Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(){
+void detector::Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(double sparsify_criteria ){
     int i, j, k, m;
     int nearby_state_basis_size = nearby_state_index.size();
     update_dx(nearby_state_basis_size);
@@ -208,7 +208,6 @@ void detector::Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(){
     vector<vector<double>> xd_for_ladder_operator;
     vector<vector<double>> yd_for_ladder_operator;
 
-    double sparsify_criteria =  pow(10,-2);
     double normalization;
     double normalization_tot;
     double magnitude;
@@ -287,9 +286,44 @@ void detector::Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(){
         }
 
         ladder_operator_Boltzmann_weighted_x_sparsify.push_back(wave_func_x_sparsify_ladder);
-        lader_operator_Boltzmann_weighted_y_sparsify.push_back(wave_func_y_sparsify_ladder);
+        ladder_operator_Boltzmann_weighted_y_sparsify.push_back(wave_func_y_sparsify_ladder);
         ladder_operator_Boltzmann_weighted_basis_index_sparsify.push_back(basis_set_index_sparsify_ladder);
 
     }
 
 }
+
+void detector::compute_normalization_factor_for_Boltzmann_weighted_factor() {
+    // compute <Haar | e^{-\beta H } | Haar> = <Haar | e^{-\beta H/2} e^{-\beta H / 2 } | Haar>
+    // This function should be called after wave function initialization function, where xd[Haar_state_index] has already been initialized as e^{-\beta H/4} |y>
+    // result store in Haar_state_normalization_list
+    int i, j, k;
+    int state_index;
+    int normalization;
+    int normalization_tot;
+    update_dx(state_number_for_evolution);
+    update_dy(state_number_for_evolution);
+
+    for(i=0;i<N_Haar; i++){
+        state_index = Haar_state_index_list[i];
+        // Boltzmann_factor_weighted_wave_func_x will be e^{-\beta H /2 } | Haar>
+        vector<double> Boltzmann_factor_weighted_wave_func_x ;
+        vector<double> Boltzmann_factor_weighted_wave_func_y;
+        // xd[state_index] as input is e^{-\beta H / 4} | Haar>
+        Chebyshev_method_Boltzmann_factor( xd[state_index] , yd[state_index] ,
+                                           Boltzmann_factor_weighted_wave_func_x, Boltzmann_factor_weighted_wave_func_y);
+
+        // normalization = <Haar| e^{-\beta H} | Haar >
+        normalization = 0;
+        for(i=0;i<dmatsize[0];i++){
+            normalization = normalization + norm(Boltzmann_factor_weighted_wave_func_x[i] ) + norm(Boltzmann_factor_weighted_wave_func_y[i]);
+        }
+        MPI_Allreduce(&normalization, &normalization_tot , 1, MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+        normalization = normalization_tot;
+
+        Haar_state_normalization_list.push_back(normalization);
+
+    }
+
+
+};

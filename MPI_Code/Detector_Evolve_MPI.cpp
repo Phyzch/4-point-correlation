@@ -470,6 +470,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream Every_states_contribution_to_OTOC_xp;
 
     ofstream TOC_output ;
+
+    ofstream regularized_Thermal_OTOC_output;
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
         if(Detector_Continue_Simulation){
@@ -492,6 +494,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             Every_states_contribution_to_OTOC_xp.open(path + "OTOC_xp_for_every_state.txt", ofstream::app);
 
             TOC_output.open(path + "TOC_factorization.txt", ofstream::app);
+
+            regularized_Thermal_OTOC_output.open(path + "regularized_Thermal_OTOC.txt" , ofstream::app);
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
@@ -512,6 +516,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             Lyapunov_spectrum_for_xp_output.open(path+"Lyapunov_spectrum_for_xp.txt");
             Every_states_contribution_to_OTOC_xp.open(path+"OTOC_xp_for_every_state.txt");
             TOC_output.open(path + "TOC_factorization.txt");
+
+            regularized_Thermal_OTOC_output.open(path + "regularized_Thermal_OTOC.txt" );
         }
     }
 
@@ -538,10 +544,13 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
     // generate Boltzmann weighted wave function for basis set.
     // also compute result : decorate Boltzmann weighted wave function with ladder operator and compute <{m} | a_{j} e^{-\beta H} | {n} >
-    d.Boltzmann_factor_decorated_basis_set_and_with_ladder_operator();
+    d.Boltzmann_factor_decorated_basis_set_and_with_ladder_operator( );
 
+    // compute normalization factor: <Haar | e^{-\beta H } | Haar>
+    d.compute_normalization_factor_for_Boltzmann_weighted_factor() ;
 
-
+    // allocate space for Haar random variable calculation
+    d.allocate_space_for_Haar_state_calculation();
 
     int initial_state_index_in_total_dmatrix;
     initial_state_index_in_total_dmatrix = d.initial_state_index[0]
@@ -788,15 +797,15 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 four_point_correlation_output << "4- point correlation function for molecule " << endl;
                 four_point_correlation_output << "total time: " << d.proptime[0]  << " "
                                               << delt * output_step << endl;
-                four_point_correlation_average_output << "4 - point correlation function for molecule average over states" <<endl;
-                four_point_correlation_average_output << "total time: " << d.proptime[0]  << " "
-                                              << delt * output_step << endl;
-                four_point_correlation_variance_output << "4 - point correlation function for molecule variance over states" <<endl;
-                four_point_correlation_variance_output << "total time: " << d.proptime[0]  << " "
-                                                      << delt * output_step << endl;
-
-                four_point_correlation_every_state_output << d.initial_state_index_in_states_for_4_point_correlation_list<<endl;
-                four_point_correlation_every_state_output <<   state_for_average_size <<endl;
+//                four_point_correlation_average_output << "4 - point correlation function for molecule average over states" <<endl;
+//                four_point_correlation_average_output << "total time: " << d.proptime[0]  << " "
+//                                              << delt * output_step << endl;
+//                four_point_correlation_variance_output << "4 - point correlation function for molecule variance over states" <<endl;
+//                four_point_correlation_variance_output << "total time: " << d.proptime[0]  << " "
+//                                                      << delt * output_step << endl;
+//
+//                four_point_correlation_every_state_output << d.initial_state_index_in_states_for_4_point_correlation_list<<endl;
+//                four_point_correlation_every_state_output <<   state_for_average_size <<endl;
 
                 // output state mode number information for all states we compute for 4 point correlation function
                 for (i=0;i<state_for_average_size;i++){
@@ -825,51 +834,53 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
                 }
                 Detector_precoup_mode_quanta<<endl;
 
-                Detector_precoup_all_state_output << d.proptime[0] << endl;
-                Detector_precoup_all_state_output << initial_state_index_in_total_dmatrix << endl;
-                Detector_precoup_all_state_output << d.total_dmat_size[0] << endl;
-                for(i=0;i<d.total_dmat_size[0];i++){
-                    for(j=0;j<d.nmodes[0];j++){
-                        Detector_precoup_all_state_output << d.dv_all[0][i][j] <<" ";
-                    }
-                        Detector_precoup_all_state_output << endl;
-                }
+//                Detector_precoup_all_state_output << d.proptime[0] << endl;
+//                Detector_precoup_all_state_output << initial_state_index_in_total_dmatrix << endl;
+//                Detector_precoup_all_state_output << d.total_dmat_size[0] << endl;
+//                for(i=0;i<d.total_dmat_size[0];i++){
+//                    for(j=0;j<d.nmodes[0];j++){
+//                        Detector_precoup_all_state_output << d.dv_all[0][i][j] <<" ";
+//                    }
+//                        Detector_precoup_all_state_output << endl;
+//                }
 
-                IPR_for_all_state_output << nearby_state_index_size << endl;
-                for(i=0;i<nearby_state_index_size;i++){
-                    for(j=0;j<d.nmodes[0];j++){
-                        IPR_for_all_state_output << d.dv_all[0][d.nearby_state_index[i]][j] <<"  ";
-                    }
-                    IPR_for_all_state_output << endl;
-                }
+//                IPR_for_all_state_output << nearby_state_index_size << endl;
+//                for(i=0;i<nearby_state_index_size;i++){
+//                    for(j=0;j<d.nmodes[0];j++){
+//                        IPR_for_all_state_output << d.dv_all[0][d.nearby_state_index[i]][j] <<"  ";
+//                    }
+//                    IPR_for_all_state_output << endl;
+//                }
 
-                overlap_with_initial_state_output<< nearby_state_index_size << endl;
-                for(i=0;i<nearby_state_index_size;i++){
-                    for(j=0;j<d.nmodes[0];j++){
-                        overlap_with_initial_state_output << d.dv_all[0][d.nearby_state_index[i]][j] <<"  ";
-                    }
-                    overlap_with_initial_state_output << endl;
-                }
+//                overlap_with_initial_state_output<< nearby_state_index_size << endl;
+//                for(i=0;i<nearby_state_index_size;i++){
+//                    for(j=0;j<d.nmodes[0];j++){
+//                        overlap_with_initial_state_output << d.dv_all[0][d.nearby_state_index[i]][j] <<"  ";
+//                    }
+//                    overlap_with_initial_state_output << endl;
+//                }
 
                 Lyapunov_spectrum_for_xp_output << d.nmodes[0] << endl;
 
                 TOC_output << d.nmodes[0] << endl;
 
-                Every_states_contribution_to_OTOC_xp << d.nmodes[0] << endl;
-                for(m=0;m<nearby_state_index_size;m++){
-                    if(d.bool_neighbor_state_all_in_nearby_state_index[m]){
-                        state_number_for_compputing_OTOC_for_xp = state_number_for_compputing_OTOC_for_xp + 1;
-                    }
-                }
-                Every_states_contribution_to_OTOC_xp << state_number_for_compputing_OTOC_for_xp << endl;
-                for(m=0;m<nearby_state_index_size;m++){
-                    if(d.bool_neighbor_state_all_in_nearby_state_index[m]){
-                        for(i=0;i<d.nmodes[0];i++){
-                            Every_states_contribution_to_OTOC_xp << d.dv_all[0][d.nearby_state_index[m]][i] <<" ";
-                        }
-                        Every_states_contribution_to_OTOC_xp << endl;
-                    }
-                }
+                regularized_Thermal_OTOC_output << d.nmodes[0] << endl;
+
+//                Every_states_contribution_to_OTOC_xp << d.nmodes[0] << endl;
+//                for(m=0;m<nearby_state_index_size;m++){
+//                    if(d.bool_neighbor_state_all_in_nearby_state_index[m]){
+//                        state_number_for_compputing_OTOC_for_xp = state_number_for_compputing_OTOC_for_xp + 1;
+//                    }
+//                }
+//                Every_states_contribution_to_OTOC_xp << state_number_for_compputing_OTOC_for_xp << endl;
+//                for(m=0;m<nearby_state_index_size;m++){
+//                    if(d.bool_neighbor_state_all_in_nearby_state_index[m]){
+//                        for(i=0;i<d.nmodes[0];i++){
+//                            Every_states_contribution_to_OTOC_xp << d.dv_all[0][d.nearby_state_index[m]][i] <<" ";
+//                        }
+//                        Every_states_contribution_to_OTOC_xp << endl;
+//                    }
+//                }
 
             }
         }
@@ -977,32 +988,54 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 //                }
 
 //                 ----------- output Lyapunovian spectrum for xp ---------------------------------------
-                d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Lyapunov_spectrum_for_xp_from_single_state,
-                                                   Matrix_M,
-                                                   xd_for_xp,yd_for_xp,
-                                                   xd_for_xp_sparsify, yd_for_xp_sparsify, index_for_xp_sparsify,
-                                                   t,Every_states_contribution_to_OTOC_xp);
-                if(my_id == 0){
-                    Lyapunov_spectrum_for_xp_output << t <<endl;
+//                d.compute_Lyapunov_spectrum_for_xp(Lyapunov_spectrum_for_xp,Lyapunov_spectrum_for_xp_from_single_state,
+//                                                   Matrix_M,
+//                                                   xd_for_xp,yd_for_xp,
+//                                                   xd_for_xp_sparsify, yd_for_xp_sparsify, index_for_xp_sparsify,
+//                                                   t,Every_states_contribution_to_OTOC_xp);
+//                if(my_id == 0){
+//                    Lyapunov_spectrum_for_xp_output << t <<endl;
+//                    for(i=0;i< 2 * d.nmodes[0];i++){
+//                        for(j=0;j<2*d.nmodes[0];j++){
+//                            Lyapunov_spectrum_for_xp_output << real(Lyapunov_spectrum_for_xp[i][j]) << " ";
+//                        }
+//                    }
+//                    Lyapunov_spectrum_for_xp_output << endl;
+//
+//                    for(i=0;i<2*d.nmodes[0];i++){
+//                        for(j=0;j<2*d.nmodes[0];j++){
+//                            Lyapunov_spectrum_for_xp_output << imag(Lyapunov_spectrum_for_xp[i][j]) <<" ";
+//                        }
+//                    }
+//                    Lyapunov_spectrum_for_xp_output << endl;
+//
+//                }
+
+                // --------------- output information for Time ordered correlation function --------
+//                d.output_TOC_factorization(Two_point_func1, Two_point_func2, TOC_per_state, TOC, xd_for_xp, yd_for_xp,
+//                                           xd_for_xp_sparsify, yd_for_xp_sparsify, index_for_xp_sparsify, t, TOC_output);
+
+                // -------------- compute regularized thermal OTOC --------------------
+                d.compute_regularized_thermal_OTOC_Lyapunov_spectrum( );
+
+                    if(my_id == 0){
+                    regularized_Thermal_OTOC_output << t <<endl;
                     for(i=0;i< 2 * d.nmodes[0];i++){
                         for(j=0;j<2*d.nmodes[0];j++){
-                            Lyapunov_spectrum_for_xp_output << real(Lyapunov_spectrum_for_xp[i][j]) << " ";
+                            regularized_Thermal_OTOC_output << real(d.regularized_thermal_Lyapunov_spectrum[i][j]) << " ";
                         }
                     }
-                    Lyapunov_spectrum_for_xp_output << endl;
+                    regularized_Thermal_OTOC_output << endl;
 
                     for(i=0;i<2*d.nmodes[0];i++){
                         for(j=0;j<2*d.nmodes[0];j++){
-                            Lyapunov_spectrum_for_xp_output << imag(Lyapunov_spectrum_for_xp[i][j]) <<" ";
+                            regularized_Thermal_OTOC_output << imag(d.regularized_thermal_Lyapunov_spectrum[i][j]) <<" ";
                         }
                     }
-                    Lyapunov_spectrum_for_xp_output << endl;
+                        regularized_Thermal_OTOC_output << endl;
 
                 }
 
-                // --------------- output information for Time ordered correlation function --------
-                d.output_TOC_factorization(Two_point_func1, Two_point_func2, TOC_per_state, TOC, xd_for_xp, yd_for_xp,
-                                           xd_for_xp_sparsify, yd_for_xp_sparsify, index_for_xp_sparsify, t, TOC_output);
 
                 // ---------- output 4-point correlation function average over states and variance -------------------
 //                compute_4_point_corre_for_multiple_states(state_for_average_size,nearby_state_index_size,n_offdiag_element,
@@ -1156,6 +1189,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         Lyapunov_spectrum_for_xp_output.close();
         Every_states_contribution_to_OTOC_xp.close();
         TOC_output.close();
+
+        regularized_Thermal_OTOC_output.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){
