@@ -64,7 +64,7 @@ void detector::allocate_space_for_Haar_state_calculation(  ){
 
 }
 
-void detector:: compute_Haar_random_state_with_ladder_operator (double sparsify_criteria ){
+void detector::compute_Haar_random_state_with_ladder_operator (double sparsify_criteria ){
     // compute  a_{i} e^{-iHt} a_{j} e^{-\beta H/4} |\phi_{Haar}>   and   a_{i}e^{-iHt} e^{-\beta H/4} |\phi_{Haar}>
     // result store in array with size [N_{Haar}] [2 * nmodes[0] + 1 ] [2 * nmodes[0] ] [vector<double (int) >]
     // Here 2*nmodes[0]+1 (2nd dimension) stands for 1 or a_{j} in above expression.  2 * nmodes[0]  (3rd dimension) stands for a_{i}

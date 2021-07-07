@@ -267,7 +267,7 @@ public:
     void prepare_compute_Boltzmann_factor_use_Chebyshev_polynomial(double one_fourth_beta , ofstream & log );
     void Chebyshev_method_Boltzmann_factor(const  vector<double> & wave_func_x ,const vector<double> & wave_func_y,
                                            vector<double> & Boltzmann_factor_weighted_wave_func_x, vector<double> & Boltzmann_factor_weighted_wave_func_y );
-    void Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(double sparsify_criteria = pow(10,-3) ) ;
+    void Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(double sparsify_criteria = 5* pow(10,-3) ) ;
 
 
     // for ladder operator operation
@@ -304,7 +304,7 @@ public:
 
     void allocate_space_for_Haar_state_calculation(  );
 
-    void compute_Haar_random_state_with_ladder_operator(  double sparsify_criteria = pow(10,-3)  );
+    void compute_Haar_random_state_with_ladder_operator(  double sparsify_criteria = 5 * pow(10,-3)  );
     void compute_Haar_random_state_with_ladder_operator_overlap_with_time_dependent_basis_set(  );
     void  compute_regularized_thermal_OTOC_component(  ) ;
 

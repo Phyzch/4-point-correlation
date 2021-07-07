@@ -57,7 +57,7 @@ void detector::prepare_compute_Boltzmann_factor_use_Chebyshev_polynomial(double 
     Chebyshev_prefactor = std::exp( - one_fourth_beta * Chebyshev_e0);
     Chebyshev_R_beta = Chebyshev_R * one_fourth_beta;
 
-    N_chebyshev = ceil(1.5 * Chebyshev_R);
+    N_chebyshev = ceil(1.5 * Chebyshev_R_beta);
     if(my_id == 0){
         cout <<"Using Chebyshev method to compute Boltzmann factor. beta * R / 4 = " << Chebyshev_R_beta << endl;
         log << "Using Chebyshev method to compute Boltzmann factor. beta * R / 4 = " << Chebyshev_R_beta << endl;
@@ -107,7 +107,7 @@ void detector::update_polyn23() {
 }
 
 
-void detector:: Chebyshev_method_Boltzmann_factor(const  vector<double> & wave_func_x ,const vector<double> & wave_func_y,
+void detector::Chebyshev_method_Boltzmann_factor(const  vector<double> & wave_func_x ,const vector<double> & wave_func_y,
                                                   vector<double> & Boltzmann_factor_weighted_wave_func_x, vector<double> & Boltzmann_factor_weighted_wave_func_y ){
     // compute Bolzmann weighted wave function .
     // input :: one_fourth_beta,  wave_func_x,  wave_func_y
@@ -299,8 +299,8 @@ void detector::compute_normalization_factor_for_Boltzmann_weighted_factor() {
     // result store in Haar_state_normalization_list
     int i, j, k;
     int state_index;
-    int normalization;
-    int normalization_tot;
+    double normalization;
+    double  normalization_tot;
     update_dx(state_number_for_evolution);
     update_dy(state_number_for_evolution);
 
@@ -315,8 +315,8 @@ void detector::compute_normalization_factor_for_Boltzmann_weighted_factor() {
 
         // normalization = <Haar| e^{-\beta H} | Haar >
         normalization = 0;
-        for(i=0;i<dmatsize[0];i++){
-            normalization = normalization + norm(Boltzmann_factor_weighted_wave_func_x[i] ) + norm(Boltzmann_factor_weighted_wave_func_y[i]);
+        for(j=0;j<dmatsize[0];j++){
+            normalization = normalization + norm(Boltzmann_factor_weighted_wave_func_x[j] ) + norm(Boltzmann_factor_weighted_wave_func_y[j]);
         }
         MPI_Allreduce(&normalization, &normalization_tot , 1, MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
         normalization = normalization_tot;
