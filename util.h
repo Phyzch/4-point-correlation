@@ -59,6 +59,9 @@ extern bool compute_eigenvalue_spectrum; // bool variable to decide if use Lancz
 extern bool no_coupling;  // if this is Ture, we do not have off-diagonal coupling
 extern bool compute_overlap_with_eigenstate; // If this is True, we will use MFD to compute overlap of initial state with eigenvalue
 
+extern int N_Harr; // Haar random state number.
+extern double Boltzmann_beta ;  // 1/T
+
 // define function here
 float ran2(long& idum);
 void estimate_memory_cost(ofstream & resource_output);  // output resource cost to file at give time step.

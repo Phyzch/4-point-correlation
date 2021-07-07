@@ -135,11 +135,11 @@ public:
     int construct_receive_buffer_index(int * remoteVecCount_element, int * remoteVecPtr_element, int * remoteVecIndex_element, int detector_index);
     void prepare_evolution();
     // MPI version of SUR for one detector for each timestep.
-    void update_dx(int nearby_state_list_size);
-    void update_dy(int nearby_state_list_size);
+    void update_dx(int state_number_for_evolution);
+    void update_dy(int state_number_for_evolution);
     void SUR_onestep_MPI(double cf);
     void construct_bright_state_MPI(ifstream & input, ofstream & output);
-    void initialize_detector_state_MPI(ofstream & log, int initial_state_choice);
+    void initialize_detector_state_MPI(ofstream & log);
     void save_detector_Hamiltonian_MPI(string path, ofstream & log);
     void load_detector_Hamiltonian_MPI(string path, ofstream & log);
     void save_detector_state_MPI(string path,double * final_time,ofstream & log,int initial_state_choice);
@@ -173,12 +173,12 @@ public:
     int ** remoteVecPtr_for_xp ;
     int ** remoteVecIndex_for_xp ;
     int ** Index_in_remoteVecIndex_for_xp ;
-    vector<int> to_receive_buffer_len_list_for_xp;
+    vector<int> to_receive_buffer_len_list_with_ladder_operator;
 
     int ** tosendVecCount_for_xp;
     int ** tosendVecPtr_for_xp ;
     int ** tosendVecIndex_for_xp ;
-    vector<int> to_send_buffer_len_list_for_xp;
+    vector<int> to_send_buffer_len_list_with_ladder_operator;
 
     double *** send_xd_for_xp;
     double *** send_yd_for_xp;
@@ -238,6 +238,55 @@ public:
                          int nlev, int maxit);
 
     void diagonalize(double * eigenvalue_list, int & numlam,  ofstream & eigenvalue_log_file);
+
+
+    // For Boltzmann weight e^{-\beta H/4}
+    double Chebyshev_e0;
+    double Chebyshev_R;
+    double Chebyshev_R_beta ;
+    int N_chebyshev;
+    double * Bessel_function_array ;
+
+    double * shifted_total_dmat;
+    double * shifted_dmat;
+
+    vector<double> * Chebyshev_polyn;
+    double ** recv_polyn;
+    double ** send_polyn;
+
+    double Chebyshev_prefactor ;
+    vector<vector<double>> Boltzmann_factor_weighted_x_sparsify;  // store Boltzmann weighted basis set e^{-\beta H} | {n}>
+    vector<vector<double>> Boltzmann_factor_weighted_y_sparsify;
+    vector<vector<int>> Boltzmann_weighted_basis_index_sparsify;
+
+    vector<vector<vector<double>>> ladder_operator_Boltzmann_weighted_x_sparsify; // use list to record a_{i} e^{-\beta H/4} |\phi>
+    vector<vector<vector<double>>> lader_operator_Boltzmann_weighted_y_sparsify;
+    vector<vector<vector<int>>> ladder_operator_Boltzmann_weighted_basis_index_sparsify ;
+
+    void update_polyn23();
+    void prepare_compute_Boltzmann_factor_use_Chebyshev_polynomial(double one_fourth_beta , ofstream & log );
+    void Chebyshev_method_Boltzmann_factor(const  vector<double> & wave_func_x ,const vector<double> & wave_func_y,
+                                           vector<double> & Boltzmann_factor_weighted_wave_func_x, vector<double> & Boltzmann_factor_weighted_wave_func_y );
+    void Boltzmann_factor_decorated_basis_set_and_with_ladder_operator() ;
+
+    // for ladder operator operation
+    double ** send_xd_ladder_operator;
+    double ** send_yd_ladder_operator;
+    double ** recv_xd_ladder_operator;
+    double ** recv_yd_ladder_operator;
+
+
+    void prepare_ladder_operation();
+    void ladder_operator_operation( const vector<double> & wave_func_x , const vector<double> & wave_func_y ,
+                                    vector<vector<double>> & xd_for_ladder_operator ,
+                                    vector<vector<double>> & yd_for_ladder_operator );
+
+    // Haar_random_vector should also be evolved in state space. Thus we need to incorporate it into nearby_state_index list.
+    // We use vector<int> Haar_state_index to indicate their location. j ~ j+2N (N : dof) stores e^{-\beta H/4} |Haar> and  a_{j} e^{-\beta H/4} |Haar>
+    // state_number_for evolution is number of state we have to evolve (including Haar random state.)
+    int state_number_for_evolution;
+    vector<int> Haar_state_index_list;
+
 };
 
 class full_system {

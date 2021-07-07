@@ -96,7 +96,6 @@ void detector::prepare_evolution(){
     // Index for remoteVecIndex, tosendVecIndex are computed here.
     int m,i;
     int vsize;
-    int nearby_state_list_size = nearby_state_index.size();
     // Index for vector to send and receive.
     // remoteVecCount: total number to receive. remoteVecPtr: displacement in remoteVecIndex for each process. remoteVecIndex: index in other process to receive.
     // tosendVecCount: total number to send to other process. tosendVecPtr: displacement in tosendVecIndex in each process.  tosendVecIndex: Index of element in itself to send. (it's global ,need to be converted to local index)
@@ -129,17 +128,17 @@ void detector::prepare_evolution(){
     local_dirow= new vector<int> [1];
     local_dicol = new vector<int> [1]; // column index for computation in local matrix.
     // buffer to send and receive buffer to/from other process.
-    recv_xd= new double * [nearby_state_list_size];
-    recv_yd= new double * [nearby_state_list_size];
-    send_xd= new double * [nearby_state_list_size];
-    send_yd = new double *[nearby_state_list_size];
+    recv_xd= new double * [state_number_for_evolution];
+    recv_yd= new double * [state_number_for_evolution];
+    send_xd= new double * [state_number_for_evolution];
+    send_yd = new double *[state_number_for_evolution];
 
     vsize= total_dmat_size[0]/num_proc;
     to_recv_buffer_len[0] = construct_receive_buffer_index(remoteVecCount[0],remoteVecPtr[0],
             remoteVecIndex[0],0);  // construct buffer to receive.
     to_send_buffer_len[0]= construct_send_buffer_index(remoteVecCount[0],remoteVecPtr[0],remoteVecIndex[0],
                                                     tosendVecCount[0],tosendVecPtr[0], tosendVecIndex[0]);
-    for(m=0;m< nearby_state_list_size;m++){
+    for(m=0;m< state_number_for_evolution ;m++){
         xd[m].resize(dmatsize[0] + to_recv_buffer_len[0]);
         yd[m].resize(dmatsize[0] + to_recv_buffer_len[0]);
         recv_xd[m] = new double [to_recv_buffer_len[0]];
@@ -166,14 +165,14 @@ void detector::prepare_evolution(){
 
 }
 
-void detector::update_dx(int nearby_state_list_size){
+void detector::update_dx(int state_number_for_evolution){
     int i;
     int m;
     int vsize;
     // collect data for send_buffer.
     vsize = total_dmat_size[0]/num_proc;
 
-    for(m=0;m<nearby_state_list_size;m++){
+    for(m=0;m< state_number_for_evolution ;m++){
         for (i = 0; i < to_send_buffer_len[0]; i++) {
             send_xd[m][i] = xd[m][tosendVecIndex[0][i] - my_id * vsize];
         }
@@ -184,13 +183,13 @@ void detector::update_dx(int nearby_state_list_size){
         }
     }
 }
-void detector::update_dy(int nearby_state_list_size){
+void detector::update_dy(int state_number_for_evolution){
     int i;
     int vsize;
     int m;
     // collect data for send_buffer.
     vsize = total_dmat_size[0]/num_proc;
-    for(m=0;m<nearby_state_list_size;m++){
+    for(m=0;m< state_number_for_evolution ;m++){
         for (i = 0; i < to_send_buffer_len[0]; i++) {
             send_yd[m][i] = yd[m][tosendVecIndex[0][i] - my_id * vsize];
         }
@@ -208,23 +207,22 @@ void detector::update_dy(int nearby_state_list_size){
 void detector::SUR_onestep_MPI(double cf){
     int m, i;
     int irow,icol;
-    int nearby_state_list_size = nearby_state_index.size();
     // do simulation starting from different state
-    update_dy(nearby_state_list_size);
+    update_dy(state_number_for_evolution);
     for(i=0;i<dmatnum[0];i++){
         // make sure when we compute off-diagonal matrix, we record both symmetric and asymmetric part
         irow = local_dirow[0][i];
         icol = local_dicol[0][i]; // compute to point to colindex in
-        for(m=0;m<nearby_state_list_size;m++) {
+        for(m=0;m< state_number_for_evolution ;m++) {
             xd[m][irow] = xd[m][irow] + dmat[0][i] * yd[m][icol] * cf;
         }
     }
 
-    update_dx(nearby_state_list_size);
+    update_dx(state_number_for_evolution);
     for(i=0;i<dmatnum[0];i++){
         irow= local_dirow[0][i];
         icol= local_dicol[0][i];
-        for(m=0;m<nearby_state_list_size;m++){
+        for(m=0;m< state_number_for_evolution ;m++){
             yd[m][irow] = yd[m][irow] - dmat[0][i] * xd[m][icol] * cf;
         }
     }
@@ -516,13 +514,33 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             TOC_output.open(path + "TOC_factorization.txt");
         }
     }
+
+    // ------------- prepare variable computing for Lyapunovian for xp --------------
+    d.prepare_computing_Lyapunovian_for_xp();
+
+    // -----------------------------------------------------------------------------------------------
+    // prepare sendbuffer and recv_buffer and corresponding index.
+    d.prepare_evolution();
+
+    // ---------- prepare computing Boltzmann weighted state ------------
+    d.prepare_compute_Boltzmann_factor_use_Chebyshev_polynomial(Boltzmann_beta/4, log);
+
+    // ---- prepare computing state after ladder operator a_{j} operation ------
+    d.prepare_ladder_operation();
+
     // -------------Load detector state from save data if we want to continue simulation of detector.------------------
     if(Detector_Continue_Simulation){
         d.load_detector_state_MPI(path,start_time,log,initial_state_choice);
     }
     else{
-        d.initialize_detector_state_MPI(log, 0); // initialize detector lower bright state
+        d.initialize_detector_state_MPI(log); // initialize detector lower bright state
     }
+
+    // generate Boltzmann weighted wave function for basis set.
+    // also compute result : decorate Boltzmann weighted wave function with ladder operator and compute <{m} | a_{j} e^{-\beta H} | {n} >
+    d.Boltzmann_factor_decorated_basis_set_and_with_ladder_operator();
+
+
 
 
     int initial_state_index_in_total_dmatrix;
@@ -721,12 +739,6 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     double special_state_y;
     double survival_prob;
 
-    // ------------- prepare variable computing for Lyapunovian for xp --------------
-    d.prepare_computing_Lyapunovian_for_xp();
-
-    // -----------------------------------------------------------------------------------------------
-    // prepare sendbuffer and recv_buffer and corresponding index.
-    d.prepare_evolution();
 
     // -----  compute state's energy and shift it before doing simulation -------------
     vector<complex<double>>  H_phi;

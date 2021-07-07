@@ -548,13 +548,16 @@ void detector:: broadcast_total_dmat(){
 }
 
 //-------------------------------- Construct detector wave function ------------------------------
-void detector::initialize_detector_state_MPI(ofstream & log, int initial_state_choice) {
+void detector::initialize_detector_state_MPI(ofstream & log) {
+    // as we have to compute Boltzmann weighted wave function here. make sure prepare_evolution function is called before this function to prepare for update_dx, update_dy here.
+    // also make sure prepare Boltzmann computation and prepare ladder operator computation is called before this function.
     // this is the code for initializing detector state's wavefunction.
-    int m, i,j;
+    int m, i,j , k;
     double norm;
     double total_norm;
     int local_index = 0;
     int dmat0_offset = my_id * int(total_dmat_size[0]/num_proc);
+    // initialize basis set state |{n}> to compute |{n}(t)>
     int nearby_state_list_size = nearby_state_index.size();
     for(m=0;m<nearby_state_list_size;m++){
         norm = 0;
@@ -574,6 +577,64 @@ void detector::initialize_detector_state_MPI(ofstream & log, int initial_state_c
                 cout << "Norm for detector state "<< m <<" is 0" << endl;
                 log << "Norm for detector state "<<m<<" is 0" << endl;
                 MPI_Abort(MPI_COMM_WORLD,-10);
+            }
+        }
+    }
+
+    // initialize Haar random state . and then decorated it with Boltzmann factor.
+    std::default_random_engine  generator;
+    std::normal_distribution<double> distribution(0,1);
+    int state_index ;
+    for(i=0;i<N_Harr; i++ ){
+        state_index = Haar_state_index_list[i];
+
+        // initialize Haar random state  xd [state_index] , yd[state_index]
+        // draw distribution from Gaussian random distribution. Then normalize it.
+        norm = 0;
+        for(k=0;k<dmatsize[0];k++){
+            xd[state_index][k] = distribution(generator);
+            yd[state_index][k] = distribution(generator);
+            norm = norm + std::norm(xd[state_index][k]) + std::norm(yd[state_index][k]) ;
+        }
+
+        MPI_Allreduce(&norm, &total_norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        total_norm = sqrt(total_norm);
+        for(k=0;k<dmatsize[0];k++){
+            xd[state_index][k] = xd[state_index][k] / total_norm;
+            yd[state_index][k] = yd[state_index][k] / total_norm;
+        }
+
+    }
+
+    // decorate Haar random state with Boltzmann factor e^{-\beta H/4}
+    update_dx(state_number_for_evolution);
+    update_dy(state_number_for_evolution);
+
+
+    // decorate Haar random state with e^{-\beta H/4}
+    for(i = 0; i< N_Harr; i++ ){
+        state_index = Haar_state_index_list[i] ;
+
+        vector<double> Boltzmann_factor_weighted_wave_func_x ;
+        vector<double> Boltzmann_factor_weighted_wave_func_y;
+        Chebyshev_method_Boltzmann_factor( xd[state_index] , yd[state_index],
+                                          Boltzmann_factor_weighted_wave_func_x, Boltzmann_factor_weighted_wave_func_y);
+        xd[ state_index ] = Boltzmann_factor_weighted_wave_func_x ;
+        yd[ state_index ] = Boltzmann_factor_weighted_wave_func_y ;
+
+    }
+
+    // compute wave function after ladder operator a_{j} is operated on Boltzmann weighted wave function:
+    for( i = 0; i<N_Harr; i++ ){
+        state_index = Haar_state_index_list[i] ;  // index for Haar random variable (after multiply e^{-\beta H/4})
+        vector<vector<double>>  xd_for_ladder_operator;
+        vector<vector<double>>  yd_for_ladder_operator;
+        ladder_operator_operation(xd[state_index] , yd[state_index], xd_for_ladder_operator, yd_for_ladder_operator );
+        for(j=0;j<2*nmodes[0];j++){
+            state_index = state_index + 1;  // state_index for a_{j} e^{-beta H/4} | \phi>
+            for(k=0;k<dmatsize[0];k++){
+                xd[state_index][k] = xd_for_ladder_operator[j][k];
+                yd[state_index][k] = yd_for_ladder_operator[j][k];
             }
         }
     }
@@ -820,6 +881,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     // for 4 - point correlation function we will make xd , yd as N*N system.
     // we will only include state near our initial state.
     int i,j,k,l;
+    int Haar_state_index;
     int max_state_quanta_diff = 0;
     int state_distance = 0;
 
@@ -831,90 +893,46 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
                                            + total_dmat_size[0]/num_proc * initial_state_pc_id[0] ;
     // compute nearby_state_index and initial_state_index_in_nearby_state_index_list for computing 4-point correlation function
     for(i=0;i<total_dmat_size[0];i++){
-
-        if (! Sphere_cutoff_in_state_space){
-            // construct a cube in state space
-            max_state_quanta_diff = 0;
-            state_energy_difference = 0;
-            for(j=0;j< nmodes[0];j++){
-                if(max_state_quanta_diff <abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -dv_all[0][i][j]) ){
-                    max_state_quanta_diff = abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -dv_all[0][i][j]);
-                }
-            }
-            state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
-
-            if(max_state_quanta_diff <= distance_cutoff_for_4_piont_corre ){
-                // we will simulate dynamics of states in this list to compute 4 point correlation function
-                nearby_state_index.push_back(i);
-            }
-            if(max_state_quanta_diff <= Distance_Range_4_point_corre_function_average
-               and state_energy_difference <= Energy_Range_4_point_corre_function_average){
-                states_for_4_point_correlation_average.push_back(i);
-            }
-
-        }
-        else{
-            // construct a sphere in state space.
-            state_distance = 0;
-            state_energy_difference = 0;
-            for(j=0;j< nmodes[0];j++){
-                state_distance = state_distance + abs(dv_all[0][initial_state_index_in_total_dmatrix][j] -
-                                                      dv_all[0][i][j]);
-            }
-            state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
-
-            if(state_distance <= distance_cutoff_for_4_piont_corre ){
-                // we will simulate dynamics of states in this list to compute 4 point correlation function
-                nearby_state_index.push_back(i);
-            }
-            if(state_distance <= Distance_Range_4_point_corre_function_average
-               and state_energy_difference <= Energy_Range_4_point_corre_function_average){
-                states_for_4_point_correlation_average.push_back(i);
-            }
-
-        }
-
-
+        nearby_state_index.push_back(i);
     }
+
+    // incorporate random Haar state to compute thermal average. For information for random Haar state, see: https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.112.120601
+    state_number_for_evolution = nearby_state_index.size();
+    Haar_state_index = total_dmat_size[0];
+    for(i=0;i<N_Harr; i++){
+        Haar_state_index_list.push_back(Haar_state_index);
+        Haar_state_index = Haar_state_index + 2 * nmodes[0] + 1 ; // we have to incorporate a_{j} e^{-\beta H/4} | Haar>
+    }
+    state_number_for_evolution = state_number_for_evolution + ( 2 * nmodes[0] + 1 ) * N_Harr;
+
     nearby_state_index_size = nearby_state_index.size();
-    state_for_4_point_correlation_average_list_size = states_for_4_point_correlation_average.size();
     for(i=0;i<nearby_state_index_size;i++){
         if(nearby_state_index[i] == initial_state_index_in_total_dmatrix){
             initial_state_index_in_nearby_state_index_list = i;
             break;
         }
     }
-    for(j=0;j<state_for_4_point_correlation_average_list_size;j++){
-        for(i=0;i<nearby_state_index_size;i++){
-            if(nearby_state_index[i] == states_for_4_point_correlation_average[j]){
-                states_for_average_in_nearby_state_index_list.push_back(i);
-                break;
-            }
-        }
-        if( states_for_4_point_correlation_average[j] == initial_state_index_in_total_dmatrix){
-            initial_state_index_in_states_for_4_point_correlation_list = j;
-        }
-    }
+
 
     log<< "Nearby state number:   "<< nearby_state_index_size <<endl;
     log<< "Total state number:    "<< total_dmat_size[0] <<endl;
-    log<<" 4 point correlation function is average over number of states:  "<<state_for_4_point_correlation_average_list_size << endl;
+    log<< "Total state for evolution " << state_number_for_evolution << endl;
 
-    for (i = 0; i < nearby_state_index_size; i++) {
+    for (i = 0; i < state_number_for_evolution ; i++) {
         vector<double> v1 ;
         v1.reserve(dmatsize[0]);
         xd.push_back(v1);
         yd.push_back(v1);
     }
-    xd_all = new double * [nearby_state_index_size];
-    yd_all = new double * [nearby_state_index_size];
-    for(i=0;i<nearby_state_index_size;i++){
+    xd_all = new double * [state_number_for_evolution];
+    yd_all = new double * [state_number_for_evolution];
+    for(i=0;i<state_number_for_evolution;i++){
         xd_all[i] = new double [total_dmat_size[0]];
         yd_all[i] = new double [total_dmat_size[0]];
     }
 
-    // construct neighbor_state_index
 
+    // construct neighbor_state_index : These are states with one quantum number difference in state space. a_{j} |{n}>
     vector<int> neighbor_state_index;  // index in all dv_all[0]
     vector<int> neighbor_state_in_nearby_state_index; // index in nearby_state_index
     vector<int> state_mode;

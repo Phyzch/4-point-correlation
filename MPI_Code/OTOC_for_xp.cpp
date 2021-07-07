@@ -264,7 +264,7 @@ void detector:: update_xd_yd_for_xp(vector<vector<double>> * xd_for_xp, vector<v
         if(state_l_index!=-1){
             for(j=0;j<2*nmodes[0];j++){
                 // j is index for move in quantum number space for state j.
-                for(k=0;k<to_send_buffer_len_list_for_xp[j];k++){
+                for(k=0;k<to_send_buffer_len_list_with_ladder_operator[j];k++){
                     local_state_index = tosendVecIndex_for_xp[j][k] - begin_index;
                     send_xd_for_xp[i][j][k] = xd[state_l_index][local_state_index];
                     send_yd_for_xp[i][j][k] = yd[state_l_index][local_state_index];
@@ -469,11 +469,11 @@ void detector::prepare_computing_Lyapunovian_for_xp() {
     }
 
 
-    to_receive_buffer_len_list_for_xp = construct_receive_buffer_index_for_xp(remoteVecCount_for_xp,
+    to_receive_buffer_len_list_with_ladder_operator = construct_receive_buffer_index_for_xp(remoteVecCount_for_xp,
                                                                               remoteVecPtr_for_xp,remoteVecIndex_for_xp,
                                                                               Index_in_remoteVecIndex_for_xp);
 
-    to_send_buffer_len_list_for_xp = construct_send_buffer_index_for_xp(remoteVecCount_for_xp,remoteVecPtr_for_xp,remoteVecIndex_for_xp,
+    to_send_buffer_len_list_with_ladder_operator = construct_send_buffer_index_for_xp(remoteVecCount_for_xp,remoteVecPtr_for_xp,remoteVecIndex_for_xp,
                                                                  tosendVecCount_for_xp,tosendVecPtr_for_xp,tosendVecIndex_for_xp);
 
     send_xd_for_xp = new double **[2*nmodes[0] + 1];
