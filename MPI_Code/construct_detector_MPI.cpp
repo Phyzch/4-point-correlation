@@ -182,6 +182,10 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
     MPI_Bcast(&cutoff2,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&kelvin,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
+    // Boltzmann_beta used for compute regularized thermal OTOC is 1 / T. T given by kelvin
+    double kelvin_in_wavenumber_unit = kelvin * 0.6945 ;
+    Boltzmann_beta = 1 / kelvin_in_wavenumber_unit ;
+
     for(i=0;i<stlnum;i++){
         MPI_Bcast(&mfreq[i][0],nmodes[i],MPI_DOUBLE,0,MPI_COMM_WORLD);
         MPI_Bcast(&nmax[i][0],nmodes[i],MPI_INT,0,MPI_COMM_WORLD);
