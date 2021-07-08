@@ -58,6 +58,9 @@ void detector::prepare_compute_Boltzmann_factor_use_Chebyshev_polynomial(double 
     Chebyshev_R_beta = Chebyshev_R * one_fourth_beta;
 
     N_chebyshev = ceil(1.5 * Chebyshev_R_beta);
+    if(N_chebyshev < 10 ){
+        N_chebyshev = 10;
+    }
     if(my_id == 0){
         cout <<"Using Chebyshev method to compute Boltzmann factor. beta * R / 4 = " << Chebyshev_R_beta << endl;
         log << "Using Chebyshev method to compute Boltzmann factor. beta * R / 4 = " << Chebyshev_R_beta << endl;
@@ -173,8 +176,8 @@ void detector::Chebyshev_method_Boltzmann_factor(const  vector<double> & wave_fu
             Chebyshev_polyn[5][irow] = Chebyshev_polyn[5][irow] + 2 * (-shifted_dmat[i]) * Chebyshev_polyn[3][icol];
         }
         for(i=0;i<dmatsize[0];i++){
-            Chebyshev_polyn[4][i] = Chebyshev_polyn[4][i] + Chebyshev_polyn[0][i];
-            Chebyshev_polyn[5][i] = Chebyshev_polyn[5][i] + Chebyshev_polyn[1][i];
+            Chebyshev_polyn[4][i] = Chebyshev_polyn[4][i] - Chebyshev_polyn[0][i];
+            Chebyshev_polyn[5][i] = Chebyshev_polyn[5][i] - Chebyshev_polyn[1][i];
         }
 
         // update dx , dy
@@ -272,7 +275,7 @@ void detector::Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(dou
 
             for(k=0;k<dmatsize[0];k++){
                 magnitude = sqrt( norm(xd_for_ladder_operator[j][k]) + norm(yd_for_ladder_operator[j][k]) );
-                if(   magnitude > sparsify_criteria * normalization  ){
+                if(   magnitude > sparsify_criteria * normalization / total_dmat_size[0]  ){
                     x_sparsify_ladder.push_back(xd_for_ladder_operator[j][k]);
                     y_sparsify_ladder.push_back(yd_for_ladder_operator[j][k]);
                     index_sparsify_ladder.push_back(k);

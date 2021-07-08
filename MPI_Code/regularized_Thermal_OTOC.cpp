@@ -106,7 +106,7 @@ void detector::compute_Haar_random_state_with_ladder_operator (double sparsify_c
 
                 for(k=0;k<dmatsize[0];k++){
                     magnitude = sqrt ( norm(xd_for_ladder_operation[l][k]) + norm(yd_for_ladder_operation[l][k])  );
-                    if(magnitude > sparsify_criteria * normalization){
+                    if(magnitude > sparsify_criteria * normalization / total_dmat_size[0] ){
                         vx.push_back(xd_for_ladder_operation[l][k]);
                         vy.push_back(yd_for_ladder_operation[l][k]);
                         v_basis_set.push_back(k);
