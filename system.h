@@ -247,7 +247,7 @@ public:
                                             complex<double> ** Thermal_OTOC,
                                             complex<double> **** l_M_m_overlap_value , int **** l_M_m_index_l,
                                             vector<complex<double>> *** l_M_m_local_overlap_value , vector<int> *** l_M_m_local_index_l  ,
-                                            int * recv_count, int * displs  );
+                                            int * recv_count, int * displs  , bool regularization);
 
     void compute_Eigenstate_OTOC();
 

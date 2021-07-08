@@ -400,7 +400,7 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
                                                   complex<double> ** Thermal_OTOC,
                                                   complex<double> **** l_M_m_overlap_value , int **** l_M_m_index_l,
                                                   vector<complex<double>> *** l_M_m_local_overlap_value , vector<int> *** l_M_m_local_index_l  ,
-                                                  int * recv_count, int * displs ){
+                                                  int * recv_count, int * displs , bool regularization ){
     int l, m,  p; // index for state
     int i, j, k; // index for dof
     int local_eigenstate_num = selected_eigenstate_num / num_proc;
@@ -485,6 +485,13 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
                         temporary_list[l] = temporary_list[l] - Value;
                     }
 
+                }
+
+                // regularization
+                if(regularization){
+                    for(l=0;l<eigenstate_num;l++){
+                        temporary_list[l] = temporary_list[l] * exp(- Boltzmann_beta / 4 * Eigenvalue_list[l] );
+                    }
                 }
 
                 // Sift result in temporary_list and only store result that is larger than cutoff.
@@ -655,27 +662,29 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
 
 
     // output to Eigenstate_OTOC_output
-    if(my_id == 0){
-        // output time
-        Eigenstate_OTOC_output << time << endl;
+    if( !regularization ){
+        if(my_id == 0){
+            // output time
+            Eigenstate_OTOC_output << time << endl;
 
-        // output format:  each state, output real and imaginary part. So in total 2 *  eigenstate_num lines
-        for(m=0;m<selected_eigenstate_num;m++){
-            for(i=0;i< 2*nmodes[0] ; i++){
-                for(j=0;j<2*nmodes[0];j++){
-                    Eigenstate_OTOC_output << real(Eigenstate_OTOC[i][j][m]) <<" ";
+            // output format:  each state, output real and imaginary part. So in total 2 *  eigenstate_num lines
+            for(m=0;m<selected_eigenstate_num;m++){
+                for(i=0;i< 2*nmodes[0] ; i++){
+                    for(j=0;j<2*nmodes[0];j++){
+                        Eigenstate_OTOC_output << real(Eigenstate_OTOC[i][j][m]) <<" ";
+                    }
                 }
-            }
-            Eigenstate_OTOC_output << endl;
-            for(i=0;i< 2*nmodes[0] ; i++){
-                for(j=0;j<2*nmodes[0];j++){
-                    Eigenstate_OTOC_output << imag (Eigenstate_OTOC[i][j][m]) <<" ";
+                Eigenstate_OTOC_output << endl;
+                for(i=0;i< 2*nmodes[0] ; i++){
+                    for(j=0;j<2*nmodes[0];j++){
+                        Eigenstate_OTOC_output << imag (Eigenstate_OTOC[i][j][m]) <<" ";
+                    }
                 }
+                Eigenstate_OTOC_output << endl;
+
             }
-            Eigenstate_OTOC_output << endl;
 
         }
-
     }
 
     // output Thermal OTOC
@@ -691,7 +700,14 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
             Thermal_OTOC[i][j] = 0;
             for(m=0;m<selected_eigenstate_num;m++){
                 selected_eigenstate_energy = Eigenvalue_list[ selected_eigenstate_index[m] ] ;
-                Thermal_OTOC[i][j] = Thermal_OTOC[i][j] + Eigenstate_OTOC[i][j][m] * exp(- Boltzmann_beta * selected_eigenstate_energy );
+                if(!regularization){
+                    Thermal_OTOC[i][j] = Thermal_OTOC[i][j] + Eigenstate_OTOC[i][j][m] * exp(- Boltzmann_beta * selected_eigenstate_energy );
+                }
+                else{
+                    //regularization
+                    Thermal_OTOC[i][j] = Thermal_OTOC[i][j] + Eigenstate_OTOC[i][j][m] * exp(- Boltzmann_beta * selected_eigenstate_energy / 2 );
+                }
+
             }
             Thermal_OTOC[i][j] = Thermal_OTOC[i][j] / thermal_normalization ;
         }
@@ -859,22 +875,41 @@ void detector::compute_Eigenstate_OTOC(){
 
     }
 
-    ofstream Thermal_OTOC_output;
+    ofstream unregularized_Thermal_OTOC_output;
     if(my_id == 0){
-        Thermal_OTOC_output.open(path + "unregularized_Thermal_OTOC_solving_eigenstate.txt");
+        unregularized_Thermal_OTOC_output.open(path + "unregularized_Thermal_OTOC_solving_eigenstate.txt");
         // output information about dof
-        Thermal_OTOC_output << nmodes[0] << endl;
+        unregularized_Thermal_OTOC_output << nmodes[0] << endl;
 
     }
 
-    // compute Eigenstate OTOC and output
+    ofstream regularized_Thermal_OTOC_output;
+    if(my_id == 0){
+        regularized_Thermal_OTOC_output.open(path + "regularized_Thermal_OTOC_solving_eigenstate.txt");
+        // output information about dof
+        regularized_Thermal_OTOC_output << nmodes[0] << endl;
+
+    }
+
+    bool regularization ;
+    // compute unregularized Thermal OTOC and output
     for(i=0;i<Time_series_len;i++){
+        regularization = false;
         t = Time_series[i];
-        compute_Eigenstate_OTOC_submodule(Eigenstate_OTOC_output, Thermal_OTOC_output , t,
+        compute_Eigenstate_OTOC_submodule(Eigenstate_OTOC_output, unregularized_Thermal_OTOC_output , t,
                                           Eigenstate_OTOC, Eigenstate_OTOC_real,Eigenstate_OTOC_imag,
                                           local_Eigenstate_OTOC, local_Eigenstate_OTOC_real, local_Eigenstate_OTOC_imag,
                                           Thermal_OTOC,
-                                          l_M_m_overlap_value, l_M_m_index_l, l_M_m_local_overlap_value  ,  l_M_m_local_index_l , recv_count,displs);
+                                          l_M_m_overlap_value, l_M_m_index_l, l_M_m_local_overlap_value  ,  l_M_m_local_index_l , recv_count,displs , regularization );
+
+        regularization = true;
+        compute_Eigenstate_OTOC_submodule(Eigenstate_OTOC_output, regularized_Thermal_OTOC_output , t,
+                                          Eigenstate_OTOC, Eigenstate_OTOC_real,Eigenstate_OTOC_imag,
+                                          local_Eigenstate_OTOC, local_Eigenstate_OTOC_real, local_Eigenstate_OTOC_imag,
+                                          Thermal_OTOC,
+                                          l_M_m_overlap_value, l_M_m_index_l, l_M_m_local_overlap_value  ,  l_M_m_local_index_l , recv_count,displs , regularization );
+
+
         if(my_id == 0){
             cout << " finish computing Eigenstate OTOC for time:  t =  " << t << endl;
         }
@@ -941,5 +976,7 @@ void detector::compute_Eigenstate_OTOC(){
     // close files
     if(my_id == 0){
         Eigenstate_OTOC_output.close();
+        unregularized_Thermal_OTOC_output.close();
+        regularized_Thermal_OTOC_output.close();
     }
 }
