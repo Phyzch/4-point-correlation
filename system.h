@@ -241,7 +241,10 @@ public:
     vector<vector<vector<phi_operator_phi_tuple>>> phi_ladder_operator_phi_tuple_list ;
     void compute_phi_ladder_operator_phi();
 
-    void  compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, double time, double *** Eigenstate_OTOC , double *** local_Eigenstate_OTOC,
+    void  compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, ofstream & Thermal_OTOC_output, double time,
+                                            complex<double> *** Eigenstate_OTOC , double *** Eigenstate_OTOC_real, double *** Eigenstate_OTOC_imag,
+                                            complex<double> *** local_Eigenstate_OTOC, double *** local_Eigenstate_OTOC_real, double *** local_Eigenstate_OTOC_imag,
+                                            complex<double> ** Thermal_OTOC,
                                             complex<double> **** l_M_m_overlap_value , int **** l_M_m_index_l,
                                             vector<complex<double>> *** l_M_m_local_overlap_value , vector<int> *** l_M_m_local_index_l  ,
                                             int * recv_count, int * displs  );

@@ -157,6 +157,9 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
         double high_initial_state_energy = max(d.initial_Detector_energy[0] , d.initial_Detector_energy[1]);
         double low_initial_state_energy = min(d.initial_Detector_energy[0],d.initial_Detector_energy[1]);
 
+        double energy_cutoff_for_temperature = d.kelvin * 0.6945 * 10 ;
+        cout << "energy cutoff criteria regarding temperatuer: 10 * T (cm-1) : " << energy_cutoff_for_temperature << endl;
+
         ndetector0[0] = -1; // this is for:  when we go into code: ndetector0[i]= ndetector0[i]+1, our first state is |000000>
         while (1) {
             label2:;  // label2 is for detector1 to jump out of while(1) loop (this is inner layer of while(1))
@@ -200,7 +203,7 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
 
             lower_bright_state_distance = state_distance(ndetector0, d.initial_detector_state[0], d.nmodes[0]);
             // we do not use distance constraint for state whose energy is between two
-            if ( lower_bright_state_distance > Rmax ) {
+            if ( lower_bright_state_distance > Rmax and ndetector0[k] > energy_cutoff_for_temperature) {
                 goto label2;
             }
 

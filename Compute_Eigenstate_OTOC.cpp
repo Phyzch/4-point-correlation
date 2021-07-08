@@ -4,6 +4,7 @@
 #include "util.h"
 #include "system.h"
 using namespace std;
+double Boltzmann_beta;
 
 void detector::compute_selected_eigenstate_index(){
     int i;
@@ -393,8 +394,10 @@ int Binary_search_phi_operator_phi_tuple_complex(const vector<phi_operator_phi_t
 
 }
 
-void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, double time, double *** Eigenstate_OTOC ,
-                                                  double *** local_Eigenstate_OTOC,
+void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_output, ofstream & Thermal_OTOC_output, double time,
+                                                  complex<double> *** Eigenstate_OTOC , double *** Eigenstate_OTOC_real, double *** Eigenstate_OTOC_imag,
+                                                  complex<double> *** local_Eigenstate_OTOC, double *** local_Eigenstate_OTOC_real, double *** local_Eigenstate_OTOC_imag,
+                                                  complex<double> ** Thermal_OTOC,
                                                   complex<double> **** l_M_m_overlap_value , int **** l_M_m_index_l,
                                                   vector<complex<double>> *** l_M_m_local_overlap_value , vector<int> *** l_M_m_local_index_l  ,
                                                   int * recv_count, int * displs ){
@@ -629,7 +632,8 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
 
                 }
 
-                local_Eigenstate_OTOC[i][j][m] = real(local_l_M_m_sum);
+                local_Eigenstate_OTOC_real[i][j][m] = real(local_l_M_m_sum);
+                local_Eigenstate_OTOC_imag[i][j][m] = imag(local_l_M_m_sum);
             }
         }
     }
@@ -637,10 +641,18 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
     // Gather local_Eigenstate_OTOC to Eigenstate_OTOC
     for(i=0;i<2*nmodes[0];i++){
         for(j=0;j<2*nmodes[0]; j++){
-            MPI_Gatherv(&local_Eigenstate_OTOC[i][j][0], local_eigenstate_num, MPI_DOUBLE,
-                        &Eigenstate_OTOC[i][j][0], &recv_count[0], &displs[0], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Gatherv(&local_Eigenstate_OTOC_real[i][j][0], local_eigenstate_num, MPI_DOUBLE,
+                        &Eigenstate_OTOC_real[i][j][0], &recv_count[0], &displs[0], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Gatherv(&local_Eigenstate_OTOC_imag[i][j][0], local_eigenstate_num, MPI_DOUBLE,
+                        &Eigenstate_OTOC_imag[i][j][0], &recv_count[0], &displs[0], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+            for(m=0;m<selected_eigenstate_num;m++){
+                Eigenstate_OTOC[i][j][m] = complex<double> (Eigenstate_OTOC_real[i][j][m] , Eigenstate_OTOC_imag[i][j][m] );
+            }
+
         }
     }
+
 
     // output to Eigenstate_OTOC_output
     if(my_id == 0){
@@ -651,13 +663,62 @@ void detector:: compute_Eigenstate_OTOC_submodule(ofstream & Eigenstate_OTOC_out
         for(m=0;m<selected_eigenstate_num;m++){
             for(i=0;i< 2*nmodes[0] ; i++){
                 for(j=0;j<2*nmodes[0];j++){
-                    Eigenstate_OTOC_output << Eigenstate_OTOC[i][j][m] <<" ";
+                    Eigenstate_OTOC_output << real(Eigenstate_OTOC[i][j][m]) <<" ";
                 }
             }
             Eigenstate_OTOC_output << endl;
+            for(i=0;i< 2*nmodes[0] ; i++){
+                for(j=0;j<2*nmodes[0];j++){
+                    Eigenstate_OTOC_output << imag (Eigenstate_OTOC[i][j][m]) <<" ";
+                }
+            }
+            Eigenstate_OTOC_output << endl;
+
         }
 
     }
+
+    // output Thermal OTOC
+    double thermal_normalization = 0 ;
+    double selected_eigenstate_energy;
+    for(m=0;m<selected_eigenstate_num;m++){
+        selected_eigenstate_energy = Eigenvalue_list[ selected_eigenstate_index[m] ] ;
+        thermal_normalization = thermal_normalization + exp( - Boltzmann_beta *  selected_eigenstate_energy);
+    }
+
+    for(i=0;i<2*nmodes[0]; i++ ){
+        for(j=0;j<2*nmodes[0] ; j++ ){
+            Thermal_OTOC[i][j] = 0;
+            for(m=0;m<selected_eigenstate_num;m++){
+                selected_eigenstate_energy = Eigenvalue_list[ selected_eigenstate_index[m] ] ;
+                Thermal_OTOC[i][j] = Thermal_OTOC[i][j] + Eigenstate_OTOC[i][j][m] * exp(- Boltzmann_beta * selected_eigenstate_energy );
+            }
+            Thermal_OTOC[i][j] = Thermal_OTOC[i][j] / thermal_normalization ;
+        }
+    }
+
+    if(my_id == 0){
+        // output time
+        Thermal_OTOC_output << time << endl;
+
+        // output format:  each state, output real and imaginary part. So in total 2 *  eigenstate_num lines
+
+        for(i=0;i< 2*nmodes[0] ; i++){
+            for(j=0;j<2*nmodes[0];j++){
+                Thermal_OTOC_output << real(Thermal_OTOC[i][j]) <<" ";
+            }
+        }
+        Thermal_OTOC_output << endl;
+        for(i=0;i< 2*nmodes[0] ; i++){
+            for(j=0;j<2*nmodes[0];j++){
+                Thermal_OTOC_output << imag (Thermal_OTOC[i][j]) <<" ";
+            }
+        }
+        Thermal_OTOC_output << endl;
+
+
+    }
+
 
     // clear the vector in l_M_m_local_***
     for(i = 0; i < 2 * nmodes[0] ; i++){
@@ -702,24 +763,43 @@ void detector::compute_Eigenstate_OTOC(){
 
 
     // size: [eigenstate_num , 2* nmodes[0], 2* nmodes[0]] store final result
-    double *** Eigenstate_OTOC;
-
-    Eigenstate_OTOC = new double ** [2 * nmodes[0]];
+    complex<double> *** Eigenstate_OTOC;
+    double *** Eigenstate_OTOC_real;
+    double *** Eigenstate_OTOC_imag;
+    Eigenstate_OTOC = new complex<double> ** [2 * nmodes[0]];
+    Eigenstate_OTOC_real = new double ** [2 * nmodes[0]];
+    Eigenstate_OTOC_imag = new double ** [2 * nmodes[0]];
     for(i=0;i<2 * nmodes[0];i++){
-        Eigenstate_OTOC[i] = new double * [ 2 * nmodes[0]];
+        Eigenstate_OTOC[i] = new complex<double> * [ 2 * nmodes[0]];
+        Eigenstate_OTOC_real[i] = new double * [ 2 * nmodes[0]];
+        Eigenstate_OTOC_imag[i] = new double * [ 2 * nmodes[0]];
         for(j=0;j<2*nmodes[0];j++){
-            Eigenstate_OTOC[i][j] = new double [selected_eigenstate_num];
+            Eigenstate_OTOC[i][j] = new complex<double> [selected_eigenstate_num];
+            Eigenstate_OTOC_real[i][j] = new double [selected_eigenstate_num];
+            Eigenstate_OTOC_imag[i][j] = new double [selected_eigenstate_num];
         }
     }
 
+    complex<double> ** Thermal_OTOC = new complex<double> * [ 2 * nmodes[0] ];
+    for(i=0;i< 2* nmodes[0]; i++ ){
+        Thermal_OTOC[i] = new complex<double> [ 2* nmodes[0] ];
+    }
 
 
-    double *** local_Eigenstate_OTOC;
-    local_Eigenstate_OTOC = new double ** [2*nmodes[0]];
+    complex<double> *** local_Eigenstate_OTOC;
+    double *** local_Eigenstate_OTOC_real;
+    double *** local_Eigenstate_OTOC_imag;
+    local_Eigenstate_OTOC = new complex<double> ** [2*nmodes[0]];
+    local_Eigenstate_OTOC_real = new double ** [2 * nmodes[0]];
+    local_Eigenstate_OTOC_imag = new double ** [2 * nmodes[0]];
     for(i=0;i<2*nmodes[0];i++){
-        local_Eigenstate_OTOC[i] = new  double * [ 2 * nmodes[0]];
+        local_Eigenstate_OTOC[i] = new  complex<double> * [ 2 * nmodes[0]];
+        local_Eigenstate_OTOC_real[i] = new double * [ 2 * nmodes[0]];
+        local_Eigenstate_OTOC_imag[i] = new double * [ 2 * nmodes[0]];
         for(j=0;j<2*nmodes[0]; j++){
-            local_Eigenstate_OTOC[i][j] = new  double  [local_eigenstate_num];
+            local_Eigenstate_OTOC[i][j] = new  complex<double> [local_eigenstate_num];
+            local_Eigenstate_OTOC_real[i][j] = new double [selected_eigenstate_num];
+            local_Eigenstate_OTOC_imag[i][j] = new double [selected_eigenstate_num];
         }
     }
 
@@ -779,10 +859,22 @@ void detector::compute_Eigenstate_OTOC(){
 
     }
 
+    ofstream Thermal_OTOC_output;
+    if(my_id == 0){
+        Thermal_OTOC_output.open(path + "unregularized_Thermal_OTOC_solving_eigenstate.txt");
+        // output information about dof
+        Thermal_OTOC_output << nmodes[0] << endl;
+
+    }
+
     // compute Eigenstate OTOC and output
     for(i=0;i<Time_series_len;i++){
         t = Time_series[i];
-        compute_Eigenstate_OTOC_submodule(Eigenstate_OTOC_output,t,Eigenstate_OTOC, local_Eigenstate_OTOC, l_M_m_overlap_value, l_M_m_index_l, l_M_m_local_overlap_value  ,  l_M_m_local_index_l , recv_count,displs);
+        compute_Eigenstate_OTOC_submodule(Eigenstate_OTOC_output, Thermal_OTOC_output , t,
+                                          Eigenstate_OTOC, Eigenstate_OTOC_real,Eigenstate_OTOC_imag,
+                                          local_Eigenstate_OTOC, local_Eigenstate_OTOC_real, local_Eigenstate_OTOC_imag,
+                                          Thermal_OTOC,
+                                          l_M_m_overlap_value, l_M_m_index_l, l_M_m_local_overlap_value  ,  l_M_m_local_index_l , recv_count,displs);
         if(my_id == 0){
             cout << " finish computing Eigenstate OTOC for time:  t =  " << t << endl;
         }
@@ -792,20 +884,36 @@ void detector::compute_Eigenstate_OTOC(){
     for(i=0;i< 2 * nmodes[0] ;i++){
         for(j=0;j<2*nmodes[0];j++){
             delete [] Eigenstate_OTOC[i][j];
+            delete [] Eigenstate_OTOC_real[i][j];
+            delete [] Eigenstate_OTOC_imag[i][j];
         }
         delete [] Eigenstate_OTOC[i];
+        delete [] Eigenstate_OTOC_real[i];
+        delete [] Eigenstate_OTOC_imag[i];
     }
     delete [ ] Eigenstate_OTOC;
+    delete [] Eigenstate_OTOC_real;
+    delete [] Eigenstate_OTOC_imag;
 
 
     for(i=0;i< 2 * nmodes[0] ;i++){
         for(j=0;j<2*nmodes[0];j++){
             delete [] local_Eigenstate_OTOC[i][j];
+            delete [] local_Eigenstate_OTOC_real[i][j];
+            delete [] local_Eigenstate_OTOC_imag[i][j];
         }
         delete [] local_Eigenstate_OTOC[i];
+        delete [] local_Eigenstate_OTOC_real[i];
+        delete [] local_Eigenstate_OTOC_imag[i];
     }
     delete [ ] local_Eigenstate_OTOC;
+    delete [ ] local_Eigenstate_OTOC_real;
+    delete [ ] local_Eigenstate_OTOC_imag;
 
+    for(i=0;i<2*nmodes[0]; i++ ){
+        delete [] Thermal_OTOC[i];
+    }
+    delete [] Thermal_OTOC;
 
     for(i=0;i<2*nmodes[0];i++){
         for(j=0;j<2*nmodes[0];j++){

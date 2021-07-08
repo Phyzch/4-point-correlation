@@ -151,7 +151,7 @@ void full_system::Quantum_evolution() {
         delete [] eigenvalue_list;
     }
 
-    // compute eigenstate of system using MFD
+    // compute eigenstate overlap with initial state using MFD
     if(compute_overlap_with_eigenstate){
         compute_eigenstate_overlap_with_initial_state();
     }
@@ -274,7 +274,7 @@ void full_system::Quantum_evolution() {
 //
 //
 //            // compute OTOC for eigenstate solved and output to file.
-//            d.compute_Eigenstate_OTOC();
+            d.compute_Eigenstate_OTOC();
 
             if(my_id == 0){
                 cout <<" Finish computing Eigenstate OTOC ." << endl;

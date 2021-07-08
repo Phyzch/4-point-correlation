@@ -18,7 +18,7 @@ bool compute_eigenvalue_spectrum = false ; // bool variable to decide if use Lan
 bool no_coupling = false;
 bool compute_overlap_with_eigenstate = false ;
 bool compute_eigenvector_use_MKL_module = true;
-bool compute_Eigenstate_OTOC_bool = false  ;
+bool compute_Eigenstate_OTOC_bool = true  ;
 
 // About matflag in input.txt: If matflag==2, +We output all x,y (after the pre_coupling), matrix element, detector matrix element etc.
 // if matflag==1: We don't output anything but still we will save our final simulation results in save.txt
@@ -27,7 +27,7 @@ bool compute_Eigenstate_OTOC_bool = false  ;
 int main(int argc,char * argv []) {
     srand(time(0));
     string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/Other Molecule/Cyclopentanone/spectrum/2232222/";
+                       "/Other Molecule/Cyclopentanone/try/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
     string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=300/";
  //   string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";

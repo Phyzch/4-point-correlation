@@ -182,6 +182,9 @@ void detector::read_MPI(ifstream & input, ofstream & output, ofstream & log, int
     MPI_Bcast(&cutoff2,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(&kelvin,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
+    double kelvin_in_wave_number_unit = kelvin * 0.6945;
+    Boltzmann_beta = 1/ kelvin_in_wave_number_unit ;
+
     for(i=0;i<stlnum;i++){
         MPI_Bcast(&mfreq[i][0],nmodes[i],MPI_DOUBLE,0,MPI_COMM_WORLD);
         MPI_Bcast(&nmax[i][0],nmodes[i],MPI_INT,0,MPI_COMM_WORLD);

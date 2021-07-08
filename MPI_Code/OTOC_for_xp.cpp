@@ -139,21 +139,21 @@ void detector:: compute_Lyapunov_spectrum_for_xp(complex<double>  ** Lyapunov_sp
             }
             // output each states' contribution to OTOC for xp
             // real part
-            if(my_id == 0){
-                for(i=0;i<2*nmodes[0];i++){
-                    for(j=0; j < 2*nmodes[0]; j++){
-                        Every_states_contribution_to_OTOC_xp << real(Lyapunov_spectrum_for_xp_from_single_state[i][j]) << " ";
-                    }
-                }
-                Every_states_contribution_to_OTOC_xp << endl;
-                // imaginary part
-                for(i=0;i<2*nmodes[0];i++){
-                    for(j=0; j< 2*nmodes[0]; j++) {
-                        Every_states_contribution_to_OTOC_xp << imag(Lyapunov_spectrum_for_xp_from_single_state[i][j]) << " ";
-                    }
-                }
-                Every_states_contribution_to_OTOC_xp << endl;
-            }
+//            if(my_id == 0){
+//                for(i=0;i<2*nmodes[0];i++){
+//                    for(j=0; j < 2*nmodes[0]; j++){
+//                        Every_states_contribution_to_OTOC_xp << real(Lyapunov_spectrum_for_xp_from_single_state[i][j]) << " ";
+//                    }
+//                }
+//                Every_states_contribution_to_OTOC_xp << endl;
+//                // imaginary part
+//                for(i=0;i<2*nmodes[0];i++){
+//                    for(j=0; j< 2*nmodes[0]; j++) {
+//                        Every_states_contribution_to_OTOC_xp << imag(Lyapunov_spectrum_for_xp_from_single_state[i][j]) << " ";
+//                    }
+//                }
+//                Every_states_contribution_to_OTOC_xp << endl;
+//            }
 
         }
 
