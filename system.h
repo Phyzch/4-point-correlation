@@ -60,6 +60,8 @@ public:
 	int ** dmatnum_each_process;  // record detector matrix element number in each process.
     int ** dmatsize_offset_each_process;
 	int ** dmat_offset_each_process; // record local first detector matrix's index in global matrix.
+
+	double ** total_dmat_diagonal;
 	double ** total_dmat;
 	int ** total_dirow, ** total_dicol; // dirow, dicol, dmat in all process.
 

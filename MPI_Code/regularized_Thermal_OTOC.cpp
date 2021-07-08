@@ -195,15 +195,31 @@ void detector:: compute_regularized_thermal_OTOC_component(){
     // result store in regularized_thermal_OTOC_overlap_Haar_state_basis_set . dimension [N_Haar][N_basis_set ] [2 * N_dof] [2* N_dof]
     // computational cost for this part :  N_basis * N_Haar * N_dof^2 * O(sparsified_state_number)
     int i, j, k, l , m;
+
     int nearby_state_basis_size = nearby_state_index.size();
 
+    int begin_index = total_dmat_size[0] / num_proc * my_id ;  // actually here total_dmat_size[0] == nearby_state_basis_size
+
     int Boltzmann_weighted_list_size;
+    int local_basis_set_index;
     int basis_set_index;
 
     int mode_index;
 
     complex<double> C1;
     complex<double> C2;
+    complex<double> C1_sum;
+    complex<double> C2_sum;
+    double C1_real;
+    double C1_imag;
+    double C2_real;
+    double C2_imag;
+    double C1_real_sum;
+    double C1_imag_sum;
+    double C2_real_sum;
+    double C2_imag_sum;
+
+
 
     complex<double> Boltzmann_weighted_basis_basis_overlap;
     complex<double> overlap_with_time_dependent_basis_set;
@@ -221,7 +237,8 @@ void detector:: compute_regularized_thermal_OTOC_component(){
                     C1 = 0;
                     Boltzmann_weighted_list_size = Boltzmann_weighted_basis_index_sparsify[m].size();
                     for(l=0;l<Boltzmann_weighted_list_size; l++ ){
-                        basis_set_index = Boltzmann_weighted_basis_index_sparsify[m][l] ;
+                        local_basis_set_index = Boltzmann_weighted_basis_index_sparsify[m][l] ;
+                        basis_set_index = local_basis_set_index + begin_index;
                         // <m|e^{-\beta H/4} | m~>:  index l stands for |m~> . index m stands for |m>
                         Boltzmann_weighted_basis_basis_overlap = complex<double> ( Boltzmann_factor_weighted_x_sparsify[m][l]  ,
                                                                                    - Boltzmann_factor_weighted_y_sparsify[m][l] );
@@ -229,6 +246,12 @@ void detector:: compute_regularized_thermal_OTOC_component(){
                         overlap_with_time_dependent_basis_set =  Haar_state_overlap_time_dependent_basis_set[i][basis_set_index][k+1][j]  ;
                         C1 = C1 + Boltzmann_weighted_basis_basis_overlap * overlap_with_time_dependent_basis_set ;
                     }
+                    C1_real = real(C1);
+                    C1_imag = imag(C1);
+                    MPI_Allreduce(&C1_real, &C1_real_sum , 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    MPI_Allreduce(&C1_imag, &C1_imag_sum , 1,  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    C1_sum = complex<double> (C1_real_sum, C1_imag_sum);
+
 
                     // compute <m | y a_{k} a_{j}(t) y | Haar> , result store in C2
                     C2 = 0;
@@ -242,7 +265,9 @@ void detector:: compute_regularized_thermal_OTOC_component(){
 
                     Boltzmann_weighted_list_size = ladder_operator_Boltzmann_weighted_basis_index_sparsify[m][mode_index].size();
                     for(l=0;l<Boltzmann_weighted_list_size;l++){
-                        basis_set_index = ladder_operator_Boltzmann_weighted_basis_index_sparsify[m][mode_index][l];
+                        // this basis set index is local index in process.
+                        local_basis_set_index = ladder_operator_Boltzmann_weighted_basis_index_sparsify[m][mode_index][l];
+                        basis_set_index = local_basis_set_index + begin_index;
                         // <m| e^{-\beta H/4} a_{k} | m~> : index l stands for |m~> , index m stands for |m>
                         Boltzmann_weighted_basis_basis_overlap = complex<double> ( ladder_operator_Boltzmann_weighted_x_sparsify[m][mode_index][l] ,
                                                                                    - ladder_operator_Boltzmann_weighted_y_sparsify[m][mode_index][l]  ) ;
@@ -251,8 +276,14 @@ void detector:: compute_regularized_thermal_OTOC_component(){
                         C2 = C2 + Boltzmann_weighted_basis_basis_overlap * overlap_with_time_dependent_basis_set ;
                     }
 
+                    C2_real = real(C2);
+                    C2_imag = imag(C2);
+                    MPI_Allreduce(&C2_real, &C2_real_sum , 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    MPI_Allreduce(&C2_imag, &C2_imag_sum , 1,  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                    C2_sum = complex<double> (C2_real_sum, C2_imag_sum);
+
                      // <m| y [a_{j}(t) , a_{k}] y | Haar>
-                    regularized_thermal_OTOC_overlap_Haar_state_basis_set [i][m][j][k] = C1 - C2 ;
+                    regularized_thermal_OTOC_overlap_Haar_state_basis_set [i][m][j][k] = C1_sum - C2_sum ;
 
                 }
             }

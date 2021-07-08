@@ -537,11 +537,16 @@ void detector:: broadcast_total_dmat(){
     total_dmat= new double * [stlnum];
     total_dirow= new int * [stlnum];
     total_dicol= new int * [stlnum];
+    total_dmat_diagonal = new double * [stlnum];
     int m;
     for(m=0;m<stlnum;m++){
+        total_dmat_diagonal[m] = new double [total_dmat_size[m]];
         total_dmat[m] = new double [total_dmat_num[m]];
         total_dirow[m] = new int [total_dmat_num[m]];
         total_dicol[m] = new int [total_dmat_num[m]];
+        MPI_Allgatherv(&dmat[m][0], dmatsize[m] , MPI_DOUBLE,
+                       &total_dmat_diagonal[m][0], dmatsize_each_process[m], dmatsize_offset_each_process[m], MPI_DOUBLE, MPI_COMM_WORLD);
+
         MPI_Allgatherv(&dmat[m][0],dmatnum[m],MPI_DOUBLE,
                 &total_dmat[m][0],dmatnum_each_process[m],dmat_offset_each_process[m],MPI_DOUBLE,MPI_COMM_WORLD);
         MPI_Allgatherv(&dirow[m][0],dmatnum[m],MPI_INT,
@@ -598,6 +603,10 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
         for(k=0;k<dmatsize[0];k++){
             xd[state_index][k] = distribution(generator);
             yd[state_index][k] = distribution(generator);
+
+            xd[state_index][k] = 1;
+            yd[state_index][k] = 1;
+
             norm = norm + std::norm(xd[state_index][k]) + std::norm(yd[state_index][k]) ;
         }
 

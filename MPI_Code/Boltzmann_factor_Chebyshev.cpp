@@ -20,11 +20,11 @@ void detector::prepare_compute_Boltzmann_factor_use_Chebyshev_polynomial(double 
     max_Hamiltonian = total_dmat[0][0];
     min_Hamiltonian = total_dmat[0][0];
     for(i=0;i<total_dmat_size[0];i++){
-        if (max_Hamiltonian < total_dmat[0][i]){
-            max_Hamiltonian = total_dmat[0][i];
+        if (max_Hamiltonian < total_dmat_diagonal[0][i]){
+            max_Hamiltonian = total_dmat_diagonal[0][i];
         }
-        if (min_Hamiltonian > total_dmat[0][i]){
-            min_Hamiltonian = total_dmat[0][i];
+        if (min_Hamiltonian > total_dmat_diagonal[0][i]){
+            min_Hamiltonian = total_dmat_diagonal[0][i];
         }
     }
 
