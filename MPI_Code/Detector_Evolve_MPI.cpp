@@ -1170,7 +1170,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             start_clock = clock();
             d.SUR_onestep_MPI(cf);
             end_clock = clock();
-            if(my_id == 0){
+            if(my_id == 0 and t == delt ){
                 cout << "Evolve one step t : " << (end_clock - start_clock)/CLOCKS_PER_SEC << endl;
             }
         }
