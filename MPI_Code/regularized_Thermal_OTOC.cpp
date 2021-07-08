@@ -134,10 +134,6 @@ void detector:: compute_Haar_random_state_with_ladder_operator_overlap_with_time
     int i,j , k, l, m;
     complex<double> overlap;
     complex<double> overlap_sum;
-    double overlap_real;
-    double overlap_imag;
-    double overlap_real_sum;
-    double overlap_imag_sum;
 
     int basis_index;
     double real_part_value_Haar_state;
@@ -146,17 +142,22 @@ void detector:: compute_Haar_random_state_with_ladder_operator_overlap_with_time
     double real_part_value_basis_state;
     double imag_part_value_basis_state;
 
+    int nearby_state_basis_size = nearby_state_index.size();
 
     int sparsify_basis_list_size;
+
+    double * overlap_real_list = new double [nearby_state_basis_size];
+    double * overlap_imag_list = new double [nearby_state_basis_size];
+    double * overlap_real_list_sum = new double [nearby_state_basis_size];
+    double * overlap_imag_list_sum = new double [nearby_state_basis_size];
+
     // compute a_{i} e^{-iHt/\hbar} a_{j} e^{-\beta H/4} |\phi_{Haar}>
     compute_Haar_random_state_with_ladder_operator();
 
-    int nearby_state_basis_size = nearby_state_index.size();
     for(i=0;i<N_Haar; i++ ){
-        for(m=0;m<nearby_state_basis_size; m++ ){
-            for(j=0;j<2 * nmodes[0]+ 1 ; j++  ){
-                for(k=0; k<2 *nmodes[0]; k++ ){
-
+        for(j=0;j<2 * nmodes[0]+ 1 ; j++  ){
+            for(k=0; k<2 *nmodes[0]; k++ ){
+                for(m=0;m<nearby_state_basis_size; m++ ){
                     overlap = 0;
                     overlap_sum = 0 ;
                     sparsify_basis_list_size = Haar_state_with_ladder_operator_basis_set_sparsify[i][j][k].size();
@@ -174,19 +175,25 @@ void detector:: compute_Haar_random_state_with_ladder_operator_overlap_with_time
                     }
 
                     // sum result in different process
-                    overlap_real = real(overlap);
-                    overlap_imag = imag(overlap);
-                    MPI_Allreduce(&overlap_real, &overlap_real_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    MPI_Allreduce(&overlap_imag, &overlap_imag_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    overlap_sum = complex<double> (overlap_real_sum, overlap_imag_sum);
-
-                    Haar_state_overlap_time_dependent_basis_set[i][m][j][k] = overlap_sum ;
+                    overlap_real_list[m] = real(overlap);
+                    overlap_imag_list[m] = imag(overlap);
 
                 }
+                MPI_Allreduce(&overlap_real_list[0] , &overlap_real_list_sum[0] , nearby_state_basis_size, MPI_DOUBLE, MPI_SUM,MPI_COMM_WORLD);
+                MPI_Allreduce(&overlap_imag_list[0] , &overlap_imag_list_sum[0] , nearby_state_basis_size , MPI_DOUBLE,MPI_SUM, MPI_COMM_WORLD);
+
+                for(m=0;m<nearby_state_basis_size;m++){
+                    Haar_state_overlap_time_dependent_basis_set[i][m][j][k] = complex<double> (overlap_real_list_sum[m] , overlap_imag_list_sum[m]);
+                }
+
             }
         }
     }
 
+    delete [] overlap_real_list;
+    delete [] overlap_real_list_sum;
+    delete [] overlap_imag_list;
+    delete [] overlap_imag_list_sum;
 
 }
 
@@ -224,13 +231,20 @@ void detector:: compute_regularized_thermal_OTOC_component(){
     complex<double> Boltzmann_weighted_basis_basis_overlap;
     complex<double> overlap_with_time_dependent_basis_set;
 
+    double * real_regularized_overlap = new double [nearby_state_basis_size];
+    double * imag_regularized_overlap = new double [nearby_state_basis_size];
+    double * real_regularized_overlap_sum = new double [nearby_state_basis_size];
+    double * imag_regularized_overlap_sum = new double [nearby_state_basis_size];
+
     // compute <m~|e^{iHt} a_{i} e^{-iHt} a_{j} e^{-\beta H/4} |Haar>
     compute_Haar_random_state_with_ladder_operator_overlap_with_time_dependent_basis_set();
 
     for(i=0;i<N_Haar;i++){
-        for(m=0;m< nearby_state_basis_size;m++){
-            for(j=0;j<2*nmodes[0] ; j++) {
-                for(k=0;k<2*nmodes[0] ; k++ ){
+        for(j=0;j<2*nmodes[0] ; j++) {
+            for(k=0;k<2*nmodes[0] ; k++ ){
+
+
+                for(m=0;m< nearby_state_basis_size;m++){
                     // compute <m| y [a_{j}(t) , a_{k}] y | Haar>
 
                     // compute <m| y a_{j}(t) a_{k} y | Haar> . result store in C1
@@ -246,11 +260,7 @@ void detector:: compute_regularized_thermal_OTOC_component(){
                         overlap_with_time_dependent_basis_set =  Haar_state_overlap_time_dependent_basis_set[i][basis_set_index][k+1][j]  ;
                         C1 = C1 + Boltzmann_weighted_basis_basis_overlap * overlap_with_time_dependent_basis_set ;
                     }
-                    C1_real = real(C1);
-                    C1_imag = imag(C1);
-                    MPI_Allreduce(&C1_real, &C1_real_sum , 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    MPI_Allreduce(&C1_imag, &C1_imag_sum , 1,  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    C1_sum = complex<double> (C1_real_sum, C1_imag_sum);
+
 
 
                     // compute <m | y a_{k} a_{j}(t) y | Haar> , result store in C2
@@ -276,21 +286,26 @@ void detector:: compute_regularized_thermal_OTOC_component(){
                         C2 = C2 + Boltzmann_weighted_basis_basis_overlap * overlap_with_time_dependent_basis_set ;
                     }
 
-                    C2_real = real(C2);
-                    C2_imag = imag(C2);
-                    MPI_Allreduce(&C2_real, &C2_real_sum , 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    MPI_Allreduce(&C2_imag, &C2_imag_sum , 1,  MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                    C2_sum = complex<double> (C2_real_sum, C2_imag_sum);
 
                      // <m| y [a_{j}(t) , a_{k}] y | Haar>
-                    regularized_thermal_OTOC_overlap_Haar_state_basis_set [i][m][j][k] = C1_sum - C2_sum ;
-
+                    real_regularized_overlap[m] = real(C1 - C2);
+                    imag_regularized_overlap[m] = imag(C1 - C2 );
                 }
+                MPI_Allreduce(&real_regularized_overlap[0], &real_regularized_overlap_sum[0], nearby_state_basis_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                MPI_Allreduce(&imag_regularized_overlap[0] , &imag_regularized_overlap_sum[0], nearby_state_basis_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+                for(m=0;m<nearby_state_basis_size;m++){
+                    regularized_thermal_OTOC_overlap_Haar_state_basis_set [i][m][j][k] = complex<double> (real_regularized_overlap_sum[m] , imag_regularized_overlap_sum[m]);
+                }
+
             }
         }
+
     }
 
-
+    delete [] real_regularized_overlap;
+    delete [] real_regularized_overlap_sum;
+    delete [] imag_regularized_overlap;
+    delete [] imag_regularized_overlap_sum;
 
 }
 
@@ -303,37 +318,40 @@ void detector:: compute_regularized_thermal_OTOC_Lyapunov_spectrum( ){
     compute_regularized_thermal_OTOC_component() ;
 
     int Haar_index;
-    for(Haar_index = 0; Haar_index <N_Haar; Haar_index ++ ){
-        for(i=0;i< 2 * nmodes[0]; i++){
-            for(j=0;j<2 * nmodes[0] ; j++ ){
-                // compute L_{ij} for Haar state |\phi>
-                Lyapunov_spectrum_component = 0 ;
-                for(m=0;m< nearby_state_basis_size ; m++ ){
-                    for(k=0; k < 2*nmodes[0]; k++ ){
-                        Lyapunov_spectrum_component = Lyapunov_spectrum_component +
-                                std::conj(regularized_thermal_OTOC_overlap_Haar_state_basis_set[Haar_index][m][k][i]) *
-                                regularized_thermal_OTOC_overlap_Haar_state_basis_set[Haar_index][m][k][j] ;
+
+    if(my_id == 0){
+        for(Haar_index = 0; Haar_index <N_Haar; Haar_index ++ ){
+            for(i=0;i< 2 * nmodes[0]; i++){
+                for(j=0;j<2 * nmodes[0] ; j++ ){
+                    // compute L_{ij} for Haar state |\phi>
+                    Lyapunov_spectrum_component = 0 ;
+                    for(m=0;m< nearby_state_basis_size ; m++ ){
+                        for(k=0; k < 2*nmodes[0]; k++ ){
+                            Lyapunov_spectrum_component = Lyapunov_spectrum_component +
+                                                          std::conj(regularized_thermal_OTOC_overlap_Haar_state_basis_set[Haar_index][m][k][i]) *
+                                                          regularized_thermal_OTOC_overlap_Haar_state_basis_set[Haar_index][m][k][j] ;
+                        }
                     }
+
+                    regularized_thermal_Lyapunov_spectrum_each_Haar_state[Haar_index][i][j]  = Lyapunov_spectrum_component ;
+                    regularized_thermal_Lyapunov_spectrum_each_Haar_state[Haar_index][i][j] =
+                            regularized_thermal_Lyapunov_spectrum_each_Haar_state[Haar_index][i][j] / Haar_state_normalization_list[Haar_index] ;
+
                 }
-
-                regularized_thermal_Lyapunov_spectrum_each_Haar_state[Haar_index][i][j]  = Lyapunov_spectrum_component ;
-                regularized_thermal_Lyapunov_spectrum_each_Haar_state[Haar_index][i][j] =
-                        regularized_thermal_Lyapunov_spectrum_each_Haar_state[Haar_index][i][j] / Haar_state_normalization_list[Haar_index] ;
-
             }
         }
-    }
 
-    // average result
-    for(i=0;i<2*nmodes[0]; i++ ){
-        for(j=0;j<2*nmodes[0]; j++){
-            regularized_thermal_Lyapunov_spectrum[i][j] = 0;
-            for(Haar_index = 0; Haar_index < N_Haar; Haar_index ++ ){
-                regularized_thermal_Lyapunov_spectrum[i][j] = regularized_thermal_Lyapunov_spectrum[i][j] +
-                                                                regularized_thermal_Lyapunov_spectrum_each_Haar_state[Haar_index][i][j];
+        // average result
+        for(i=0;i<2*nmodes[0]; i++ ){
+            for(j=0;j<2*nmodes[0]; j++){
+                regularized_thermal_Lyapunov_spectrum[i][j] = 0;
+                for(Haar_index = 0; Haar_index < N_Haar; Haar_index ++ ){
+                    regularized_thermal_Lyapunov_spectrum[i][j] = regularized_thermal_Lyapunov_spectrum[i][j] +
+                                                                  regularized_thermal_Lyapunov_spectrum_each_Haar_state[Haar_index][i][j];
+                }
+                regularized_thermal_Lyapunov_spectrum[i][j] = regularized_thermal_Lyapunov_spectrum[i][j] / double(N_Haar);
+
             }
-            regularized_thermal_Lyapunov_spectrum[i][j] = regularized_thermal_Lyapunov_spectrum[i][j] / double(N_Haar);
-
         }
     }
 

@@ -429,6 +429,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     int b;
     double var;
 
+    double start_clock;
+    double end_clock;
+
     double Magnitude;
     MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
@@ -1016,9 +1019,11 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 //                                           xd_for_xp_sparsify, yd_for_xp_sparsify, index_for_xp_sparsify, t, TOC_output);
 
                 // -------------- compute regularized thermal OTOC --------------------
+                start_clock = clock();
                 d.compute_regularized_thermal_OTOC_Lyapunov_spectrum( );
-
-                    if(my_id == 0){
+                end_clock = clock();
+                if(my_id == 0){
+                    cout << " Finish computing one step of regularized thermal OTOC , t = " << (end_clock - start_clock)/CLOCKS_PER_SEC << endl;
                     regularized_Thermal_OTOC_output << t <<endl;
                     for(i=0;i< 2 * d.nmodes[0];i++){
                         for(j=0;j<2*d.nmodes[0];j++){
@@ -1162,7 +1167,12 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
             }
             t= t+ delt;
+            start_clock = clock();
             d.SUR_onestep_MPI(cf);
+            end_clock = clock();
+            if(my_id == 0){
+                cout << "Evolve one step t : " << (end_clock - start_clock)/CLOCKS_PER_SEC << endl;
+            }
         }
         final_time[0] = t;
     }
