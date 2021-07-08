@@ -594,8 +594,9 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
     std::default_random_engine  generator;
     std::normal_distribution<double> distribution(0,1);
     int state_index ;
+
     for(i=0;i<N_Haar; i++ ){
-        state_index = Haar_state_index_list[i];
+        state_index = regularized_Haar_state_index_list[i];
 
         // initialize Haar random state  xd [state_index] , yd[state_index]
         // draw distribution from Gaussian random distribution. Then normalize it.
@@ -603,7 +604,7 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
         for(k=0;k<dmatsize[0];k++){
             xd[state_index][k] = distribution(generator);
             yd[state_index][k] = distribution(generator);
-
+            
             norm = norm + std::norm(xd[state_index][k]) + std::norm(yd[state_index][k]) ;
         }
 
@@ -616,12 +617,13 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
 
     }
 
+
     // decorate Haar random state with Boltzmann factor e^{-\beta H/4}
     update_dx(state_number_for_evolution);
     update_dy(state_number_for_evolution);
 
     for(i = 0; i< N_Haar; i++ ){
-        state_index = Haar_state_index_list[i] ;
+        state_index = regularized_Haar_state_index_list[i] ;
 
         vector<double> Boltzmann_factor_weighted_wave_func_x ;
         vector<double> Boltzmann_factor_weighted_wave_func_y;
@@ -632,9 +634,10 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
 
     }
 
+
     // compute wave function after ladder operator a_{j} is operated on Boltzmann weighted wave function:
     for( i = 0; i<N_Haar; i++ ){
-        state_index = Haar_state_index_list[i] ;  // index for Haar random variable (after multiply e^{-\beta H/4})
+        state_index = regularized_Haar_state_index_list[i] ;  // index for Haar random variable (after multiply e^{-\beta H/4})
         vector<vector<double>>  xd_for_ladder_operator;
         vector<vector<double>>  yd_for_ladder_operator;
         ladder_operator_operation(xd[state_index] , yd[state_index], xd_for_ladder_operator, yd_for_ladder_operator );
@@ -643,6 +646,47 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
             for(k=0;k<dmatsize[0];k++){
                 xd[state_index][k] = xd_for_ladder_operator[j][k];
                 yd[state_index][k] = yd_for_ladder_operator[j][k];
+            }
+        }
+    }
+
+
+    update_dx(state_number_for_evolution);
+    update_dy(state_number_for_evolution);
+
+    // for comparision, we use same Haar random state to compute unregularized Lyapunov spectrum.
+    // we initialize it as e^{-\beta H /2 } |Haar>
+    int unregularized_Haar_state_index;
+    int regularized_Haar_state_index;
+    for(i=0; i<N_Haar; i++ ){
+        unregularized_Haar_state_index = unregularized_Haar_state_index_list[i];
+        regularized_Haar_state_index = regularized_Haar_state_index_list[i];
+
+        xd[unregularized_Haar_state_index] = xd[regularized_Haar_state_index];
+        yd[unregularized_Haar_state_index] = yd[regularized_Haar_state_index];
+
+        vector<double> Boltzmann_factor_weighted_wave_func_x ;
+        vector<double> Boltzmann_factor_weighted_wave_func_y;
+
+        Chebyshev_method_Boltzmann_factor(xd[unregularized_Haar_state_index] , yd[unregularized_Haar_state_index] ,
+                                          Boltzmann_factor_weighted_wave_func_x, Boltzmann_factor_weighted_wave_func_y) ;
+        // e^{-\beta H /2 } |Haar>
+        xd[unregularized_Haar_state_index] = Boltzmann_factor_weighted_wave_func_x;
+        yd[unregularized_Haar_state_index] = Boltzmann_factor_weighted_wave_func_y;
+
+    }
+
+    // apply ladder operator to e^{-\beta H /2 } |Haar>
+    for(i=0;i<N_Haar; i++ ){
+        unregularized_Haar_state_index = unregularized_Haar_state_index_list[i] ;  // index for Haar random variable (after multiply e^{-\beta H/4})
+        vector<vector<double>>  xd_for_ladder_operator;
+        vector<vector<double>>  yd_for_ladder_operator;
+        ladder_operator_operation(xd[unregularized_Haar_state_index] , yd[unregularized_Haar_state_index], xd_for_ladder_operator, yd_for_ladder_operator );
+        for(j=0;j<2*nmodes[0];j++){
+            unregularized_Haar_state_index = unregularized_Haar_state_index + 1;  // state_index for a_{j} e^{-beta H/4} | \phi>
+            for(k=0;k<dmatsize[0];k++){
+                xd[unregularized_Haar_state_index][k] = xd_for_ladder_operator[j][k];
+                yd[unregularized_Haar_state_index][k] = yd_for_ladder_operator[j][k];
             }
         }
     }
@@ -908,10 +952,18 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     state_number_for_evolution = nearby_state_index.size();
     Haar_state_index = total_dmat_size[0];
     for(i=0;i<N_Haar; i++){
-        Haar_state_index_list.push_back(Haar_state_index);
+        regularized_Haar_state_index_list.push_back(Haar_state_index);
         Haar_state_index = Haar_state_index + 2 * nmodes[0] + 1 ; // we have to incorporate a_{j} e^{-\beta H/4} | Haar>
     }
     state_number_for_evolution = state_number_for_evolution + ( 2 * nmodes[0] + 1 ) * N_Haar;
+
+    // for computing unregularized Lyapunov spectrum
+    Haar_state_index = state_number_for_evolution;
+    for(i=0; i< N_Haar; i++ ){
+        unregularized_Haar_state_index_list.push_back(Haar_state_index);
+        Haar_state_index = Haar_state_index + 2 * nmodes[0] + 1 ;
+    }
+    state_number_for_evolution = state_number_for_evolution + (2*nmodes[0] + 1 ) * N_Haar;
 
     nearby_state_index_size = nearby_state_index.size();
     for(i=0;i<nearby_state_index_size;i++){

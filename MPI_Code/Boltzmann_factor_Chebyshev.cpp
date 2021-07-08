@@ -308,7 +308,7 @@ void detector::compute_normalization_factor_for_Boltzmann_weighted_factor() {
     update_dy(state_number_for_evolution);
 
     for(i=0;i<N_Haar; i++){
-        state_index = Haar_state_index_list[i];
+        state_index = regularized_Haar_state_index_list[i];
         // Boltzmann_factor_weighted_wave_func_x will be e^{-\beta H /2 } | Haar>
         vector<double> Boltzmann_factor_weighted_wave_func_x ;
         vector<double> Boltzmann_factor_weighted_wave_func_y;

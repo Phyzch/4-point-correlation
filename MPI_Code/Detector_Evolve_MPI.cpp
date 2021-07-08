@@ -475,6 +475,9 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     ofstream TOC_output ;
 
     ofstream regularized_Thermal_OTOC_output;
+
+    ofstream unregularized_Thermal_OTOC_output;
+
     // -----------Open 4_point_correlation_output ofstream -----------------------------
     if(my_id==0){
         if(Detector_Continue_Simulation){
@@ -499,6 +502,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             TOC_output.open(path + "TOC_factorization.txt", ofstream::app);
 
             regularized_Thermal_OTOC_output.open(path + "regularized_Thermal_OTOC.txt" , ofstream::app);
+
+            unregularized_Thermal_OTOC_output.open(path+ "unregularized_Thermal_OTOC.txt" , ofstream :: app );
         }
         else {
             four_point_correlation_output.open(path + "4 point correlation.txt");
@@ -521,6 +526,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
             TOC_output.open(path + "TOC_factorization.txt");
 
             regularized_Thermal_OTOC_output.open(path + "regularized_Thermal_OTOC.txt" );
+
+            unregularized_Thermal_OTOC_output.open(path + "unregularied Thermal OTOC.txt");
         }
     }
 
@@ -552,8 +559,11 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
     // compute normalization factor: <Haar | e^{-\beta H } | Haar>
     d.compute_normalization_factor_for_Boltzmann_weighted_factor() ;
 
-    // allocate space for Haar random variable calculation
-    d.allocate_space_for_Haar_state_calculation();
+    // allocate space for regularized OTOC calculation
+    d.allocate_space_for_regularized_thermal_Lyapunov_spectrum_calculation();
+
+    // allocate space for unregularized OTOC calculation
+    d.allocate_space_for_unregularized_Lyapunov_spectrum_calculation();
 
     int initial_state_index_in_total_dmatrix;
     initial_state_index_in_total_dmatrix = d.initial_state_index[0]
@@ -869,6 +879,8 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
                 regularized_Thermal_OTOC_output << d.nmodes[0] << endl;
 
+                unregularized_Thermal_OTOC_output << d.nmodes[0] << endl;
+
 //                Every_states_contribution_to_OTOC_xp << d.nmodes[0] << endl;
 //                for(m=0;m<nearby_state_index_size;m++){
 //                    if(d.bool_neighbor_state_all_in_nearby_state_index[m]){
@@ -1041,6 +1053,28 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
 
                 }
 
+                // ------ compute unregularized thermal OTOC
+                start_clock = clock();
+                d.compute_unregularized_thermal_OTOC_Lyapunov_spectrum( );
+                end_clock = clock();
+                if(my_id == 0 ){
+                    cout << " Finish computing one step of unregularized thermal OTOC , t = " << (end_clock - start_clock)/CLOCKS_PER_SEC << endl;
+                    unregularized_Thermal_OTOC_output << t << endl;
+                    for(i=0;i< 2 * d.nmodes[0];i++){
+                        for(j=0;j<2*d.nmodes[0];j++){
+                            unregularized_Thermal_OTOC_output << real(d.unregularized_thermal_Lyapunov_spectrum[i][j]) << " ";
+                        }
+                    }
+                    unregularized_Thermal_OTOC_output << endl;
+
+                    for(i=0;i<2*d.nmodes[0];i++){
+                        for(j=0;j<2*d.nmodes[0];j++){
+                            unregularized_Thermal_OTOC_output << imag(d.unregularized_thermal_Lyapunov_spectrum[i][j]) <<" ";
+                        }
+                    }
+                    unregularized_Thermal_OTOC_output << endl;
+                }
+
 
                 // ---------- output 4-point correlation function average over states and variance -------------------
 //                compute_4_point_corre_for_multiple_states(state_for_average_size,nearby_state_index_size,n_offdiag_element,
@@ -1201,6 +1235,7 @@ void full_system::pre_coupling_evolution_MPI(int initial_state_choice){
         TOC_output.close();
 
         regularized_Thermal_OTOC_output.close();
+        unregularized_Thermal_OTOC_output.close();
     }
     // -------------- free remote_Vec_Count, remote_Vec_Index -------------------------
     for(i=0;i<1;i++){

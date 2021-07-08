@@ -4,7 +4,7 @@
 #include "../util.h"
 #include "../system.h"
 
-void detector::allocate_space_for_Haar_state_calculation(  ){
+void detector::allocate_space_for_regularized_thermal_Lyapunov_spectrum_calculation(  ){
     int i, j, k, l;
     int nearby_state_basis_size = nearby_state_index.size();
 
@@ -85,7 +85,7 @@ void detector::compute_Haar_random_state_with_ladder_operator (double sparsify_c
 
     for(i=0;i<N_Haar ; i++){
         for(j=0;j<2*nmodes[0]+1; j++ ){
-            state_index = Haar_state_index_list[i] + j ;
+            state_index = regularized_Haar_state_index_list[i] + j ;
             vector<vector<double>> xd_for_ladder_operation;
             vector<vector<double>> yd_for_ladder_operation;
             ladder_operator_operation(xd[state_index] , yd[state_index] , xd_for_ladder_operation, yd_for_ladder_operation);
@@ -215,17 +215,6 @@ void detector:: compute_regularized_thermal_OTOC_component(){
 
     complex<double> C1;
     complex<double> C2;
-    complex<double> C1_sum;
-    complex<double> C2_sum;
-    double C1_real;
-    double C1_imag;
-    double C2_real;
-    double C2_imag;
-    double C1_real_sum;
-    double C1_imag_sum;
-    double C2_real_sum;
-    double C2_imag_sum;
-
 
 
     complex<double> Boltzmann_weighted_basis_basis_overlap;

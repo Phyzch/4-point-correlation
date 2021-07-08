@@ -289,28 +289,54 @@ public:
 
     // Haar_random_vector should also be evolved in state space. Thus we need to incorporate it into nearby_state_index list.
     // We use vector<int> Haar_state_index to indicate their location. j ~ j+2N (N : dof) stores e^{-\beta H/4} |Haar> and  a_{j} e^{-\beta H/4} |Haar>
-    vector<int> Haar_state_index_list;
+    vector<int> regularized_Haar_state_index_list;
     vector<double> Haar_state_normalization_list;
 
-
+    // for regularized Lyapunov spectrum
     vector<vector<complex<double>>> regularized_thermal_Lyapunov_spectrum;
     vector<vector<vector< complex <double> >>>  regularized_thermal_Lyapunov_spectrum_each_Haar_state;
+    // <m| e^{-\beta H / 4} [a_{i}(t) , a_{j} ] e^{-\beta H / 4 } |Haar> .
     vector<vector<vector<vector<  complex<double>   >>>>   regularized_thermal_OTOC_overlap_Haar_state_basis_set  ;
+    // <m(t) | a_{i} e^{-iHt} a_{j} e^{-\beta H/4} |Haar>
     vector<vector<vector<vector<  complex<double>   >>>>  Haar_state_overlap_time_dependent_basis_set ;
+    // a_{i} e^{-iHt} a_{j} e^{-\beta H/4} |\phi_{Haar}>   and   a_{i}e^{-iHt} e^{-\beta H/4} |\phi_{Haar}>
     vector<vector<double>> ** Haar_state_with_ladder_operator_x_sparsify;
     vector<vector<double>> ** Haar_state_with_ladder_operator_y_sparsify;
     vector<vector<int>> ** Haar_state_with_ladder_operator_basis_set_sparsify;
 
+
+
     // compute <Haar | e^{-\beta H } | Haar>
     void compute_normalization_factor_for_Boltzmann_weighted_factor();
 
-    void allocate_space_for_Haar_state_calculation(  );
+    void allocate_space_for_regularized_thermal_Lyapunov_spectrum_calculation(  );
 
     void compute_Haar_random_state_with_ladder_operator(  double sparsify_criteria =  pow(10,-2)  );
     void compute_Haar_random_state_with_ladder_operator_overlap_with_time_dependent_basis_set(  );
     void  compute_regularized_thermal_OTOC_component(  ) ;
 
     void  compute_regularized_thermal_OTOC_Lyapunov_spectrum(  );
+
+
+    // unregularized Lyapunov spectrum.
+    vector<int> unregularized_Haar_state_index_list;
+
+    // a_{i} e^{-iHt} a_{j} e^{-\beta H/2} |\phi_{Haar}>   and   a_{i}e^{-iHt} e^{-\beta H/2} |\phi_{Haar}>
+    vector<vector<double>> ** unregularized_Haar_state_with_ladder_operator_x_sparsify;
+    vector<vector<double>> ** unregularized_Haar_state_with_ladder_operator_y_sparsify;
+    vector<vector<int>> ** unregularized_Haar_state_with_ladder_operator_basis_set_sparsify;
+
+    //  <m| [a_{i}(t) a_{j}] e^{-\beta H / 2 } | Haar>
+    vector<vector<vector<vector<  complex<double>   >>>>   unregularized_thermal_OTOC_overlap_Haar_state_basis_set  ;
+
+    // for unregularized Lyapunov spectrum
+    vector<vector<vector< complex <double> >>>  unregularized_thermal_Lyapunov_spectrum_each_Haar_state;
+    vector<vector<complex<double>>> unregularized_thermal_Lyapunov_spectrum;
+
+    void allocate_space_for_unregularized_Lyapunov_spectrum_calculation(  ) ;
+    void compute_unregularized_Haar_random_state_with_ladder_operator (double sparsify_criteri = pow(10,-2) );
+    void  compute_unregularized_thermal_OTOC_component();
+    void  compute_unregularized_thermal_OTOC_Lyapunov_spectrum(  );
 
 };
 
