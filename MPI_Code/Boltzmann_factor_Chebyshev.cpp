@@ -205,6 +205,9 @@ void detector::Chebyshev_method_Boltzmann_factor(const  vector<double> & wave_fu
 void detector::Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(double sparsify_criteria ){
     int i, j, k, m;
     int nearby_state_basis_size = nearby_state_index.size();
+    int state_index;
+    int local_state_index;
+    int begin_index = total_dmat_size[0] / num_proc * my_id ;
     update_dx(nearby_state_basis_size);
     update_dy(nearby_state_basis_size);
 
@@ -236,14 +239,24 @@ void detector::Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(dou
         normalization = sqrt(normalization);
 
         //sparsify
-        for(k=0;k<dmatsize[0];k++){
-            magnitude =  sqrt( norm(Boltzmann_weighted_x[k]) + norm(Boltzmann_weighted_y[k]) );
+        for(k=0;k<nearby_state_basis_size;k++){
+            // go through nearby state index list
+            state_index = nearby_state_index[k];
+            if(state_index < begin_index or state_index >= begin_index + dmatsize[0]){
+                continue;
+            }
+            local_state_index = state_index - begin_index ;
+
+            magnitude =  sqrt( norm(Boltzmann_weighted_x[ local_state_index ]) + norm(Boltzmann_weighted_y[ local_state_index ]) );
             if( magnitude > sparsify_criteria * normalization ){
-                x_sparsify.push_back(Boltzmann_weighted_x[k]);
-                y_sparsify.push_back(Boltzmann_weighted_y[k]);
+                // overlap with state in nearby state index :   <m~ | e^{-\beta H / 4 } | m>  Both state are in neraby_state_index.
+                x_sparsify.push_back(Boltzmann_weighted_x[local_state_index]);
+                y_sparsify.push_back(Boltzmann_weighted_y[local_state_index]);
                 basis_set_index_sparsify.push_back(k);
             }
         }
+
+
         Boltzmann_factor_weighted_x_sparsify.push_back(x_sparsify);
         Boltzmann_factor_weighted_y_sparsify.push_back(y_sparsify);
         Boltzmann_weighted_basis_index_sparsify.push_back(basis_set_index_sparsify);
@@ -273,11 +286,20 @@ void detector::Boltzmann_factor_decorated_basis_set_and_with_ladder_operator(dou
             normalization = normalization_tot;
             normalization = sqrt(normalization);
 
-            for(k=0;k<dmatsize[0];k++){
-                magnitude = sqrt( norm(xd_for_ladder_operator[j][k]) + norm(yd_for_ladder_operator[j][k]) );
+            for(k=0;k< nearby_state_basis_size ;k++){
+                // state index is index in basis set
+                state_index = nearby_state_index[k];
+                if(state_index < begin_index or state_index >= begin_index + dmatsize[0]){
+                    continue;
+                }
+                // local state index is in local basis set in process.
+                local_state_index = state_index - begin_index ;
+
+                magnitude = sqrt( norm(xd_for_ladder_operator[j][local_state_index]) + norm(yd_for_ladder_operator[j][local_state_index]) );
                 if(   magnitude > sparsify_criteria * normalization / total_dmat_size[0]  ){
-                    x_sparsify_ladder.push_back(xd_for_ladder_operator[j][k]);
-                    y_sparsify_ladder.push_back(yd_for_ladder_operator[j][k]);
+                    // overlap with state in nearby state index :   <m~ | a_{j} e^{-\beta H / 4 } | m>  Both state are in neraby_state_index.
+                    x_sparsify_ladder.push_back(xd_for_ladder_operator[j][local_state_index]);
+                    y_sparsify_ladder.push_back(yd_for_ladder_operator[j][local_state_index]);
                     index_sparsify_ladder.push_back(k);
                 }
             }

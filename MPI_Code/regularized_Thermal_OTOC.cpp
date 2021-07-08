@@ -240,8 +240,9 @@ void detector:: compute_regularized_thermal_OTOC_component(){
                     C1 = 0;
                     Boltzmann_weighted_list_size = Boltzmann_weighted_basis_index_sparsify[m].size();
                     for(l=0;l<Boltzmann_weighted_list_size; l++ ){
-                        local_basis_set_index = Boltzmann_weighted_basis_index_sparsify[m][l] ;
-                        basis_set_index = local_basis_set_index + begin_index;
+                        // now Boltzmann_weighted_basis_index_sparsify[m] have to store index in nearby state index list
+                        basis_set_index = Boltzmann_weighted_basis_index_sparsify[m][l] ;
+
                         // <m|e^{-\beta H/4} | m~>:  index l stands for |m~> . index m stands for |m>
                         Boltzmann_weighted_basis_basis_overlap = complex<double> ( Boltzmann_factor_weighted_x_sparsify[m][l]  ,
                                                                                    - Boltzmann_factor_weighted_y_sparsify[m][l] );
@@ -264,9 +265,9 @@ void detector:: compute_regularized_thermal_OTOC_component(){
 
                     Boltzmann_weighted_list_size = ladder_operator_Boltzmann_weighted_basis_index_sparsify[m][mode_index].size();
                     for(l=0;l<Boltzmann_weighted_list_size;l++){
-                        // this basis set index is local index in process.
-                        local_basis_set_index = ladder_operator_Boltzmann_weighted_basis_index_sparsify[m][mode_index][l];
-                        basis_set_index = local_basis_set_index + begin_index;
+                        //  now ladder_operator_Boltzmann_weighted_basis_index_sparsify[m] have to store index in nearby state index list
+                        basis_set_index = ladder_operator_Boltzmann_weighted_basis_index_sparsify[m][mode_index][l];
+
                         // <m| e^{-\beta H/4} a_{k} | m~> : index l stands for |m~> , index m stands for |m>
                         Boltzmann_weighted_basis_basis_overlap = complex<double> ( ladder_operator_Boltzmann_weighted_x_sparsify[m][mode_index][l] ,
                                                                                    - ladder_operator_Boltzmann_weighted_y_sparsify[m][mode_index][l]  ) ;

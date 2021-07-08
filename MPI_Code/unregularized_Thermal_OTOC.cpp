@@ -173,13 +173,14 @@ void detector:: compute_unregularized_thermal_OTOC_component(){
                     list_size = unregularized_Haar_state_with_ladder_operator_basis_set_sparsify[i][0][j].size();
                     if(k<nmodes[0]){
                         mode_index = k + nmodes[0];  // <m| a_{k} == conj (a_{k}^{+} |m>)
-                        Coeff = sqrt(dv_all[0][m][k] + 1) ;  // \sqrt{n_{k} + 1 }
+                        Coeff = sqrt(dv_all[0][ nearby_state_index[m] ][k] + 1) ;  // \sqrt{n_{k} + 1 }
                     }
                     else{
                         mode_index = k - nmodes[0]; // <m|a_{k}^{+} == conj ( a_{k} |m> )
-                        Coeff = sqrt(dv_all[0][m][k - nmodes[0]]) ;  // sqrt{n_{k}}
+                        Coeff = sqrt(dv_all[0][nearby_state_index[m]][k - nmodes[0]]) ;  // sqrt{n_{k}}
                     }
-                    m_state_index_after_ladder_operator = neighbor_state_index_for_all_state_list[m][mode_index];
+                    m_state_index_after_ladder_operator = neighbor_state_in_nearby_state_index_list[m][mode_index];
+
 
                     if(m_state_index_after_ladder_operator != -1){
                         for(l=0; l<list_size; l++ ){

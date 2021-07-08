@@ -936,6 +936,8 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     int Haar_state_index;
     int max_state_quanta_diff = 0;
     int state_distance = 0;
+    double maximum_freq = 0;
+    double energy_cutoff_for_nearby_state_index;
 
     double state_energy_difference;
     int initial_state_index_in_total_dmatrix;
@@ -943,14 +945,27 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     int state_for_4_point_correlation_average_list_size ;
     initial_state_index_in_total_dmatrix = initial_state_index[0]
                                            + total_dmat_size[0]/num_proc * initial_state_pc_id[0] ;
+
+    for(i=0;i< nmodes[0]; i++){
+        if(mfreq[0][i] > maximum_freq){
+            maximum_freq = mfreq[0][i];
+        }
+    }
+    energy_cutoff_for_nearby_state_index = 8 / Boltzmann_beta + maximum_freq * 2 ;
+    if(my_id == 0){
+        cout << "energy cutoff for nearby state index " << energy_cutoff_for_nearby_state_index << endl;
+    }
+
     // compute nearby_state_index and initial_state_index_in_nearby_state_index_list for computing 4-point correlation function
     for(i=0;i<total_dmat_size[0];i++){
-        nearby_state_index.push_back(i);
+        if( total_dmat_diagonal[0][i] < energy_cutoff_for_nearby_state_index ){
+            nearby_state_index.push_back(i);
+        }
     }
 
     // incorporate random Haar state to compute thermal average. For information for random Haar state, see: https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.112.120601
     state_number_for_evolution = nearby_state_index.size();
-    Haar_state_index = total_dmat_size[0];
+    Haar_state_index = state_number_for_evolution ;
     for(i=0;i<N_Haar; i++){
         regularized_Haar_state_index_list.push_back(Haar_state_index);
         Haar_state_index = Haar_state_index + 2 * nmodes[0] + 1 ; // we have to incorporate a_{j} e^{-\beta H/4} | Haar>
