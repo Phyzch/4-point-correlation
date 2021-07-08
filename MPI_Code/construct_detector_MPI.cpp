@@ -604,7 +604,7 @@ void detector::initialize_detector_state_MPI(ofstream & log) {
         for(k=0;k<dmatsize[0];k++){
             xd[state_index][k] = distribution(generator);
             yd[state_index][k] = distribution(generator);
-            
+
             norm = norm + std::norm(xd[state_index][k]) + std::norm(yd[state_index][k]) ;
         }
 
