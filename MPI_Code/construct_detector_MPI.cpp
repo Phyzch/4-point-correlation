@@ -951,7 +951,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
             maximum_freq = mfreq[0][i];
         }
     }
-    energy_cutoff_for_nearby_state_index = 8 / Boltzmann_beta + maximum_freq * 2 ;
+    energy_cutoff_for_nearby_state_index = 4 / Boltzmann_beta + maximum_freq * 2 ;
     if(my_id == 0){
         cout << "energy cutoff for nearby state index " << energy_cutoff_for_nearby_state_index << endl;
     }
