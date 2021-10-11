@@ -60,7 +60,7 @@ public:
 	int ** dmatnum_each_process;  // record detector matrix element number in each process.
     int ** dmatsize_offset_each_process;
 	int ** dmat_offset_each_process; // record local first detector matrix's index in global matrix.
-	double ** total_dmat;
+	complex<double> ** total_dmat;
 	int ** total_dirow, ** total_dicol; // dirow, dicol, dmat in all process.
 
     double average_coupling_strength;
@@ -74,8 +74,9 @@ public:
 	double **aij;
 	vector<vector<double>>  xd,  yd; // wavefunction of detector state
     double ** xd_all, ** yd_all;
-	vector<double> * dmat; // matrix
-	double *proptime; // we set proptime for two different mode to be the same
+	vector<complex<double>> * dmat; // matrix
+
+    double *proptime; // we set proptime for two different mode to be the same
 
 
     int ** remoteVecCount,  ** remoteVecPtr,  **  remoteVecIndex;
@@ -97,6 +98,18 @@ public:
 	double V_intra, a_intra; // intra detector coupling strength.  a_intra = coupling strength for mfreq = 50.
     double detector_energy_window_size;
 	int ** bright_state, ** initial_detector_state; // record bright mode for two detectors when we try to see decoherence in our model.
+
+
+    // variable for rotational motion
+    int angular_momentum_J ; // total angular momentum J
+    int initial_state_angular_momentum_M; // angular momentum for initial state M.
+    vector<int> d_rot;  // d_rot : rotational quantum number M for states.
+    double rotational_constant[3];
+    int Coriolis_coupling_term_num;
+    int * Coriolis_coupling_rot_axis; // 0 for x, 1 for y. 2 for z.
+    int **  Coriolis_coupling_vib_index;  // have to -1 to make index start at 0.
+    double *  Coriolis_coupling_strength; // in cm^{-1} unit.
+
 	double * initial_Detector_energy;
 	double * bright_state_energy;  // energy of detector's bright state.
 
@@ -241,6 +254,11 @@ public:
                          int nlev, int maxit);
 
     void diagonalize(double * eigenvalue_list, int & numlam,  ofstream & eigenvalue_log_file);
+
+
+    // Coriolis and rotation related function :
+    void read_rotation_parameter();
+    void compute_rotational_offdiag_part_MPI(ofstream & log,vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1);
 };
 
 class full_system {

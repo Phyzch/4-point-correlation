@@ -144,8 +144,8 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
         int i1, i2;
         double  detector0_energy, detector1_energy;
         // ndetector0 and ndetector1 indicate current detector mode index we are calculating energy.
-        vector<int> ndetector0(d.nmodes[0]);
-        vector <int> ndetector1(d.nmodes[1]);
+        vector<int> ndetector0(d.nmodes[0] + 1 );
+        vector <int> ndetector1(d.nmodes[1] + 1 );
         // record size of total matrix
         int location;
         bool exist=false;
@@ -156,6 +156,20 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
         double middle_state_energy = (d.initial_Detector_energy[0] + d.initial_Detector_energy[1])/2;
         double high_initial_state_energy = max(d.initial_Detector_energy[0] , d.initial_Detector_energy[1]);
         double low_initial_state_energy = min(d.initial_Detector_energy[0],d.initial_Detector_energy[1]);
+
+        int angular_momentum_J = d.angular_momentum_J ;
+        int rotation_state_M_num = 2 * angular_momentum_J + 1 ;
+        int rotation_index ;
+        int rotation_state_M;
+        double rotation_energy;
+        double rot_vib_energy;
+        double * rotation_energy_array = new double [rotation_state_M_num];
+        for (rotation_index = 0; rotation_index < rotation_state_M_num; rotation_index ++ ){
+            rotation_state_M = rotation_index - angular_momentum_J ;
+            rotation_energy =  ( angular_momentum_J * (angular_momentum_J + 1) - pow(rotation_state_M , 2) ) / 2 * (d.rotational_constant[0] + d.rotational_constant[1]) +
+                               pow(rotation_state_M , 2 ) * d.rotational_constant[2] ;
+            rotation_energy_array[rotation_index ] = rotation_energy ;
+        }
 
         ndetector0[0] = -1; // this is for:  when we go into code: ndetector0[i]= ndetector0[i]+1, our first state is |000000>
         while (1) {
@@ -206,12 +220,24 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
 
 
             //--------------------------------------insert this state in detector's state.-----------------------------------------------------------
-            location=find_position_for_insert_binary(vmode0, ndetector0, exist);  // we check if this mode exist and the location we have to insert this state at the same time.
-            if (!exist) {
-                // when we push back we should consider arrange them in order. We compute location to insert in find_position_for_insert_binary() function:
-                vmode0.insert(vmode0.begin() + location, ndetector0);
-                dmat0.insert(dmat0.begin() + location, detector0_energy);
+            // Take rotation dof into account here:
+            for (rotation_index = 0; rotation_index < rotation_state_M_num; rotation_index ++ ){
+                rotation_state_M = rotation_index - angular_momentum_J ;
+                ndetector0[d.nmodes[0]] = rotation_state_M  ;
+
+                rotation_energy = rotation_energy_array[rotation_index];
+                // detector0_energy is vibrational energy,  now rot_vib_energy is rotational_energy + vibrational_energy
+                rot_vib_energy = detector0_energy + rotation_energy ;
+
+                location=find_position_for_insert_binary(vmode0, ndetector0, exist);  // we check if this mode exist and the location we have to insert this state at the same time.
+                if (!exist) {
+                    // when we push back we should consider arrange them in order. We compute location to insert in find_position_for_insert_binary() function:
+                    vmode0.insert(vmode0.begin() + location, ndetector0);
+                    dmat0.insert(dmat0.begin() + location, rot_vib_energy);
+                }
+
             }
+
         }
         label1:;
 
@@ -258,11 +284,25 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
             if ( lower_bright_state_distance > Rmax ) {
                 goto label3;
             }
-            location = find_position_for_insert_binary(vmode1, ndetector1, exist);
-            if (!exist) {
-                vmode1.insert(vmode1.begin() + location, ndetector1);
-                dmat1.insert(dmat1.begin() + location, detector1_energy);
+
+            for (rotation_index = 0; rotation_index < rotation_state_M_num; rotation_index ++ ){
+                rotation_state_M = rotation_index - angular_momentum_J ;
+                ndetector1[d.nmodes[1]] = rotation_state_M  ;
+
+                rotation_energy = rotation_energy_array[rotation_index];
+                // detector0_energy is vibrational energy,  now rot_vib_energy is rotational_energy + vibrational_energy
+                rot_vib_energy = detector1_energy + rotation_energy ;
+
+                location=find_position_for_insert_binary(vmode1, ndetector1, exist);  // we check if this mode exist and the location we have to insert this state at the same time.
+                if (!exist) {
+                    // when we push back we should consider arrange them in order. We compute location to insert in find_position_for_insert_binary() function:
+                    vmode1.insert(vmode1.begin() + location, ndetector1);
+                    dmat1.insert(dmat1.begin() + location, rot_vib_energy);
+                }
+
             }
+
+
         }
         label4:;
         // add function here to count state number in dmat1 and dmat0 to get state number.

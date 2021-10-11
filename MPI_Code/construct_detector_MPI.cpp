@@ -33,7 +33,7 @@ void detector::allocate_space(int tlnum) {
 
     premodcoup = new double *[tlnum]; // coupling before system and detector contact with each other.
 
-    dmat = new vector <double> [tlnum];
+    dmat = new vector <complex<double>> [tlnum];
 
     for (i=0;i<tlnum;i++){
         vector<int> v1 ;
@@ -211,11 +211,23 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
                 log << "Use Van Vleck transformation" << endl;
             }
         }
-        if(!no_coupling){
-            construct_state_coupling_vanvlk(dmat[0], dmat0, vmode0, dirow[0], dicol[0],output);
+
+        vector <double> dmat0_real ;
+        for(i=0;i<dmat[0].size(); i++ ){
+            dmat0_real.push_back(real(dmat[0][i]));
         }
+        if(!no_coupling){
+            construct_state_coupling_vanvlk(dmat0_real , dmat0, vmode0, dirow[0], dicol[0],output);
+        }
+
+        dmat[0].clear();
+        for(i=0;i<dmat0_real.size();i++){
+            dmat[0].push_back(dmat0_real[i]);
+        }
+
     }
 
+    // add rotational state coupling
 
     //--------------------------------------------------------------------------------------------------
     update_initial_and_bright_detector_energy();
@@ -440,6 +452,8 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
         for(i=begin_index;i<begin_index + dmatsize[m];i++){  // for my_id==0 , O(dmatsize * dmatsize/ proc_num)
             for(j=0;j<total_dmat_size[m];j++){ // j is different from serial program. Now we record both symmetric Hamiltonian element
                 if (i==j) continue;
+                // if vibrational state not equal to each other, continue.
+                if((*vmode_ptr)[i][nmodes[m]] != (*vmode_ptr)[j][nmodes[m]] ) continue;
                 ntot=0;
                 for(k=0;k<nmodes[m];k++){
                     deln[k]= abs( (*vmode_ptr)[i][k] - (*vmode_ptr)[j][k] ); // same as deln[k] = abs(dv[m][i][k] - dv[m][j][k]);
@@ -525,16 +539,21 @@ void detector:: broadcast_total_dmat(){
      construct total_dmat, total_dirow, total_dicol
      use dmatnum_each_process,  dmat_offset_each_process\
     */
-    total_dmat= new double * [stlnum];
+    total_dmat= new complex<double> * [stlnum];
     total_dirow= new int * [stlnum];
     total_dicol= new int * [stlnum];
     int m;
     for(m=0;m<stlnum;m++){
-        total_dmat[m] = new double [total_dmat_num[m]];
+        total_dmat[m] = new complex<double> [total_dmat_num[m]];
         total_dirow[m] = new int [total_dmat_num[m]];
         total_dicol[m] = new int [total_dmat_num[m]];
+
+
+
         MPI_Allgatherv(&dmat[m][0],dmatnum[m],MPI_DOUBLE,
                 &total_dmat[m][0],dmatnum_each_process[m],dmat_offset_each_process[m],MPI_DOUBLE,MPI_COMM_WORLD);
+
+
         MPI_Allgatherv(&dirow[m][0],dmatnum[m],MPI_INT,
                 &total_dirow[m][0],dmatnum_each_process[m],dmat_offset_each_process[m],MPI_INT,MPI_COMM_WORLD);
         MPI_Allgatherv(&dicol[m][0],dmatnum[m],MPI_INT,
@@ -591,18 +610,21 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
     initial_Detector_energy= new double [stlnum];
     bright_state_energy= new double [stlnum];
     for(m=0;m<stlnum;m++){
-        bright_state[m]= new int [nmodes[m]];
-        initial_detector_state[m]= new int [nmodes[m]];
+        bright_state[m]= new int [nmodes[m] + 1 ]; // the last index is for rotational index M.
+        initial_detector_state[m]= new int [nmodes[m] + 1 ]; // the last index is for rotational index M.
         initial_Detector_energy[m]=0;
         bright_state_energy[m]=0;
     }
     if(my_id==0){
+        input >> angular_momentum_J >> initial_state_angular_momentum_M ;
+
         for(m=0;m<stlnum;m++) {
             // initialize our bright state from input.txt
             if (!Random_bright_state) {
                 for (i = 0; i < nmodes[m]; i++) {
                     input >> initial_detector_state[m][i];
                 }
+                initial_detector_state[m][nmodes[m]] = initial_state_angular_momentum_M;
             }
             else {
                 // construct bright state according to Boltzmann distribution.
@@ -625,19 +647,33 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
         }
     }
     for(m=0;m<stlnum;m++){ // Broad cast initial detector state.
-        MPI_Bcast(&initial_detector_state[m][0],nmodes[m],MPI_INT,0,MPI_COMM_WORLD);
+        MPI_Bcast(&initial_detector_state[m][0],nmodes[m] + 1 ,MPI_INT,0,MPI_COMM_WORLD);
     }
 
+    // Broadcast total angular momentum J and angular momentum for state M:
+    MPI_Bcast(&angular_momentum_J, 1, MPI_INT, 0 , MPI_COMM_WORLD) ;
+    MPI_Bcast(&initial_state_angular_momentum_M , 1, MPI_INT, 0 , MPI_COMM_WORLD);
+
+    // rotational energy
+    double Rotation_energy ;  // B_z * J_z^2 + B_x * J_x^2 + B_y * J_y^2
+    Rotation_energy = rotational_constant[0] * 1/2 * (angular_momentum_J  * (angular_momentum_J + 1) - pow(initial_state_angular_momentum_M , 2 ) )
+                      + rotational_constant[1] * 1/2 * (angular_momentum_J  * (angular_momentum_J + 1) - pow(initial_state_angular_momentum_M , 2 ) )
+                      + rotational_constant[2] *  pow(initial_state_angular_momentum_M , 2 );
     for(m=0;m<stlnum;m++){
         // initialize our initial detector state.  set dark mode's quanta equal to bright_state.
         bright_state[m][0]= initial_detector_state[m][0] + 1;
-        for(i=1;i<nmodes[m];i++){   // other dark mode
+        for(i=1;i<nmodes[m] + 1 ;i++){   // other dark mode
             bright_state[m][i]=initial_detector_state[m][i];
         }
+
         for(i=0;i<nmodes[m];i++){
             initial_Detector_energy[m]= initial_Detector_energy[m] + initial_detector_state[m][i] * mfreq[m][i];
             bright_state_energy[m] = bright_state_energy[m] + bright_state[m][i] * mfreq[m][i];
         }
+        initial_Detector_energy[m] = initial_Detector_energy[m]
+                                     + Rotation_energy;
+        bright_state_energy[m] = bright_state_energy[m] + Rotation_energy ;
+
     }
     initial_energy= initial_energy + initial_Detector_energy[0] + initial_Detector_energy[1]; // update initial energy
     // as system + detector.
@@ -660,10 +696,10 @@ void detector:: update_initial_and_bright_detector_energy(){
         initial_Detector_energy[m] = 0;
         bright_state_energy[m] = 0;
         if(my_id == initial_state_pc_id[m]) {
-            initial_Detector_energy[m] = dmat[m][initial_state_index[m]];
+            initial_Detector_energy[m] = real ( dmat[m][initial_state_index[m]] );
         }
         if(my_id == bright_state_pc_id[m] and bright_state_index[m]<dmatsize[m]){
-            bright_state_energy[m] = dmat[m][bright_state_index[m]];
+            bright_state_energy[m] = real ( dmat[m][bright_state_index[m]] );
         }
         MPI_Bcast(&initial_Detector_energy[m],1,MPI_DOUBLE,initial_state_pc_id[m],MPI_COMM_WORLD);
         MPI_Bcast(&bright_state_energy[m],1,MPI_DOUBLE,bright_state_index[m],MPI_COMM_WORLD);
@@ -709,7 +745,7 @@ void detector:: compute_important_state_index(){
         // loop for two detector.
         for (m = 0; m < stlnum; m++) {
             special_state_vec.clear();
-            for (i = 0; i < nmodes[m]; i++) {
+            for (i = 0; i < nmodes[m] + 1 ; i++) {
                 special_state_vec.push_back(special_state[m][i]);
             }
             position=find_position_for_insert_binary(dv[m],special_state_vec,exist);
@@ -1049,7 +1085,7 @@ void detector:: compute_local_density_of_state(ofstream & output,vector<double> 
             if(dirow[0][i] == begin_index + initial_state_index[0]){
                 number_of_state = number_of_state + 1;
                 energy_difference = abs(dmat[0][initial_state_index[0]] - dmat0[dicol[0][i]]);
-                density_of_states = density_of_states + 1 / (1+ pow(  energy_difference/dmat[0][i] , 2 ) );
+                density_of_states = density_of_states + 1 / (1 + pow(  energy_difference/ real(dmat[0][i]) , 2 ) );
             }
         }
     }

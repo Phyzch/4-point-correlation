@@ -145,7 +145,7 @@ void detector::compute_Lanczos( double * alpha, double * beta,
         for(j=0;j<dmatnum[0];j++){
             irow = local_dirow[0][j];
             icol = local_dicol[0][j];
-            local_w[irow] = local_w[irow] + dmat[0][j] * local_v[icol];
+            local_w[irow] = local_w[irow] + real(dmat[0][j]) * local_v[icol];
         }
 
         // alpha = w^{T} * v

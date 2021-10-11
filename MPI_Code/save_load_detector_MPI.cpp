@@ -57,7 +57,7 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
     int m, i, j;
     int value;
     int required_num_proc;
-    total_dmat = new double * [stlnum];
+    total_dmat = new complex<double> * [stlnum];
     total_dirow = new int * [stlnum];
     total_dicol = new int * [stlnum];
     for (i=0;i<2;i++){
@@ -94,7 +94,7 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
             }
             //use MPI_Gatherv function to gather dmat, dirow, dicol to process 0
             for (m = 0; m < stlnum; m++) {
-                total_dmat[m] = new double [ total_dmat_num[m] ];
+                total_dmat[m] = new complex<double> [ total_dmat_num[m] ];
                 total_dirow[m] = new int [ total_dmat_num[m] ];
                 total_dicol[m] = new int [ total_dmat_num[m] ];
             }
@@ -184,7 +184,7 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
     }
     if(my_id!=0){ // allocate space for total_dmat
         for(m=0;m<stlnum;m++){
-            total_dmat[m] = new double [total_dmat_num[m]];
+            total_dmat[m] = new complex<double> [total_dmat_num[m]];
             total_dirow[m] = new int [total_dmat_num[m]];
             total_dicol[m] = new int [total_dmat_num[m]];
         }

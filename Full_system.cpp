@@ -47,6 +47,7 @@ full_system::full_system(string path1, string cvpt_path1) {
 
 	s.read_MPI(input, output, log);
 	d.read_MPI(input, output, log, s.tlnum, s.tldim,path);
+    d.read_rotation_parameter();
     d.construct_bright_state_MPI(input,output);
 
     detector_only = true;
@@ -205,13 +206,13 @@ void full_system::compute_eigenstate_overlap_with_initial_state(){
     initial_state_index_in_total_dmatrix = d.initial_state_index[0] + d.total_dmat_size[0] / num_proc * d.initial_state_pc_id[0];
     // record matrix element couple to bright state and its position
     vector<int> matrix_element_position;
-    vector<double> matrix_element_value;
+    vector<complex<double>> matrix_element_value;
     matrix_element_number = 0;
     for(i=d.dmatsize[0];i<d.dmatnum[0];i++){
         if(d.dirow[0][i] == initial_state_index_in_total_dmatrix or d.dicol[0][i] == initial_state_index_in_total_dmatrix){
             matrix_element_number ++ ;
             matrix_element_position.push_back(i);
-            matrix_element_value.push_back(d.dmat[0][i]); // coupling strength value
+            matrix_element_value.push_back( d.dmat[0][i] ); // coupling strength value
         }
     }
 

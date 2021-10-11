@@ -331,6 +331,9 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
         begin_index = mcount[bin_index - 1];
         end_index = mcount[bin_index];
 
+        // rotational dof index should equal to each other for vib term to have effect.
+        if(dv[i][ndegre] != dv[j][ndegre] ) goto label3;
+
         for(k=begin_index;k<end_index;k++){
             if (k == mcount[bin_number]) break;
             for(l=0;l<ndegre;l++){
@@ -338,6 +341,7 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
                 if( dv[i][l] - dv[j][l] != index_diff ) goto label2;
                 if( dv[j][l] < Normal_Form[k][l+ndegre]) goto label2; // lowering operator first reach |0> here
             }
+
             Prod=1;
             for(l=0;l<ndegre;l++){
                 Prod = Prod * factorial( dv[i][l], dv[j][l], Normal_Form[k][l+ndegre] );
@@ -345,6 +349,8 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
             Vmat = Vmat + Prod * Coeff[k];
             label2:;
         }
+
+        label3:;
     }
 
     if(i!=j) {

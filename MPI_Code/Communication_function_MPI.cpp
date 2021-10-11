@@ -119,7 +119,8 @@ void detector::Scatter_dv(vector<int> & total_mat_num){
         int index=0;
         for(i=0;i<vsize;i++){
             vector <int> temp_vmode;
-            for(j=0;j<nmodes[m];j++){
+            // take rot dof into account
+            for(j=0;j<nmodes[m] + 1 ;j++){
                 temp_vmode.push_back(receive_vmode[index]);
                 index= index+1;
             }
