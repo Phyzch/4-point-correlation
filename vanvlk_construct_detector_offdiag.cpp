@@ -286,7 +286,7 @@ double factorial(int i, int j, int n){
     return prod;
 }
 
-void vmat(vector<double> & state_energy_change,vector<double> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
+void detector :: vmat(vector<double> & state_energy_change, vector<complex<double>> & state_energy_local ,  vector<double> & state_energy, vector<vector<int>> & dv,
           vector <int> & dirow, vector<int> & dicol,
           vector<double> & energy_decrease_list, vector<double> & Coeff,
           vector<vector<int>> & Normal_Form, int * mcount, int i, int j, int bin_index,
@@ -295,12 +295,17 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
     int k,l;
     double Prod;
     double lij;
-    double Vmat= 0;
+    complex<double> Vmat= 0;
     double index_diff;
     // local index is index of i in state_energy_local
     int local_index;
     int begin_index, end_index;
     local_index = i - (matrix_size/num_proc)*my_id ;
+
+    complex<double> rot_vmat;
+    vector<vector<int>> * v_ptr = & dv;
+
+    int xx;
 
     if(i==j){
         // diagonal term
@@ -351,6 +356,11 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
         }
 
         label3:;
+
+        // take rotational coupling into account.
+        rot_vmat = compute_rotational_offdiag_part_MPI( v_ptr, i,j, 0 );
+        Vmat = Vmat + rot_vmat ;
+
     }
 
     if(i!=j) {
@@ -366,13 +376,13 @@ void vmat(vector<double> & state_energy_change,vector<double> & state_energy_loc
         // diagonal term
         // state_energy represent dmat0/ dmat1, which is detector matrix diagonal form across all process.
         // It will be used in compute_sstate_dstate_diagpart_dirow_dicol_MPI() to construct full matrix so we have to update it.
-        state_energy_change[i] = state_energy_change[i] + Vmat;
-        state_energy_local[local_index] = state_energy_local[local_index] + Vmat;
+        state_energy_change[i] = state_energy_change[i] + real(Vmat);
+        state_energy_local[local_index] =  state_energy_local[local_index] + real(Vmat) ;
     }
 }
 
 
-void  construct_state_coupling_subroutine(vector<double> & state_energy_local ,vector<double> & state_energy, vector<vector<int>> & dv,
+void  detector :: construct_state_coupling_subroutine(vector<complex<double>> & state_energy_local ,vector<double> & state_energy, vector<vector<int>> & dv,
                                           vector <int> & dirow, vector<int> & dicol,
                                           vector<double> & energy_decrease_list, vector<double> & Coeff,
                                           vector<vector<int>> & Normal_Form, int * mcount, double cutoff, ofstream & output){
@@ -428,6 +438,7 @@ void  construct_state_coupling_subroutine(vector<double> & state_energy_local ,v
     }
     // now we compute coupling between different state.
     for(i=begin_index;i<end_index;i++){
+        int xx = 0;
         for(j=0;j<matrix_size;j++){
             if(j!=i) {
                 energy_difference = original_state_energy[j] - original_state_energy[i];   // <i| operator | j>
@@ -445,7 +456,7 @@ void  construct_state_coupling_subroutine(vector<double> & state_energy_local ,v
     }
 }
 
-void detector::construct_state_coupling_vanvlk(vector<double> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
+void detector::construct_state_coupling_vanvlk(vector<complex<double>> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
                                                vector <int> & dirow, vector<int> & dicol,ofstream & output){
     // state_energy_local is dmat[0] \ dmat[1] , which is local detector matrix in each process.
     // state_energy is dmat0 or dmat1, which is detector matrix (diagonal part) shared by all process

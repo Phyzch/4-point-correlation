@@ -212,22 +212,13 @@ void detector:: construct_dmatrix_MPI(ifstream & input, ofstream & output, ofstr
             }
         }
 
-        vector <double> dmat0_real ;
-        for(i=0;i<dmat[0].size(); i++ ){
-            dmat0_real.push_back(real(dmat[0][i]));
-        }
+        // dmat[0] is changed in construct_state_coupling_vanvlk.
         if(!no_coupling){
-            construct_state_coupling_vanvlk(dmat0_real , dmat0, vmode0, dirow[0], dicol[0],output);
+            construct_state_coupling_vanvlk(dmat[0] , dmat0, vmode0, dirow[0], dicol[0],output);
         }
 
-        dmat[0].clear();
-        for(i=0;i<dmat0_real.size();i++){
-            dmat[0].push_back(dmat0_real[i]);
-        }
 
     }
-
-    // add rotational state coupling
 
     //--------------------------------------------------------------------------------------------------
     update_initial_and_bright_detector_energy();
@@ -431,7 +422,11 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
     int i,j,m,k;
     int begin_index;
     int ntot;
-    double value, lij;
+    complex<double> value;
+    double lij;
+
+    complex <double> rot_value ;
+
     vector<vector <int>> * vmode_ptr;
     vector<double> * dmat_ptr;
     bool exist;
@@ -489,6 +484,11 @@ void detector::compute_detector_offdiag_part_MPI(ofstream & log,vector<double> &
                     for (k = 0; k < nmodes[m]; k++) {
                         value = value * pow(aij[m][k]* nbar[k], deln[k]);
                     }
+
+                    // take rotational energy into account.
+                    rot_value = compute_rotational_offdiag_part_MPI( vmode_ptr, i, j, m);
+                    value = value + rot_value ;
+
                     if ( (*dmat_ptr)[i] != (*dmat_ptr)[j] ) {
                         lij = abs(value / ((*dmat_ptr)[i] - (*dmat_ptr)[j]));
                         if (lij > cutoff) {
@@ -543,15 +543,33 @@ void detector:: broadcast_total_dmat(){
     total_dirow= new int * [stlnum];
     total_dicol= new int * [stlnum];
     int m;
+    int i ;
     for(m=0;m<stlnum;m++){
         total_dmat[m] = new complex<double> [total_dmat_num[m]];
         total_dirow[m] = new int [total_dmat_num[m]];
         total_dicol[m] = new int [total_dmat_num[m]];
 
+        // Now we are dealing with complex Hamiltonian. need to do it for real and imaginary part.
+        double * dmat_m_real = new double [dmat[m].size()];
+        double * dmat_m_imag = new  double [dmat[m].size()];
+        for(i = 0 ; i < dmat[m].size(); i++ ){
+            dmat_m_real [i] = real(dmat[m][i]);
+            dmat_m_imag [i] = imag(dmat[m][i]);
+        }
+        double * total_dmat_m_real = new double [total_dmat_num[m] ];
+        double * total_dmat_m_imag = new double [total_dmat_num[m] ];
 
-
-        MPI_Allgatherv(&dmat[m][0],dmatnum[m],MPI_DOUBLE,
-                &total_dmat[m][0],dmatnum_each_process[m],dmat_offset_each_process[m],MPI_DOUBLE,MPI_COMM_WORLD);
+        MPI_Allgatherv(&dmat_m_real[0],dmatnum[m],MPI_DOUBLE,
+                       &total_dmat_m_real[0],dmatnum_each_process[m],dmat_offset_each_process[m],MPI_DOUBLE,MPI_COMM_WORLD);
+        MPI_Allgatherv(&dmat_m_imag[0],dmatnum[m],MPI_DOUBLE,
+                       &total_dmat_m_imag[0],dmatnum_each_process[m],dmat_offset_each_process[m],MPI_DOUBLE,MPI_COMM_WORLD);
+        for(i=0;i<total_dmat_num[m];i++){
+            total_dmat[m][i] = complex<double> (total_dmat_m_real[i], total_dmat_m_imag[i]);
+        }
+        delete [] dmat_m_real;
+        delete [] dmat_m_imag;
+        delete [] total_dmat_m_real;
+        delete [] total_dmat_m_imag;
 
 
         MPI_Allgatherv(&dirow[m][0],dmatnum[m],MPI_INT,
@@ -934,8 +952,8 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
     for (i = 0; i < nearby_state_index_size; i++) {
         vector<double> v1 ;
         v1.reserve(dmatsize[0]);
-        xd.push_back(v1);
-        yd.push_back(v1);
+        xd.push_back(v1);  // real part
+        yd.push_back(v1);  // imag part
     }
     xd_all = new double * [nearby_state_index_size];
     yd_all = new double * [nearby_state_index_size];

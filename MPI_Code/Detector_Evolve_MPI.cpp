@@ -216,7 +216,7 @@ void detector::SUR_onestep_MPI(double cf){
         irow = local_dirow[0][i];
         icol = local_dicol[0][i]; // compute to point to colindex in
         for(m=0;m<nearby_state_list_size;m++) {
-            xd[m][irow] = xd[m][irow] + real(dmat[0][i]) * yd[m][icol] * cf  + imag(dmat[0][i]) * xd[m][icol] * cf ;
+            xd[m][irow] = xd[m][irow] + real(dmat[0][i]) * yd[m][icol] * cf  + imag(dmat[0][i]) * xd[m][icol] * cf ; // Now we may have imaginary part of Hamiltonian.
         }
     }
 

@@ -58,6 +58,9 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
     int value;
     int required_num_proc;
     total_dmat = new complex<double> * [stlnum];
+    double ** total_dmat_real = new double * [stlnum];
+    double ** total_dmat_imag = new double * [stlnum];
+
     total_dirow = new int * [stlnum];
     total_dicol = new int * [stlnum];
     for (i=0;i<2;i++){
@@ -65,7 +68,8 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
         dv_all.push_back(v1);
     }
     vector<int> temporary_dv;
-    double ** temp_dmat = new double * [stlnum];
+    double ** temp_dmat_real = new double * [stlnum];
+    double ** temp_dmat_imag = new double * [stlnum];
     int ** temp_dirow = new int * [stlnum];
     int ** temp_dicol = new int * [stlnum];
     if (my_id == 0) {
@@ -95,12 +99,16 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
             //use MPI_Gatherv function to gather dmat, dirow, dicol to process 0
             for (m = 0; m < stlnum; m++) {
                 total_dmat[m] = new complex<double> [ total_dmat_num[m] ];
+                total_dmat_real[m] = new double [total_dmat_num[m]];
+                total_dmat_imag[m] = new double [total_dmat_num[m]];
                 total_dirow[m] = new int [ total_dmat_num[m] ];
                 total_dicol[m] = new int [ total_dmat_num[m] ];
             }
             for (m = 0; m < stlnum; m++) {
                 for (i = 0; i < total_dmat_num[m]; i++) {
                     load >> total_dmat[m][i] >> total_dirow[m][i] >> total_dicol[m][i];
+                    total_dmat_real[m][i] = real(total_dmat[m][i]);
+                    total_dmat_imag[m][i] = imag(total_dmat[m][i]);
                 }
                 std::getline(load, ss);
             }
@@ -168,16 +176,20 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
         dicol[m].reserve(dmatnum[m]);
     }
     for(m=0;m<stlnum;m++){
-        temp_dmat[m] = new double [dmatnum[m]];
+        temp_dmat_real[m] = new double [dmatnum[m]];
+        temp_dmat_imag[m] = new double [dmatnum[m]];
         temp_dirow[m] = new int [dmatnum[m]];
         temp_dicol[m] = new int [dmatnum[m]];
     }
     for(m=0;m<stlnum;m++){
-        MPI_Scatterv(&total_dmat[m][0],dmatnum_each_process[m],dmat_offset_each_process[m],MPI_DOUBLE,&temp_dmat[m][0],dmatnum[m],MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+        MPI_Scatterv(&total_dmat_real[m][0],dmatnum_each_process[m],dmat_offset_each_process[m],MPI_DOUBLE,&temp_dmat_real[m][0],dmatnum[m],MPI_DOUBLE,0,MPI_COMM_WORLD);
+        MPI_Scatterv(&total_dmat_imag[m][0],dmatnum_each_process[m],dmat_offset_each_process[m],MPI_DOUBLE,&temp_dmat_imag[m][0],dmatnum[m],MPI_DOUBLE,0,MPI_COMM_WORLD);
+
         MPI_Scatterv((void *)&total_dirow[m][0],dmatnum_each_process[m],dmat_offset_each_process[m],MPI_INT,&temp_dirow[m][0],dmatnum[m],MPI_INT,0,MPI_COMM_WORLD);
         MPI_Scatterv( &total_dicol[m][0], dmatnum_each_process[m],dmat_offset_each_process[m],MPI_INT,&temp_dicol[m][0],dmatnum[m],MPI_INT,0,MPI_COMM_WORLD);
         for(i=0;i<dmatnum[m];i++){
-            dmat[m].push_back(temp_dmat[m][i]);
+            dmat[m].push_back(  complex<double> (temp_dmat_real[m][i] , temp_dmat_imag[m][i] ) );
             dirow[m].push_back(temp_dirow[m][i]);
             dicol[m].push_back(temp_dicol[m][i]);
         }
@@ -185,23 +197,40 @@ void detector::load_detector_Hamiltonian_MPI(string path, ofstream & log) {
     if(my_id!=0){ // allocate space for total_dmat
         for(m=0;m<stlnum;m++){
             total_dmat[m] = new complex<double> [total_dmat_num[m]];
+            total_dmat_real[m] = new double [total_dmat_num[m]];
+            total_dmat_imag[m] = new double [total_dmat_num[m]];
             total_dirow[m] = new int [total_dmat_num[m]];
             total_dicol[m] = new int [total_dmat_num[m]];
         }
     }
     for(m=0;m<stlnum;m++){
-        MPI_Bcast(&total_dmat[m][0],total_dmat_num[m],MPI_DOUBLE,0,MPI_COMM_WORLD);
+
+        MPI_Bcast(&total_dmat_real[m][0],total_dmat_num[m],MPI_DOUBLE,0,MPI_COMM_WORLD);
+        MPI_Bcast(&total_dmat_imag[m][0] , total_dmat_num[m] , MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+        if(my_id != 0){
+            for(i=0;i<total_dmat_num[m];i++){
+                total_dmat[m][i] = complex<double> (total_dmat_real[m][i] , total_dmat_imag[m][i] );
+            }
+        }
+
         MPI_Bcast(&total_dirow[m][0],total_dmat_num[m],MPI_INT,0,MPI_COMM_WORLD);
         MPI_Bcast(&total_dicol[m][0],total_dmat_num[m],MPI_INT,0,MPI_COMM_WORLD);
     }
     Scatter_dv(total_dmat_size);  // Scatter dv_all to dv.
     Broadcast_dv_all(); // broadcast dv_all from process 0 to other process.
     for(m=0;m<stlnum;m++){
-        delete [] temp_dmat[m];
+        delete[] total_dmat_real[m];
+        delete[] total_dmat_imag[m];
+        delete [] temp_dmat_real[m];
+        delete [] temp_dmat_imag[m];
         delete [] temp_dirow[m];
         delete [] temp_dicol[m];
     }
-    delete [] temp_dmat;
+    delete [] total_dmat_real;
+    delete [] total_dmat_imag;
+    delete [] temp_dmat_real;
+    delete [] temp_dmat_imag;
     delete [] temp_dirow;
     delete [] temp_dicol;
 

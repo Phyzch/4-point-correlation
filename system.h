@@ -162,8 +162,18 @@ public:
     void Broadcast_dv_all();
     // for Van Vleck transformation
     void output_detector_Hamiltonian(vector<double> & state_energy, vector<vector<int>> & dv);
-    void construct_state_coupling_vanvlk(vector<double> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
+    void construct_state_coupling_vanvlk( vector<complex<double>> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
                                          vector <int> & dirow, vector<int> & dicol, ofstream & output);
+    void construct_state_coupling_subroutine(vector<complex<double>> & state_energy_local ,vector<double> & state_energy, vector<vector<int>> & dv,
+                                             vector <int> & dirow, vector<int> & dicol,
+                                             vector<double> & energy_decrease_list, vector<double> & Coeff,
+                                             vector<vector<int>> & Normal_Form, int * mcount, double cutoff, ofstream & output);
+    void vmat(vector<double> & state_energy_change, vector<complex<double>> & state_energy_local, vector<double> & state_energy, vector<vector<int>> & dv,
+              vector <int> & dirow, vector<int> & dicol,
+              vector<double> & energy_decrease_list, vector<double> & Coeff,
+              vector<vector<int>> & Normal_Form, int * mcount, int i, int j, int bin_index,
+              int matrix_size, double cutoff, double random_number);
+
     // use hybrid method for van vleck Hamiltonian
     void update_initial_and_bright_detector_energy();
     void compute_important_state_index();
@@ -258,7 +268,7 @@ public:
 
     // Coriolis and rotation related function :
     void read_rotation_parameter();
-    void compute_rotational_offdiag_part_MPI(ofstream & log,vector<double> & dmat0,  vector<double> & dmat1,  vector<vector<int>> & vmode0, vector<vector<int>> & vmode1);
+    complex<double> compute_rotational_offdiag_part_MPI(   vector<vector <int>> * vmode_ptr , int i , int j , int m  );
 };
 
 class full_system {
