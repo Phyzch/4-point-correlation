@@ -103,6 +103,7 @@ public:
     // variable for rotational motion
     int angular_momentum_J ; // total angular momentum J
     int initial_state_angular_momentum_M; // angular momentum for initial state M.
+    int angular_momentum_M_range;
     vector<int> d_rot;  // d_rot : rotational quantum number M for states.
     double rotational_constant[3];
     int Coriolis_coupling_term_num;

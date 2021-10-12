@@ -367,6 +367,10 @@ void detector :: vmat(vector<double> & state_energy_change, vector<complex<doubl
         // off-diagonal term
         lij = abs(Vmat) / abs(state_energy[i] - state_energy[j]);
         if (lij > cutoff) {
+//            if(abs(rot_vmat ) > 1 ){
+//                cout << "significant rotational contribution" << endl;
+//            }
+
             state_energy_local.push_back(Vmat);
             dirow.push_back(i);
             dicol.push_back(j);

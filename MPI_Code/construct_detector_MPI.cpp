@@ -634,7 +634,7 @@ void detector::construct_bright_state_MPI(ifstream & input, ofstream & output){
         bright_state_energy[m]=0;
     }
     if(my_id==0){
-        input >> angular_momentum_J >> initial_state_angular_momentum_M ;
+        input >> angular_momentum_J >> initial_state_angular_momentum_M  >> angular_momentum_M_range ;  // angular momentum M range  is Delta M in simulation. Center around initial state M.
 
         for(m=0;m<stlnum;m++) {
             // initialize our bright state from input.txt

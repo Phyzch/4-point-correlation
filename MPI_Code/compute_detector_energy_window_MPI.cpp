@@ -158,17 +158,17 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
         double low_initial_state_energy = min(d.initial_Detector_energy[0],d.initial_Detector_energy[1]);
 
         int angular_momentum_J = d.angular_momentum_J ;
-        int rotation_state_M_num = 2 * angular_momentum_J + 1 ;
+        int rotation_state_M_num = 2 * d.angular_momentum_M_range + 1 ;
         int rotation_index ;
         int rotation_state_M;
         double rotation_energy;
         double rot_vib_energy;
         double * rotation_energy_array = new double [rotation_state_M_num];
-        for (rotation_index = 0; rotation_index < rotation_state_M_num; rotation_index ++ ){
-            rotation_state_M = rotation_index - angular_momentum_J ;
+        for (rotation_index = 0; rotation_index < rotation_state_M_num  ; rotation_index ++ ){
+            rotation_state_M = d.initial_state_angular_momentum_M - d.angular_momentum_M_range + rotation_index  ;
             rotation_energy =  ( angular_momentum_J * (angular_momentum_J + 1) - pow(rotation_state_M , 2) ) / 2 * (d.rotational_constant[0] + d.rotational_constant[1]) +
                                pow(rotation_state_M , 2 ) * d.rotational_constant[2] ;
-            rotation_energy_array[rotation_index ] = rotation_energy ;
+            rotation_energy_array[ rotation_index ] = rotation_energy ;
         }
 
         ndetector0[0] = -1; // this is for:  when we go into code: ndetector0[i]= ndetector0[i]+1, our first state is |000000>
@@ -222,7 +222,7 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
             //--------------------------------------insert this state in detector's state.-----------------------------------------------------------
             // Take rotation dof into account here:
             for (rotation_index = 0; rotation_index < rotation_state_M_num; rotation_index ++ ){
-                rotation_state_M = rotation_index - angular_momentum_J ;
+                rotation_state_M = d.initial_state_angular_momentum_M - d.angular_momentum_M_range + rotation_index ;
                 ndetector0[d.nmodes[0]] = rotation_state_M  ;
 
                 rotation_energy = rotation_energy_array[rotation_index];
@@ -286,7 +286,7 @@ void full_system:: compute_detector_matrix_size_MPI_sphere( ){
             }
 
             for (rotation_index = 0; rotation_index < rotation_state_M_num; rotation_index ++ ){
-                rotation_state_M = rotation_index - angular_momentum_J ;
+                rotation_state_M = d.initial_state_angular_momentum_M - d.angular_momentum_M_range + rotation_index ;
                 ndetector1[d.nmodes[1]] = rotation_state_M  ;
 
                 rotation_energy = rotation_energy_array[rotation_index];
