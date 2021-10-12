@@ -892,7 +892,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
             }
             state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
 
-            if(max_state_quanta_diff <= distance_cutoff_for_4_piont_corre ){
+            if(max_state_quanta_diff <= distance_cutoff_for_4_piont_corre  and dv_all[0][initial_state_index_in_total_dmatrix][nmodes[0]] == dv_all[0][i][nmodes[0]] ){
                 // we will simulate dynamics of states in this list to compute 4 point correlation function
                 nearby_state_index.push_back(i);
             }
@@ -912,7 +912,7 @@ void detector:: prepare_variable_for_4_point_correlation_function(vector<double>
             }
             state_energy_difference = abs(dmat0[i] - dmat0[initial_state_index_in_total_dmatrix]);
 
-            if(state_distance <= distance_cutoff_for_4_piont_corre ){
+            if(state_distance <= distance_cutoff_for_4_piont_corre and dv_all[0][initial_state_index_in_total_dmatrix][nmodes[0]] == dv_all[0][i][nmodes[0]] ){
                 // we will simulate dynamics of states in this list to compute 4 point correlation function
                 nearby_state_index.push_back(i);
             }
