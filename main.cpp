@@ -10,7 +10,7 @@ int my_id;
 int num_proc;
 bool Turn_on_Vanvleck = false ;  // Note when turn on vanvleck, the V_intra and a_intra is decided by vanvlk file there.
 bool turn_on_random_self_anharmonicity = false ;
-bool read_Hamltonian_from_file = false ;
+bool read_Hamltonian_from_file = true ;
 bool Sphere_cutoff_in_state_space = true;
 bool save_state = false;
 bool Evolve_dynamics = true;  // bool variable to decide if we run Detector_Evolve
@@ -24,11 +24,10 @@ bool compute_overlap_with_eigenstate = false ;
 // Warning: Always check Continue_Simulation variable in your code before starting your simulation.  Backup your simulation result output.txt everytime before your simulation.
 int main(int argc,char * argv []) {
     srand(time(0));
-    string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/"
-                       "/Other Molecule/Cyclopentanone/Haar_thermal/try/";
+    string parentpath= "/home/phyzch/CLionProjects/4_point_correlation_calculation/result/SCCL2 sample/SCCL2 full Hamiltonian/Loop/1/";
 //    string cvpt_parent_path = "/home/phyzch/CLionProjects/4_point_correlation_calculation/sample potential/SCCL2 effective/";
-    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
- //   string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";
+//    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 change V/0.2/V=10/";
+    string cvpt_parent_path = "/home/phyzch/CLionProjects/CVPT/data/4 point corre/SCCL2 XB/";
     string cvpt_path;
     int i;
     int Filenumber=1;
